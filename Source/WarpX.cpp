@@ -19,6 +19,9 @@
 #include "Utils/WarpXUtil.H"
 #include "Utils/WarpXAlgorithmSelection.H"
 #include "Utils/WarpXProfilerWrapper.H"
+#ifdef PULSAR
+# include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_MultiFabUtil.H>
@@ -26,7 +29,7 @@
 #   include <AMReX_AmrMeshInSituBridge.H>
 #endif
 
-#ifdef AMREX_USE_OMP
+#ifdef _OPENMP
 #   include <omp.h>
 #endif
 
@@ -1020,6 +1023,10 @@ WarpX::ReadParameters ()
        }
 
     }
+#ifdef PULSAR
+    PulsarParm::ReadParameters();
+#endif
+
 }
 
 void
