@@ -36,7 +36,7 @@
 #include "Utils/WarpXAlgorithmSelection.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #ifdef PULSAR
-#include "Particles/PulsarParameters.H"
+    #include "Particles/PulsarParameters.H"
 #endif
 
 #ifdef AMREX_USE_SENSEI_INSITU
