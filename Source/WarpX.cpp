@@ -23,6 +23,10 @@
 #   include <AMReX_AmrMeshInSituBridge.H>
 #endif
 
+#ifdef PULSAR
+#include <PulsarParameters.H>
+#endif
+
 #ifdef _OPENMP
 #   include <omp.h>
 #endif
@@ -826,6 +830,10 @@ WarpX::ReadParameters ()
        }
 
     }
+#ifdef PULSAR
+    PulsarParm::ReadParameters();
+#endif
+
 }
 
 void
