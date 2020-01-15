@@ -7,7 +7,7 @@
 # See the "Pulsar Setup" section at the end for the options
 #
 # This initializes the electrons and positrons with a corotating momentum function.
-# Based on the pulsar_type = "active" or "dead", particles are injected continuously or 
+# Based on the pulsar_type = "active" or "dead", particles are injected continuously or
 #                             until rho_GJ is reached
 
 #################################
