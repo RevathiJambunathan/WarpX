@@ -1102,25 +1102,25 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         });
 
 #ifdef PULSAR
-       if (PulsarParm::EB_external == 1) {
-          Real* const AMREX_RESTRICT xp_data = xp.dataPtr();
-          Real* const AMREX_RESTRICT yp_data = yp.dataPtr();
-          Real* const AMREX_RESTRICT zp_data = zp.dataPtr();
-          Real* const AMREX_RESTRICT Exp_data = Exp.dataPtr();
-          Real* const AMREX_RESTRICT Eyp_data = Eyp.dataPtr();
-          Real* const AMREX_RESTRICT Ezp_data = Ezp.dataPtr();
-          Real* const AMREX_RESTRICT Bxp_data = Bxp.dataPtr();
-          Real* const AMREX_RESTRICT Byp_data = Byp.dataPtr();
-          Real* const AMREX_RESTRICT Bzp_data = Bzp.dataPtr();
-          Real time = warpx.gett_new(lev);
-          amrex::ParallelFor(pti.numParticles(),
-                [=] AMREX_GPU_DEVICE (long i) {
-                // spherical r, theta, phi, and cylidrical r
-                PulsarParm::PulsarEBField(xp_data[i],yp_data[i],zp_data[i],
-                              Exp_data[i],Eyp_data[i],Ezp_data[i],
-                              Bxp_data[i],Byp_data[i],Bzp_data[i],time);
-          });  
-       }
+        if (PulsarParm::EB_external == 1) {
+           Real* const AMREX_RESTRICT xp_data = xp.dataPtr();
+           Real* const AMREX_RESTRICT yp_data = yp.dataPtr();
+           Real* const AMREX_RESTRICT zp_data = zp.dataPtr();
+           Real* const AMREX_RESTRICT Exp_data = Exp.dataPtr();
+           Real* const AMREX_RESTRICT Eyp_data = Eyp.dataPtr();
+           Real* const AMREX_RESTRICT Ezp_data = Ezp.dataPtr();
+           Real* const AMREX_RESTRICT Bxp_data = Bxp.dataPtr();
+           Real* const AMREX_RESTRICT Byp_data = Byp.dataPtr();
+           Real* const AMREX_RESTRICT Bzp_data = Bzp.dataPtr();
+           Real time = warpx.gett_new(lev);
+           amrex::ParallelFor(pti.numParticles(),
+                 [=] AMREX_GPU_DEVICE (long i) {
+                 // spherical r, theta, phi, and cylidrical r
+                 PulsarParm::PulsarEBField(xp_data[i],yp_data[i],zp_data[i],
+                               Exp_data[i],Eyp_data[i],Ezp_data[i],
+                               Bxp_data[i],Byp_data[i],Bzp_data[i],time);
+           });
+        }
 #endif
         amrex::Gpu::synchronize();
 
