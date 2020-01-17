@@ -47,6 +47,10 @@ public:
 
     // bool: whether the point (x, y, z) is inside the plasma region
     bool insideBounds (amrex::Real x, amrex::Real y, amrex::Real z) const noexcept;
+#ifdef PULSAR
+    bool insidePulsarBounds (amrex::Real r, amrex::Real R_star,
+                             amrex::Real dR_star) const noexcept;
+#endif
 
     // bool: whether the region defined by lo and hi overlaps with the plasma region
     bool overlapsWith (const amrex::XDim3& lo, const amrex::XDim3& hi) const noexcept;
