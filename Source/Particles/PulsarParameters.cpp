@@ -46,13 +46,13 @@ namespace PulsarParm
         const amrex::Real phi = std::atan2((yp-yc),(xp-xc));
         amrex::Real theta = 0.0;
         if (r > 0) {
-           theta = std::acos((zp-zc)/r);  
+           theta = std::acos((zp-zc)/r);
         }
         const amrex::Real c_theta = std::cos(theta);
-        const amrex::Real s_theta = std::sin(theta); 
+        const amrex::Real s_theta = std::sin(theta);
         const amrex::Real c_phi = std::cos(phi);
         const amrex::Real s_phi = std::sin(phi);
- 
+
         // Inside star :: uniform B a,d E = - (omega X r) X B
         if (r<R_star) {
            amrex::Real Er = -2.0*B_star*omega_star*r*s_theta*s_theta;
@@ -84,7 +84,7 @@ namespace PulsarParm
 
            Bxp = Br*s_theta*c_phi + Btheta*c_theta*c_phi;
            Byp = Br*s_theta*s_phi + Btheta*c_theta*s_phi;
-           Bzp = Br*c_theta - Btheta*s_theta; 
+           Bzp = Br*c_theta - Btheta*s_theta;
         }
    }
 
