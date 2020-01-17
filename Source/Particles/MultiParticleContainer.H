@@ -34,6 +34,10 @@
 #include <AMReX_REAL.H>
 #include <AMReX_RealBox.H>
 #include <AMReX_Vector.H>
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+#include <AMReX_Particles.H>
 
 #include <AMReX_BaseFwd.H>
 #include <AMReX_AmrCoreFwd.H>
@@ -324,6 +328,7 @@ public:
 #ifdef PULSAR
     std::string m_E_ext_particle_coord = "cartesian";
     std::string m_B_ext_particle_coord = "cartesian";
+    void PulsarParticleInjection();
 #endif
 
 protected:

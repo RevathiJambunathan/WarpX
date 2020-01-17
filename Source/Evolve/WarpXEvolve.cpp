@@ -256,6 +256,11 @@ WarpX::Evolve (int numsteps)
 
         m_particle_boundary_buffer->gatherParticles(*mypc, amrex::GetVecOfConstPtrs(m_distance_to_eb));
 
+#ifdef PULSAR
+        mypc->PulsarParticleInjection();
+        mypc->Redistribute();
+#endif
+
         mypc->ApplyBoundaryConditions();
 
         // interact with particles with EB walls (if present)
