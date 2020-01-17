@@ -177,6 +177,10 @@ WarpX::Evolve (int numsteps)
 
         int num_moved = MoveWindow(move_j);
 
+#ifdef PULSAR
+        mypc->PulsarParticleRemoval();
+        mypc->PulsarParticleInjection();
+#endif
         mypc->ApplyBoundaryConditions();
 
         // Electrostatic solver: particles can move by an arbitrary number of cells
