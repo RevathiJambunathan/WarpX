@@ -95,4 +95,4 @@ pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
 pulsar.dR = 2e3
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
-pulsar.E_external_monopole = 1                  # [0/1] 
+pulsar.E_external_monopole = 1                  # [0/1]
