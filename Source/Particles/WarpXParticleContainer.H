@@ -330,6 +330,9 @@ public:
     bool AmIA () const noexcept {return (physical_species == PhysSpec);}
 
     amrex::Array<amrex::Real,3> get_v_galilean () {return m_v_galilean;}
+#ifdef PULSAR
+    virtual void PulsarParticleInjection () {};
+#endif
 
     /**
      * \brief Virtual method to resample the species. Overriden by PhysicalParticleContainer only.
