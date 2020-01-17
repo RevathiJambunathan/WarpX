@@ -358,6 +358,11 @@ WarpX::Evolve (int numsteps)
         mypc->PulsarParticleInjection();
 #endif
 
+#ifdef PULSAR
+        mypc->PulsarParticleInjection();
+        mypc->Redistribute();
+#endif
+
         mypc->ApplyBoundaryConditions();
 
         // interact with particles with EB walls (if present)

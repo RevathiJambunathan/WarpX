@@ -1065,7 +1065,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                         continue;
                     }
 #ifdef PULSAR
-                    //amrex::Print() << " old xyz  : " << xb << " " << yb << " " << z0 << "\n";
                     amrex::Real xc = PulsarParm::center_star[0];
                     amrex::Real yc = PulsarParm::center_star[1];
                     amrex::Real zc = PulsarParm::center_star[2];
@@ -2819,5 +2818,12 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
             });
         }
    }
+}
+#endif
+
+#ifdef PULSAR
+void PhysicalParticleContainer::PulsarParticleInjection() {
+    
+     AddPlasma( 0 );
 }
 #endif

@@ -60,10 +60,6 @@ plasma_e.injection_style = "NUniformPerCell"
 plasma_e.profile = parse_density_function
 plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_e.num_particles_per_cell_each_dim = 4 4 4
-=======
-plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<(r_star+dR)) )*dens"
-plasma_e.num_particles_per_cell_each_dim = 3 3 3
->>>>>>> 082ea436 (added external E and B fields and the appropriate input parameters)
 plasma_e.momentum_distribution_type = parse_momentum_function
 
 ## Inject stationary pairs
@@ -78,13 +74,8 @@ plasma_p.charge = q_e
 plasma_p.mass = m_e
 plasma_p.injection_style = "NUniformPerCell"
 plasma_p.profile = parse_density_function
-<<<<<<< HEAD
 plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_p.num_particles_per_cell_each_dim = 4 4 4
-=======
-plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)* ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<(r_star+dR)))*dens"
-plasma_p.num_particles_per_cell_each_dim = 3 3 3
->>>>>>> 082ea436 (added external E and B fields and the appropriate input parameters)
 plasma_p.momentum_distribution_type = parse_momentum_function
 
 ## Inject stationary pairs
@@ -109,7 +100,6 @@ chk.intervals = 1000
 #################################
 pulsar.pulsarType = "dead"             # [dead/active]: sets particle injection type
 pulsar.omega_star = 6245.676               # angular velocity of NS (rad/s)
-<<<<<<< HEAD
 pulsar.ramp_omega_time = 0.0             # time over which to ramp up NS angular velocity (s)
                                            # if ramp_omega_time < 0, omega = omega_star for any t
                                            # consistency requires ramp_omega_time = my_constants.to
