@@ -266,6 +266,11 @@ public:
 
     int getSpeciesID (std::string product_str) const;
 
+#ifdef PULSAR
+    std::string m_E_ext_particle_coord = "cartesian";
+    std::string m_B_ext_particle_coord = "cartesian";
+#endif
+
 protected:
 
 #ifdef WARPX_QED
