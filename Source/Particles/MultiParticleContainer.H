@@ -30,6 +30,10 @@
 #   include "Particles/ElementaryProcess/QEDInternals/QuantumSyncEngineWrapper.H"
 #endif
 
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+
 #include <AMReX_Particles.H>
 
 #include <memory>
@@ -267,6 +271,7 @@ public:
 #ifdef PULSAR
     std::string m_E_ext_particle_coord = "cartesian";
     std::string m_B_ext_particle_coord = "cartesian";
+    void PulsarParticleInjection();
 #endif
 
 protected:

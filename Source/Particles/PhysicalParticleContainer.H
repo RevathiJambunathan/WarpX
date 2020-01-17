@@ -324,6 +324,10 @@ public:
     PairGenerationFilterFunc getPairGenerationFilterFunc ();
 #endif
 
+#ifdef PULSAR
+    virtual void PulsarParticleInjection () override;
+#endif
+
 protected:
     std::string species_name;
     std::unique_ptr<PlasmaInjector> plasma_injector;
