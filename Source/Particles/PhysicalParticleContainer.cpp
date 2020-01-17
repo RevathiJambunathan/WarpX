@@ -929,7 +929,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                  PulsarParm::PulsarEBField(xp_data[i],yp_data[i],zp_data[i],
                                Exp_data[i],Eyp_data[i],Ezp_data[i],
                                Bxp_data[i],Byp_data[i],Bzp_data[i],time);
-           });  
+           });
         }
 #endif
 
