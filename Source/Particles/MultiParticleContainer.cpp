@@ -1444,3 +1444,14 @@ MultiParticleContainer::PulsarParticleRemoval()
 
 }
 #endif
+
+#ifdef PULSAR
+void 
+MultiParticleContainer::PulsarParticleInjection()
+{
+    amrex::Print() << " pulsar injection on! \n";
+    for (auto& pc : allcontainers) {
+        pc->PulsarParticleInjection(); 
+    }
+}
+#endif
