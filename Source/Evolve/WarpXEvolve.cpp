@@ -179,7 +179,6 @@ WarpX::Evolve (int numsteps)
 
 #ifdef PULSAR
         mypc->PulsarParticleInjection();
-        mypc->Redistribute();
 #endif
 
         mypc->ApplyBoundaryConditions();
