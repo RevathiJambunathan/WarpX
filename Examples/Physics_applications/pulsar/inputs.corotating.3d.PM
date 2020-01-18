@@ -46,11 +46,8 @@ interpolation.nox = 3
 interpolation.noy = 3
 interpolation.noz = 3
 
-#warpx.E_ext_grid_init_style = "parse_E_ext_grid_function"
-#warpx.Ex_external_grid_function(x,y,z) = "((x-xc)*(x-xc)+(y-yc)*(y-yc) + (z-zc)*(z-zc))^0.5"
-#warpx.Ey_external_grid_function(x,y,z) = "((x-xc)*(x-xc)+(y-yc)*(y-yc) + (z-zc)*(z-zc))^0.5"
-#warpx.Ez_external_grid_function(x,y,z) = "((x-xc)*(x-xc)+(y-yc)*(y-yc) + (z-zc)*(z-zc))^0.5"
-
+particles.E_ext_particle_init_style = "constant"
+particles.E_external_particle = 0.0 0.000  0.0
 
 
 

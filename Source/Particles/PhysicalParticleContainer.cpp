@@ -538,7 +538,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 #ifdef PULSAR
     amrex::Print() << " in add plasma" << PulsarParm::R_star << "\n";
     // Steps to implement
-    // 1. inside PulsarBound p.id = -1 if not within R_star+dR_star
+    // 1. inside PulsarBound p.id = -1 if not within R_star+dR_star -- done
     // 2. find sigma of the cell the particle belongs to
     //    2a. Cell Id of the particle
     //    2b. Get x,y,z -> r,theta,phi of the cell. if r >R_star-dR and r<R_star+dR
@@ -571,6 +571,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     Real scale_fac;
 #if AMREX_SPACEDIM==3
     scale_fac = dx[0]*dx[1]*dx[2]/num_ppc;
+    amrex::Print() << " scale_fac " << scale_fac << "\n";
 #elif AMREX_SPACEDIM==2
     scale_fac = dx[0]*dx[1]/num_ppc;
 #endif
