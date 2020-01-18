@@ -684,7 +684,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 #ifdef PULSAR
     amrex::Print() << " in add plasma" << PulsarParm::R_star << "\n";
     // Steps to implement
-    // 1. inside PulsarBound p.id = -1 if not within R_star+dR_star
+    // 1. inside PulsarBound p.id = -1 if not within R_star+dR_star -- done
     // 2. find sigma of the cell the particle belongs to
     //    2a. Cell Id of the particle
     //    2b. Get x,y,z -> r,theta,phi of the cell. if r >R_star-dR and r<R_star+dR
@@ -753,11 +753,17 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     Real t = WarpX::GetInstance().gett_new(lev);
     Real density_min = plasma_injector->density_min;
     Real density_max = plasma_injector->density_max;
+#ifdef PULSAR
+    const MultiFab& Ex_mf = WarpX::GetInstance().getEfield(lev,0);
+    const MultiFab& Ey_mf = WarpX::GetInstance().getEfield(lev,1);
+    const MultiFab& Ez_mf = WarpX::GetInstance().getEfield(lev,2);
+#endif
 
 #ifdef WARPX_DIM_RZ
     const int nmodes = WarpX::n_rz_azimuthal_modes;
     bool radially_weighted = plasma_injector->radially_weighted;
 #endif
+
 
     MFItInfo info;
     if (do_tiling && Gpu::notInLaunchRegion()) {
@@ -767,6 +773,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     info.SetDynamic(true);
 #pragma omp parallel if (not WarpX::serialize_ics)
 #endif
+
+
     for (MFIter mfi = MakeMFIter(lev, info); mfi.isValid(); ++mfi)
     {
         if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
@@ -925,6 +933,31 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 
         bool loc_do_field_ionization = do_field_ionization;
         int loc_ionization_initial_level = ionization_initial_level;
+#ifdef PULSAR
+        // Fab
+	const int Ex_nghost = Ex_mf.nGrow();
+	const int Ey_nghost = Ey_mf.nGrow();
+	const int Ez_nghost = Ez_mf.nGrow();
+        const FArrayBox& Ex_fab = Ex_mf[mfi];
+        const FArrayBox& Ey_fab = Ey_mf[mfi];
+        const FArrayBox& Ez_fab = Ez_mf[mfi];
+        Box Ex_box = Ex_fab.box();
+        Box Ey_box = Ey_fab.box();
+        Box Ez_box = Ez_fab.box();
+        const Dim3 Ex_lo = lbound(mfi.tilebox());
+        const Dim3 Ey_lo = lbound(mfi.tilebox());
+        const Dim3 Ez_lo = lbound(mfi.tilebox());
+        amrex::Array4<const amrex::Real> const& ex_arr = Ex_fab.array();
+        amrex::Array4<const amrex::Real> const& ey_arr = Ey_fab.array();
+        amrex::Array4<const amrex::Real> const& ez_arr = Ez_fab.array();
+        //amrex::Print() << " box " << x_box << "\n";
+        //FArrayBox Ey_fab = Ey_mf[mfi];
+        //Box Ey_box = Ey_fab.validbox();
+        //FArrayBox Ez_fab = Ez_mf[mfi];
+        //Box Ez_box = Ez_fab.validbox();
+        //amrex::Print() << " Ey box " << Ey_box << "\n"; 
+        //amrex::Print() << " Ez box " << Ez_box << "\n"; 
+#endif
 
         // Loop over all new particles and inject them (creates too many
         // particles, in particular does not consider xmin, xmax etc.).
@@ -1018,23 +1051,44 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                         continue;
                     }
 #ifdef PULSAR
-                    //amrex::Real xc = PulsarParm::center_star[0];
-                    //amrex::Real yc = PulsarParm::center_star[1];
-                    //amrex::Real zc = PulsarParm::center_star[2];
-                    amrex::Real xc = 90000;
-                    amrex::Real yc = 90000;
-                    amrex::Real zc = 90000;
-                    amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
-                    //if (!inj_pos->insidePulsarBounds(r,PulsarParm::R_star,PulsarParm::dR_star)) {
-                    //if (!inj_pos->insidePulsarBounds(r,12000,-2000)) {
-                    if (  (rad< 10000) or (rad>12000)  ) {
+                    amrex::Real xc = PulsarParm::center_star[0];
+                    amrex::Real yc = PulsarParm::center_star[1];
+                    amrex::Real zc = PulsarParm::center_star[2];
+                    amrex::Real rad = std::sqrt( (xb-xc)*(xb-xc)
+                                      + (yb-yc)*(yb-yc) + (zb-zc)*(zb-zc) );
+                    if (!inj_pos->insidePulsarBounds(rad,PulsarParm::R_star,PulsarParm::dR_star)) {
                        p.id() = -1;
-                       //amrex::Print() << "call inside pulsar bounds " << r << " rstar " << PulsarParm::R_star << " " << PulsarParm::dR_star<<"\n";
-                       amrex::Print() << "call inside pulsar bounds " <<"\n";
                        continue;
                     }
-                    else
-                    { amrex::Print() << " r " << rad << "\n";}
+                    // get cell center
+                    amrex::Real cc_x = overlap_corner[0] + iv[0]*dx[0] + 0.5*dx[0] ;
+                    amrex::Real cc_y = overlap_corner[1] + iv[1]*dx[1] + 0.5*dx[1] ;
+                    amrex::Real cc_z = overlap_corner[2] + iv[2]*dx[2] + 0.5*dx[2] ;
+                    // get spherical r, theta, phi
+                    amrex::Real cc_rad = std::sqrt(  (cc_x-xc)*(cc_x-xc) 
+                                                   + (cc_y-yc)*(cc_y-yc)
+                                                   + (cc_z-zc)*(cc_z-zc));
+                    amrex::Real cc_theta = 0; 
+                    if (cc_rad > 0 ) {
+                        cc_theta = std::acos((cc_z-xc)/cc_rad);
+                    }
+                    amrex::Real cc_phi = std::atan2((cc_y-yc),(cc_x-xc));
+                    const amrex::Real c_theta = std::cos(cc_theta);
+                    const amrex::Real s_theta = std::sin(cc_theta);
+                    const amrex::Real c_phi = std::cos(cc_phi);
+                    const amrex::Real s_phi = std::sin(cc_phi);
+                    amrex::Print() << " tile box = " << tile_box << "\n";
+                    amrex::Print() << " iv " << iv[0] << " " << iv[1] << " " << iv[2] << "\n";
+                    int ii = Ex_lo.x + iv[0];
+                    int jj = Ex_lo.y + iv[1];
+                    int kk = Ex_lo.z + iv[2];
+                    amrex::Real Er_cor = -2.0*PulsarParm::B_star
+                                             *PulsarParm::omega_star
+                                             *cc_rad*s_theta*s_theta;
+                    amrex::Print() << " Ex : " << Ex_box << "\n"; 
+                    amrex::Print() << " Er cor : " << Er_cor << "\n";
+                    amrex::Print() << " ex_arr " << ex_arr(ii,jj,kk) << " ii " << ii << " jj " << jj << " kk " << kk << "\n";
+                    amrex::Print() << " overlap box " << overlap_box << "\n";
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
