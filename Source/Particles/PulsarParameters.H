@@ -21,8 +21,8 @@ namespace PulsarParm
 
    void ReadParameters();
    void PulsarEBField(amrex::Real xp, amrex::Real yp, amrex::Real zp,
-                      amrex::Real Exp, amrex::Real Eyp, amrex::Real Ezp,
-                      amrex::Real Bxp, amrex::Real Byp, amrex::Real Bzp,
+                      amrex::Real &Exp, amrex::Real &Eyp, amrex::Real &Ezp,
+                      amrex::Real &Bxp, amrex::Real &Byp, amrex::Real &Bzp,
                       amrex::Real time);
 
 }
