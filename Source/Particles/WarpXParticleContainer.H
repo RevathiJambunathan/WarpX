@@ -341,6 +341,7 @@ public:
     amrex::Array<amrex::Real,3> get_v_galilean () {return m_v_galilean;}
 #ifdef PULSAR
     virtual void PulsarParticleInjection () {};
+    virtual void PulsarParticleRemoval () {};
 #endif
 
     /**
