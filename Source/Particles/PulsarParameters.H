@@ -227,9 +227,6 @@ namespace PulsarParm
             const auto domain_xhi = geom.ProbHi();
             const auto domain_dx  = geom.CellSize();
 
-            //const amrex::Real x = domain_xlo[0] + (i - domain_ilo.x + 0.5) * domain_dx[0] + (1.0 - mf_ixType[0])*domain_dx[0]*0.5;
-            //const amrex::Real y = domain_xlo[1] + (j - domain_ilo.y + 0.5) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
-            //const amrex::Real z = domain_xlo[2] + (k - domain_ilo.z + 0.5) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
             const amrex::Real x = domain_xlo[0] + (i ) * domain_dx[0] + (1.0 - mf_ixType[0])*domain_dx[0]*0.5;
             const amrex::Real y = domain_xlo[1] + (j ) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
             const amrex::Real z = domain_xlo[2] + (k ) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
