@@ -274,6 +274,7 @@ public:
     std::string m_E_ext_particle_coord = "cartesian";
     std::string m_B_ext_particle_coord = "cartesian";
     void PulsarParticleInjection();
+    void PulsarParticleRemoval();
 #endif
 
 protected:

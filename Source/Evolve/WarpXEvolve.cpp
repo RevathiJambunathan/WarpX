@@ -184,6 +184,7 @@ WarpX::Evolve (int numsteps)
         int num_moved = MoveWindow(move_j);
 
 #ifdef PULSAR
+        mypc->PulsarParticleRemoval(); 
         mypc->PulsarParticleInjection();
 #endif
 

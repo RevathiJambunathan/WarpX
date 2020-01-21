@@ -20,7 +20,7 @@ amr.max_grid_size = 64
 amr.blocking_factor = 64
 amr.max_level = 0
 amr.plot_file = "plotfiles/plt"
-amr.plot_int = 1
+amr.plot_int = 2
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 0 0 0     # Is periodic?
 geometry.prob_lo     = 0.0    0.0    0.0
@@ -34,7 +34,7 @@ warpx.verbose = 1
 warpx.plot_raw_fields = 0
 warpx.do_dive_cleaning = 0
 warpx.use_filter = 1
-warpx.cfl = .99
+warpx.cfl = .5
 warpx.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
 my_constants.pi    = 3.141592653589793
 my_constants.dens  = 5.544e6
@@ -46,12 +46,16 @@ my_constants.omega = 6245.676
 my_constants.c = 299792458.
 my_constants.B_star = 8.0323e-6                  # magnetic field of NS (T)
 my_constants.dR = 2e3
+my_constants.to = -2e-4
 interpolation.nox = 3
 interpolation.noy = 3
 interpolation.noz = 3
 
-particles.E_ext_particle_init_style = "constant"
-particles.E_external_particle = 0.0 0.000  0.0
+#warpx.E_ext_grid_init_style = "parse_E_ext_grid_function"
+#warpx.Ex_external_grid_function(x,y,z) = "((x-xc)*(x-xc)+(y-yc)*(y-yc) + (z-zc)*(z-zc))^0.5"
+#warpx.Ey_external_grid_function(x,y,z) = "((x-xc)*(x-xc)+(y-yc)*(y-yc) + (z-zc)*(z-zc))^0.5"
+#warpx.Ez_external_grid_function(x,y,z) = "((x-xc)*(x-xc)+(y-yc)*(y-yc) + (z-zc)*(z-zc))^0.5"
+
 
 
 
@@ -66,12 +70,21 @@ plasma_e.charge = -q_e
 plasma_e.mass = m_e
 plasma_e.injection_style = "NUniformPerCell"
 plasma_e.profile = parse_density_function
-plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<(r_star+dR)) )*dens"
+#plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<(r_star+dR)) )*dens"
+plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_e.num_particles_per_cell_each_dim = 3 3 3
 plasma_e.momentum_distribution_type = parse_momentum_function
-plasma_e.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-plasma_e.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_e.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(-( (t<to)*(t/to)*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*(t/to)*omega + (t>=to)*omega)  *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_e.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*( ( (t<to)*(t/to)*omega + (t>=to)*omega ) *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*t/to*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+##plasma_e.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+##plasma_e.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 plasma_e.momentum_function_uz(x,y,z) = "0.0"
+plasma_e.momentum_function_ux(x,y,z) = "0.0"
+plasma_e.momentum_function_uy(x,y,z) = "0.0"
+#plasma_e.momentum_distribution_type = "constant"
+#plasma_e.ux = 0.0
+#plasma_e.uy = 0.0
+#plasma_e.uz = 0.0
 plasma_e.do_continuous_injection = 0
 plasma_e.density_min = 1E0
 
@@ -79,12 +92,22 @@ plasma_p.charge = q_e
 plasma_p.mass = m_e
 plasma_p.injection_style = "NUniformPerCell"
 plasma_p.profile = parse_density_function
-plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)* ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<(r_star+dR)))*dens"
+#plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)* ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<(r_star+dR)))*dens"
+plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_p.num_particles_per_cell_each_dim = 3 3 3
 plasma_p.momentum_distribution_type = parse_momentum_function
-plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(-( (t<to)*(t/to)*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*(t/to)*omega + (t>=to)*omega)  *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*( ( (t<to)*(t/to)*omega + (t>=to)*omega ) *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*t/to*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+##plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+##plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 plasma_p.momentum_function_uz(x,y,z) = "0.0"
+plasma_p.momentum_function_uz(x,y,z) = "0.0"
+plasma_p.momentum_distribution_type = "constant"
+#plasma_p.ux = 0.0
+#plasma_p.uy = 0.0
+#plasma_p.uz = 0.0
 plasma_p.do_continuous_injection = 0
 plasma_p.density_min = 1E0
 
@@ -99,5 +122,5 @@ pulsar.R_star = 12.e3                  # radius of NS (m)
 pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
 pulsar.dR = 2e3
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
-pulsar.EB_external = 0                 # [0/1]: to apply external E and B
-pulsar.E_external_monopole = 0                  # [0/1]
+pulsar.EB_external = 1                 # [0/1]: to apply external E and B
+pulsar.E_external_monopole = 1                  # [0/1]
