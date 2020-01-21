@@ -22,7 +22,7 @@
 #include <limits>
 
 #ifdef PULSAR
-#include <PulsarParameters.H>
+    #include "Particles/PulsarParameters.H"
 #endif
 
 using namespace amrex;
