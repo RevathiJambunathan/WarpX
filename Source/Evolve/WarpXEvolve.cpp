@@ -257,6 +257,7 @@ WarpX::Evolve (int numsteps)
         m_particle_boundary_buffer->gatherParticles(*mypc, amrex::GetVecOfConstPtrs(m_distance_to_eb));
 
 #ifdef PULSAR
+        mypc->PulsarParticleRemoval(); 
         mypc->PulsarParticleInjection();
 #endif
 
