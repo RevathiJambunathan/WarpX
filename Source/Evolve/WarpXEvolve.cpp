@@ -21,6 +21,9 @@
 #include <cmath>
 #include <limits>
 
+#ifdef PULSAR
+#include <PulsarParameters.H>
+#endif
 
 using namespace amrex;
 
@@ -137,7 +140,49 @@ WarpX::Evolve (int numsteps)
             // B : guard cells are NOT up-to-date
         }
 
+#ifdef PULSAR
+        if (PulsarParm::damp_E_internal) {
+            MultiFab *Ex, *Ey, *Ez;
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                Ex = Efield_fp[lev][0].get();
+                Ey = Efield_fp[lev][1].get();
+                Ez = Efield_fp[lev][2].get();
+
+                auto geom = Geom(lev).data();
+#ifdef _OPENMP
+#pragma omp parallel if (Gpu::notInLaunchRegion())
+#endif
+                for ( MFIter mfi(*Ex, TilingIfNotGPU()); mfi.isValid(); ++mfi )
+                {
+                    const Box& tex  = mfi.tilebox(Ex_nodal_flag);
+                    const Box& tey  = mfi.tilebox(Ey_nodal_flag);
+                    const Box& tez  = mfi.tilebox(Ez_nodal_flag);
+
+                    auto const& Exfab = Ex->array(mfi);
+                    auto const& Eyfab = Ey->array(mfi);
+                    auto const& Ezfab = Ez->array(mfi);
+
+                    amrex::ParallelFor(tex, tey, tez,
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                    {
+                        PulsarParm::PulsarDampEField(i, j, k, geom, Exfab);
+                    },
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                    {
+                        PulsarParm::PulsarDampEField(i, j, k, geom, Eyfab);
+                    },
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                    {
+                        PulsarParm::PulsarDampEField(i, j, k, geom, Ezfab);
+                    });
+                }
+            }
+        }
+#endif
+
+#ifdef WARPX_USE_PY
         if (warpx_py_beforeEsolve) warpx_py_beforeEsolve();
+#endif
 
         if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
             // At the end of last step, push p by 0.5*dt to synchronize
