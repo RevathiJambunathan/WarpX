@@ -56,6 +56,10 @@
 #include <cmath>
 #include <limits>
 
+#ifdef PULSAR
+#include <PulsarParameters.H>
+#endif
+
 using namespace amrex;
 
 void
