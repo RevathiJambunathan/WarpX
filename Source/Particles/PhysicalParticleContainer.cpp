@@ -608,6 +608,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& Ex_mf = WarpX::GetInstance().getEfield(lev,0);
     const MultiFab& Ey_mf = WarpX::GetInstance().getEfield(lev,1);
     const MultiFab& Ez_mf = WarpX::GetInstance().getEfield(lev,2);
+    const Real dt = WarpX::GetInstance().getdt(0);
+//    if (t > 100*dt) {return;}
 #endif
 
 #ifdef WARPX_DIM_RZ
@@ -792,15 +794,13 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         const FArrayBox& Ex_fab = Ex_mf[mfi];
         const FArrayBox& Ey_fab = Ey_mf[mfi];
         const FArrayBox& Ez_fab = Ez_mf[mfi];
-        Box Ex_box = Ex_fab.box();
-        Box Ey_box = Ey_fab.box();
-        Box Ez_box = Ez_fab.box();
         const Dim3 Ex_lo = lbound(mfi.tilebox());
         const Dim3 Ey_lo = lbound(mfi.tilebox());
         const Dim3 Ez_lo = lbound(mfi.tilebox());
         amrex::Array4<const amrex::Real> const& ex_arr = Ex_fab.array();
         amrex::Array4<const amrex::Real> const& ey_arr = Ey_fab.array();
         amrex::Array4<const amrex::Real> const& ez_arr = Ez_fab.array();
+        const Real q_pm = this->charge; 
         //amrex::Print() << " box " << x_box << "\n";
         //FArrayBox Ey_fab = Ey_mf[mfi];
         //Box Ey_box = Ey_fab.validbox();
@@ -906,18 +906,51 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     const amrex::Real s_theta = std::sin(cc_theta);
                     const amrex::Real c_phi = std::cos(cc_phi);
                     const amrex::Real s_phi = std::sin(cc_phi);
-                    amrex::Print() << " tile box = " << tile_box << "\n";
-                    amrex::Print() << " iv " << iv[0] << " " << iv[1] << " " << iv[2] << "\n";
+                    amrex::Real omega = PulsarParm::omega_star;
+                    if (t < 2.0e-4) {
+                       omega = PulsarParm::omega_star*t/2.0e-4;
+                    }
+                    amrex::Real ratio = PulsarParm::R_star/cc_rad;
+                    amrex::Real r3 = ratio*ratio*ratio;
+                    amrex::Real Er_cor =  PulsarParm::B_star
+                                             *omega
+                                             *PulsarParm::R_star*s_theta*s_theta;
+                    Real Er_ext = omega*PulsarParm::B_star*PulsarParm::R_star
+                                  *(1.0-3.0*c_theta*c_theta);
                     int ii = Ex_lo.x + iv[0];
                     int jj = Ex_lo.y + iv[1];
                     int kk = Ex_lo.z + iv[2];
-                    amrex::Real Er_cor = -2.0*PulsarParm::B_star
-                                             *PulsarParm::omega_star
-                                             *cc_rad*s_theta*s_theta;
-                    amrex::Print() << " Ex : " << Ex_box << "\n"; 
-                    amrex::Print() << " Er cor : " << Er_cor << "\n";
-                    amrex::Print() << " ex_arr " << ex_arr(ii,jj,kk) << " ii " << ii << " jj " << jj << " kk " << kk << "\n";
-                    amrex::Print() << " overlap box " << overlap_box << "\n";
+                    Real ex_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii,jj+1,kk+1));
+                    Real ey_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii+1,jj,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii+1,jj,kk+1));
+                    Real ez_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii+1,jj,kk) + ex_arr(ii+1,jj+1,kk));
+                    Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
+                    Real sigma_inj = ((Er_cell - Er_cor));
+                    Real max_dens = 5.54e6;
+                    Real N_inj = 0.2*std::abs(sigma_inj) * dx[0]*dx[0]* 8.85e-12/(1.609e-19*max_dens*scale_fac);
+                    //amrex::Print() << " ex_arr " << ex_avg << " ey avg " << ey_avg << " ez_avg " << ez_avg << " E_cell " << Er_cell << " Er_corr " << Er_cor << " sigma inj " << sigma_inj << " ninj " << N_inj  << " num pcc " << num_ppc << " dt " << dt << " t " << t << "\n";
+    //                amrex::Print() << " ex_arr " << ex_avg << " ey avg " << ey_avg << " ez_avg " << ez_avg << " Er_cell " << Er_cell << " Er ext " << Er_ext << " Er_corr " << Er_cor << " sigma inj " << sigma_inj << " ninj " << N_inj  << " num pcc " << num_ppc << " ccrad " << cc_rad << " t "<< t << "\n";
+                    if (t > 0) {
+                    if (N_inj >= 1) {
+                       int part_freq = floor(num_ppc / N_inj);
+                       if (N_inj < num_ppc) {
+                       if (i_part%part_freq!=0) {
+                          p.id() = -1;
+                          continue;
+                       }
+                       }
+                    }
+                    else 
+                    {
+                       p.id() = -1;
+                       continue;
+                    }
+                    }
+                    ////if (N_inj < 1) { p.id() = -1; return;}
+                    //if (t > 0) {
+                    //   if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
+                    //   if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
+                    //}
+                    
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
@@ -2183,5 +2216,41 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 void PhysicalParticleContainer::PulsarParticleInjection() {
     
      AddPlasma( 0 );
+}
+
+void PhysicalParticleContainer::PulsarParticleRemoval() {
+    int lev = 0;
+    // Remove Particles From inside sphere
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+    {
+#ifdef _OPENMP
+        int thread_num = omp_get_thread_num();
+#else
+        int thread_num = 0;
+#endif
+        for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
+        {
+            pti.GetPosition(m_xp[thread_num], m_yp[thread_num], m_zp[thread_num]);
+            Real* const AMREX_RESTRICT xp_data = m_xp[thread_num].dataPtr();
+            Real* const AMREX_RESTRICT yp_data = m_yp[thread_num].dataPtr();
+            Real* const AMREX_RESTRICT zp_data = m_zp[thread_num].dataPtr();
+            Real xc = PulsarParm::center_star[0];
+            Real yc = PulsarParm::center_star[1];
+            Real zc = PulsarParm::center_star[2];
+            ParticleType* pp = pti.GetArrayOfStructs()().data();
+            amrex::ParallelFor(pti.numParticles(),
+                  [=] AMREX_GPU_DEVICE (long i) {
+                    
+                  Real r = std::sqrt((xp_data[i]-xc)*(xp_data[i]-xc)
+                                   + (yp_data[i]-yc)*(yp_data[i]-yc)
+                                   + (zp_data[i]-zc)*(zp_data[i]-zc));
+                  if (r<=PulsarParm::R_star - PulsarParm::dR_star) {
+                      pp[i].id() = -1;
+                  }
+            });
+        }
+   }
 }
 #endif
