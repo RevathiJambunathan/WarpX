@@ -359,6 +359,7 @@ WarpX::Evolve (int numsteps)
 #endif
 
 #ifdef PULSAR
+        mypc->PulsarParticleRemoval(); 
         mypc->PulsarParticleInjection();
         mypc->Redistribute();
 #endif
