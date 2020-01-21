@@ -24,6 +24,8 @@
 #ifdef PULSAR
 #include <PulsarParameters.H>
 #endif
+#include <cmath>
+#include <limits>
 
 using namespace amrex;
 
