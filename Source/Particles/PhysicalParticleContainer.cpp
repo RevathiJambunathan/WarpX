@@ -2440,4 +2440,40 @@ void PhysicalParticleContainer::PulsarParticleInjection() {
     
      AddPlasma( 0 );
 }
+
+void PhysicalParticleContainer::PulsarParticleRemoval() {
+    int lev = 0;
+    // Remove Particles From inside sphere
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+    {
+#ifdef _OPENMP
+        int thread_num = omp_get_thread_num();
+#else
+        int thread_num = 0;
+#endif
+        for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
+        {
+            pti.GetPosition(m_xp[thread_num], m_yp[thread_num], m_zp[thread_num]);
+            Real* const AMREX_RESTRICT xp_data = m_xp[thread_num].dataPtr();
+            Real* const AMREX_RESTRICT yp_data = m_yp[thread_num].dataPtr();
+            Real* const AMREX_RESTRICT zp_data = m_zp[thread_num].dataPtr();
+            Real xc = PulsarParm::center_star[0];
+            Real yc = PulsarParm::center_star[1];
+            Real zc = PulsarParm::center_star[2];
+            ParticleType* pp = pti.GetArrayOfStructs()().data();
+            amrex::ParallelFor(pti.numParticles(),
+                  [=] AMREX_GPU_DEVICE (long i) {
+                    
+                  Real r = std::sqrt((xp_data[i]-xc)*(xp_data[i]-xc)
+                                   + (yp_data[i]-yc)*(yp_data[i]-yc)
+                                   + (zp_data[i]-zc)*(zp_data[i]-zc));
+                  if (r<=PulsarParm::R_star - PulsarParm::dR_star) {
+                      pp[i].id() = -1;
+                  }
+            });
+        }
+   }
+}
 #endif
