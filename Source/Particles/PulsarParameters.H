@@ -15,11 +15,13 @@ namespace PulsarParm
    extern AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
    extern AMREX_GPU_DEVICE_MANAGED int EB_external;
    extern AMREX_GPU_DEVICE_MANAGED int E_external_monopole;
-   extern AMREX_GPU_DEVICE_MANAGED amrex::Vector<amrex::Real> center_star;
+   extern AMREX_GPU_DEVICE_MANAGED 
+          amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
 
    extern AMREX_GPU_DEVICE_MANAGED int verbose;
 
    void ReadParameters();
+   AMREX_GPU_HOST_DEVICE AMREX_INLINE
    void PulsarEBField(amrex::Real xp, amrex::Real yp, amrex::Real zp,
                       amrex::Real &Exp, amrex::Real &Eyp, amrex::Real &Ezp,
                       amrex::Real &Bxp, amrex::Real &Byp, amrex::Real &Bzp,
