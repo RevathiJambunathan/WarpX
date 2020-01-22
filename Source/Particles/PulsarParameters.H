@@ -100,6 +100,7 @@ namespace PulsarParm
    void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield)
    {
        const amrex::Real r = Spherical::r(i, j, k, geom);
+       const amrex::Real R_inner = PulsarParm::R_star - PulsarParm::dR_star;
 
        if (r < R_star) {
            // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
