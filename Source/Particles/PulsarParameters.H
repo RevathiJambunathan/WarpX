@@ -59,15 +59,16 @@ namespace PulsarParm
    }
 
    AMREX_GPU_HOST_DEVICE AMREX_INLINE
-   void PulsarDampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield)
+   void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield)
    {
        const amrex::Real r = Spherical::r(i, j, k, geom);
+       const amrex::Real R_inner = PulsarParm::R_star - PulsarParm::dR_star;
 
-       if (r < PulsarParm::R_star) {
-           // Damping function: Fd = 0.5*(tanh(r-0.5*R_star)+1)
+       if (r < R_inner) {
+           // Damping function: Fd = 0.5*(tanh(7 * (r/R_inner-0.5))+1)
            // Fd(0) ~ 0
-           // Fd(R_star) ~ 1
-           const amrex::Real Fd = 0.5 * (std::tanh(r - 0.5 * PulsarParm::R_star) + 1.0);
+           // Fd(R_inner) ~ 1
+           const amrex::Real Fd = 0.5*(std::tanh(7 * (r/R_inner-0.5))+1);
            Efield(i, j, k) = Efield(i, j, k) * Fd;
        }
    }
