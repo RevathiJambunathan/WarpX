@@ -895,24 +895,30 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 amrex::Real cc_rad = std::sqrt(  (cc_x-xc)*(cc_x-xc) 
                                                + (cc_y-yc)*(cc_y-yc)
                                                + (cc_z-zc)*(cc_z-zc));
+                amrex::Real r_cl = std::sqrt(  (cc_x-xc)*(cc_x-xc) 
+                                               + (cc_y-yc)*(cc_y-yc));
                 amrex::Real cc_theta = 0; 
                 if (cc_rad > 0 ) {
                     cc_theta = std::acos((cc_z-zc)/cc_rad);
                 }
                 amrex::Real cc_phi = std::atan2((cc_y-yc),(cc_x-xc));
-                const amrex::Real c_theta = std::cos(cc_theta);
-                const amrex::Real s_theta = std::sin(cc_theta);
-                const amrex::Real c_phi = std::cos(cc_phi);
-                const amrex::Real s_phi = std::sin(cc_phi);
-                amrex::Real omega = PulsarParm::omega_star;
-                if (t < 2.0e-4) {
-                   omega = PulsarParm::omega_star*t/2.0e-4;
+                const amrex::Real c_theta = (cc_z-zc)/cc_rad;
+                const amrex::Real s_theta = r_cl/cc_rad;
+                amrex::Real c_phi = 0;
+                amrex::Real s_phi = 0;
+                if (r_cl > 0) {
+                    c_phi = (cc_x-xc)/r_cl;
+                    s_phi = (cc_y-yc)/r_cl;
                 }
+                amrex::Real omega = PulsarParm::omega_star;
+                //if (t < 2.0e-4) {
+                //   omega = PulsarParm::omega_star*t/2.0e-4;
+                //}
                 amrex::Real ratio = PulsarParm::R_star/cc_rad;
                 amrex::Real r3 = ratio*ratio*ratio;
                 amrex::Real Er_cor =  PulsarParm::B_star
                                          *omega
-                                         *PulsarParm::R_star*s_theta*s_theta;
+                                         *cc_rad*s_theta*s_theta;
                 Real Er_ext = omega*PulsarParm::B_star*PulsarParm::R_star
                               *(1.0-3.0*c_theta*c_theta);
                 int ii = Ex_lo.x + iv[0];
@@ -922,32 +928,27 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 Real ey_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii+1,jj,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii+1,jj,kk+1));
                 Real ez_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii+1,jj,kk) + ex_arr(ii+1,jj+1,kk));
                 Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
-                Real sigma_inj = ((Er_cell - Er_cor));
+                Real sigma_inj = ((Er_ext - Er_cor));
                 Real max_dens = 5.54e6;
                 Real N_inj = 0.2*std::abs(sigma_inj) * dx[0]*dx[0]* 8.85e-12/(1.609e-19*max_dens*scale_fac);
-                //amrex::Print() << " ex_arr " << ex_avg << " ey avg " << ey_avg << " ez_avg " << ez_avg << " E_cell " << Er_cell << " Er_corr " << Er_cor << " sigma inj " << sigma_inj << " ninj " << N_inj  << " num pcc " << num_ppc << " dt " << dt << " t " << t << "\n";
-//                amrex::Print() << " ex_arr " << ex_avg << " ey avg " << ey_avg << " ez_avg " << ez_avg << " Er_cell " << Er_cell << " Er ext " << Er_ext << " Er_corr " << Er_cor << " sigma inj " << sigma_inj << " ninj " << N_inj  << " num pcc " << num_ppc << " ccrad " << cc_rad << " t "<< t << "\n";
                 if (t > 0) {
-                if (N_inj >= 1) {
-                   int part_freq = floor(num_ppc / N_inj);
-                   if (N_inj < num_ppc) {
-                   if (i_part%part_freq!=0) {
+                   if (N_inj >= 1) {
+                      if (N_inj < num_ppc) {
+                         int part_freq = floor(num_ppc / N_inj);
+                         if (i_part%part_freq!=0) {
+                            p.id() = -1;
+                            return;
+                         }
+                      }
+                   }
+                   else 
+                   {
                       p.id() = -1;
                       return;
                    }
-                   }
+                   if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
+                   if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
                 }
-                else 
-                {
-                   p.id() = -1;
-                   return;
-                }
-                }
-                ////if (N_inj < 1) { p.id() = -1; return;}
-                //if (t > 0) {
-                //   if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
-                //   if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
-                //}
                 
 #endif
 
