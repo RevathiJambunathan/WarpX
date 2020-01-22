@@ -15,14 +15,17 @@ namespace PulsarParm
    AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
    AMREX_GPU_DEVICE_MANAGED int EB_external = 0;
    AMREX_GPU_DEVICE_MANAGED int E_external_monopole = 0;
-   AMREX_GPU_DEVICE_MANAGED amrex::Vector<amrex::Real> center_star(3,0.0);
+   AMREX_GPU_DEVICE_MANAGED 
+   amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star(3,0.0);
    AMREX_GPU_DEVICE_MANAGED int verbose = 0;
 
    void ReadParameters() {
       amrex::ParmParse pp("pulsar");
       pp.query("pulsarType",pulsar_type);
       pp.query("omega_star",omega_star);
-      pp.queryarr("center_star",center_star);
+      amrex::Vector<amrex::Real> center_star_v(AMREX_SPACEDIM);
+      pp.queryarr("center_star",center_star_v);
+      std::copy(center_star_v.begin(),center_star_v.end(),center_star.begin());
       pp.query("R_star",R_star);
       pp.query("B_star",B_star);
       pp.query("dR",dR_star);
@@ -34,6 +37,7 @@ namespace PulsarParm
       amrex::Print() << " Pulsar B_star : " << B_star << "\n";
    }
 
+   AMREX_GPU_HOST_DEVICE AMREX_INLINE 
    void PulsarEBField(amrex::Real xp, amrex::Real yp, amrex::Real zp,
                       amrex::Real &Exp, amrex::Real &Eyp, amrex::Real &Ezp,
                       amrex::Real &Bxp, amrex::Real &Byp, amrex::Real &Bzp,
