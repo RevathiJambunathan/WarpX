@@ -15,8 +15,8 @@ namespace PulsarParm
    AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
    AMREX_GPU_DEVICE_MANAGED int EB_external = 0;
    AMREX_GPU_DEVICE_MANAGED int E_external_monopole = 0;
-   AMREX_GPU_DEVICE_MANAGED 
-   amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star(3,0.0);
+   AMREX_GPU_DEVICE_MANAGED
+   amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
    AMREX_GPU_DEVICE_MANAGED int verbose = 0;
 
    void ReadParameters() {
