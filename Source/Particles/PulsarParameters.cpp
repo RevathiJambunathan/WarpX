@@ -58,7 +58,7 @@ namespace PulsarParm
         //}
 
         // Inside star :: uniform B a,d E = - (omega X r) X B
-        if (r<R_star-PulsarParm::dR_star) {
+        if (r<R_star) {
            //amrex::Real Er = -2.0*B_star*omega_star*r*s_theta*s_theta;
            //amrex::Real Etheta = -2.0*B_star*omega_star*r*s_theta*c_theta;
            amrex::Real r_ratio = R_star/r;
@@ -80,7 +80,7 @@ namespace PulsarParm
         }
 
         // On and outside star surface -- dipole B and E with monopole
-        if (r >= R_star - PulsarParm::dR_star) {
+        if (r >= R_star) {
            amrex::Real r_ratio = R_star/r;
            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
            amrex::Real Er = B_star*omega*R_star*r_ratio*r3*(1.0-3.0*c_theta*c_theta);
