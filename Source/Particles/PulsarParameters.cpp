@@ -10,6 +10,7 @@ namespace PulsarParm
    std::string pulsar_type;
 
    AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
+   AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time = -1.0;
    AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
    AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
    AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
@@ -37,6 +38,7 @@ namespace PulsarParm
       pp.query("EB_external",EB_external);
       pp.query("E_external_monopole",E_external_monopole);
       pp.query("damp_E_internal",damp_E_internal);
+      pp.query("ramp_omega_time", ramp_omega_time);
       amrex::Print() << " Pulsar center: " << center_star[0] << " " << center_star[1] << " " << center_star[2] << "\n";
       amrex::Print() << " Pulsar omega: " << omega_star << "\n";
       amrex::Print() << " Pulsar B_star : " << B_star << "\n";
@@ -96,7 +98,6 @@ namespace PulsarParm
         if (r >= R_star ) {
            amrex::Real r_ratio = R_star/r;
            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-           // Taking derivative of phi given in eq 30 of Michel and Li
            amrex::Real Er = B_star*omega*R_star*r_ratio*r3*(1.0-3.0*c_theta*c_theta);
            if (E_external_monopole == 1) {
                 Er += (2.0/3.0)*omega*B_star*R_star*r_ratio*r_ratio;

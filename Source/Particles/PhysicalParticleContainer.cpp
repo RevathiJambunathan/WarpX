@@ -894,10 +894,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     c_phi = (cc_x-xc)/r_cl;
                     s_phi = (cc_y-yc)/r_cl;
                 }
-                amrex::Real omega = PulsarParm::omega_star;
-                if (t < 2.0e-4) {
-                   omega = PulsarParm::omega_star*t/2.0e-4;
-                }
+
+                amrex::Real omega = PulsarParm::Omega(t);
                 amrex::Real ratio = PulsarParm::R_star/cc_rad;
                 amrex::Real r3 = ratio*ratio*ratio;
                 amrex::Real Er_cor =  PulsarParm::B_star
