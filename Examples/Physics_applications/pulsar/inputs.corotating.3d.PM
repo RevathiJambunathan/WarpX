@@ -68,10 +68,10 @@ plasma_e.profile = parse_density_function
 plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_e.num_particles_per_cell_each_dim = 3 3 3
 plasma_e.momentum_distribution_type = parse_momentum_function
+
 ## Inject stationary pairs
 plasma_e.momentum_function_ux(x,y,z) = "0.0"
 plasma_e.momentum_function_uy(x,y,z) = "0.0"
-
 ## uz is always 0 for the injection methods above
 plasma_e.momentum_function_uz(x,y,z) = "0.0"
 plasma_e.do_continuous_injection = 0
