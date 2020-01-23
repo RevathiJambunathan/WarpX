@@ -608,6 +608,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& Ex_mf = WarpX::GetInstance().getEfield(lev,0);
     const MultiFab& Ey_mf = WarpX::GetInstance().getEfield(lev,1);
     const MultiFab& Ez_mf = WarpX::GetInstance().getEfield(lev,2);
+    const MultiFab& rho_mf = WarpX::GetInstance().getRho(lev);
     const Real dt = WarpX::GetInstance().getdt(0);
 //    if (t > 100*dt) {return;}
 #endif
@@ -794,12 +795,14 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         const FArrayBox& Ex_fab = Ex_mf[mfi];
         const FArrayBox& Ey_fab = Ey_mf[mfi];
         const FArrayBox& Ez_fab = Ez_mf[mfi];
+        const FArrayBox& rho_fab = rho_mf[mfi];
         const Dim3 Ex_lo = lbound(mfi.tilebox());
         const Dim3 Ey_lo = lbound(mfi.tilebox());
         const Dim3 Ez_lo = lbound(mfi.tilebox());
         amrex::Array4<const amrex::Real> const& ex_arr = Ex_fab.array();
         amrex::Array4<const amrex::Real> const& ey_arr = Ey_fab.array();
         amrex::Array4<const amrex::Real> const& ez_arr = Ez_fab.array();
+        amrex::Array4<const amrex::Real> const& rho_arr = rho_fab.array();
         const Real q_pm = this->charge; 
         //amrex::Print() << " box " << x_box << "\n";
         //FArrayBox Ey_fab = Ey_mf[mfi];
@@ -916,6 +919,9 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                              *cc_rad*s_theta*s_theta;
                     Real Er_ext = omega*PulsarParm::B_star*PulsarParm::R_star
                                   *(1.0-3.0*c_theta*c_theta);
+                    Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*PulsarParm::R_star;
+                    amrex::Real rho_GJ = 2*8.85e-12*PulsarParm::B_star*omega
+                                         *PulsarParm::R_star*(1.0-3.0*c_theta*c_theta);
                     int ii = Ex_lo.x + iv[0];
                     int jj = Ex_lo.y + iv[1];
                     int kk = Ex_lo.z + iv[2];
@@ -923,27 +929,41 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     Real ey_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii+1,jj,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii+1,jj,kk+1));
                     Real ez_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii+1,jj,kk) + ex_arr(ii+1,jj+1,kk));
                     Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
-                    Real sigma_inj = ((Er_ext - Er_cor));
+                    Real sigma_inj = ((Er_ext + Er_cell - Er_cor));
                     Real max_dens = 5.54e6;
                     Real N_inj = 0.2*std::abs(sigma_inj) * dx[0]*dx[0]* 8.85e-12/(1.609e-19*max_dens*scale_fac);
-                if (t > 0) {
-                   if (N_inj >= 1) {
-                      if (N_inj < num_ppc) {
-                         int part_freq = floor(num_ppc / N_inj);
-                         if (i_part%part_freq!=0) {
-                            p.id() = -1;
-                            continue;
-                         }
-                      }
-                   }
-                   else 
-                   {
-                      p.id() = -1;
-                      continue;
-                   }
-                   if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
-                   if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
-                }
+                    if (t > 0) {
+                       if (N_inj >= 1) {
+                          if (N_inj < num_ppc) {
+                             int part_freq = floor(num_ppc / N_inj);
+                             if (i_part%part_freq!=0) {
+                                p.id() = -1;
+                                continue;
+                             }
+                          }
+                       }
+                       else 
+                       {
+                          p.id() = -1;
+                          continue;
+                       }
+                       //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
+                       //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
+                       if (rho_GJ == 0) {
+                          amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rho gj is zero \n";
+                          p.id() = -1;
+                          return;
+                       }
+                       else {
+                          Real rel_rho_err = std::abs((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
+                          amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
+                          amrex::Print() << " Er_Cell " << Er_cell << " " << " Er_Ext " << Er_ext <<" Er cor " << Er_cor << "\n";
+                          if ( rel_rho_err < 0.1) {
+                             p.id() = -1;
+                             return;
+                          }
+                       }
+                    }
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
