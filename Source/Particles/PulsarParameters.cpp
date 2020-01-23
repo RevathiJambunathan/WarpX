@@ -53,25 +53,22 @@ namespace PulsarParm
         const amrex::Real c_phi = std::cos(phi);
         const amrex::Real s_phi = std::sin(phi);
         amrex::Real omega = omega_star;
-        //if (time < 2.0e-4) {
-        //   omega = omega_star*time/2.0e-4;
-        //}
-        Exp = 0.0; Eyp = 0.0; Ezp = 0.0;
+        // ramping up omega
+        if (time < 2.0e-4) {
+           omega = omega_star*time/2.0e-4;
+        }
 
-        // Inside star :: uniform B a,d E = - (omega X r) X B
         if (r<R_star) {
-           //amrex::Real Er = -2.0*B_star*omega_star*r*s_theta*s_theta;
-           //amrex::Real Etheta = -2.0*B_star*omega_star*r*s_theta*c_theta;
            amrex::Real r_ratio = R_star/r;
            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-           amrex::Real Er = B_star*omega*r3*r*s_theta*s_theta;
-           amrex::Real Etheta = -B_star*omega*r3*r*2.0*s_theta*c_theta;
+           // Michel and Li -- eq 14 and 15 from michel and li
+           amrex::Real Er = B_star*omega*r_ratio*r_ratio*r*s_theta*s_theta;
+           amrex::Real Etheta = -B_star*omega*r_ratio*r_ratio*r*2.0*s_theta*c_theta;
            Exp = Er*s_theta*c_phi + Etheta*c_theta*c_phi;
            Eyp = Er*s_theta*s_phi + Etheta*c_theta*s_phi;
            Ezp = Er*c_theta - Etheta*s_theta;
-           //Bxp = 0.0;
-           //Byp = 0.0;
-           //Bzp = 2*B_star;
+
+           // dipole B field
            amrex::Real Br = 2.0*B_star*r3*c_theta;
            amrex::Real Btheta = B_star*r3*s_theta;
 
@@ -81,9 +78,10 @@ namespace PulsarParm
         }
 
         // On and outside star surface -- dipole B and E with monopole
-        if (r >= R_star - PulsarParm::dR_star) {
+        if (r >= R_star ) {
            amrex::Real r_ratio = R_star/r;
            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
+           // Taking derivative of phi given in eq 30 of Michel and Li
            amrex::Real Er = B_star*omega*R_star*r_ratio*r3*(1.0-3.0*c_theta*c_theta);
            if (E_external_monopole == 1) {
                 Er += (2.0/3.0)*omega*B_star*R_star*r_ratio*r_ratio;
