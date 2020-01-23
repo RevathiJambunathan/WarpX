@@ -906,12 +906,13 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     amrex::Real cc_phi = std::atan2((cc_y-yc),(cc_x-xc));
                     const amrex::Real c_theta = std::cos(cc_theta);
                     const amrex::Real s_theta = std::sin(cc_theta);
-                    const amrex::Real c_phi = std::cos(cc_phi);
-                    const amrex::Real s_phi = std::sin(cc_phi);
-                    amrex::Real omega = PulsarParm::omega_star;
-                    if (t < 2.0e-4) {
-                       omega = PulsarParm::omega_star*t/2.0e-4;
+                    amrex::Real c_phi = 0.;
+                    amrex::Real s_phi = 0.;
+                    if (r_cl > 0) {
+                        c_phi = (cc_x-xc)/r_cl;
+                        s_phi = (cc_y-yc)/r_cl;
                     }
+                    amrex::Real omega = PulsarParm::Omega(t);
                     amrex::Real ratio = PulsarParm::R_star/cc_rad;
                     amrex::Real r3 = ratio*ratio*ratio;
                     amrex::Real Er_cor =  PulsarParm::B_star
