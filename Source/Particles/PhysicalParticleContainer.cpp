@@ -926,9 +926,14 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     Real ey_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii+1,jj,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii+1,jj,kk+1));
                     Real ez_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii+1,jj,kk) + ex_arr(ii+1,jj+1,kk));
                     Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
-                    Real sigma_inj = ((Er_ext + Er_cell - Er_cor));
+                    // analytical surface charge density
+                    Real sigma_inj = PhysConst::ep0*(( Er_ext - Er_cor));
+                    // hard-coded input parameter -- ndenx = max_dens
                     Real max_dens = 5.54e6;
-                    Real N_inj = 0.2*std::abs(sigma_inj) * dx[0]*dx[0]* 8.85e-12/(1.609e-19*max_dens*scale_fac);
+                    // hard-coded fraction of particles injected
+                    amrex::Real fraction = 0.05;
+                    // number of particle pairs injected
+                    Real N_inj = fraction*std::abs(sigma_inj) * dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
                     if (t > 0) {
                        if (N_inj >= 1) {
                           if (N_inj < num_ppc) {
@@ -946,7 +951,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                        }
                        //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
                        //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
-                       if (rho_GJ == 0) {
+                       // if rho is too smal -- we dont inject particles
+                       if (std::abs(rho_GJ) < 1E-25) {
                        //   amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rho gj is zero \n";
                           p.id() = -1;
                           continue;
@@ -955,7 +961,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                           Real rel_rho_err = std::abs((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
                           //amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
                           //amrex::Print() << " Er_Cell " << Er_cell << " " << " Er_Ext " << Er_ext <<" Er cor " << Er_cor << "\n";
-                          if ( rel_rho_err < 0.1) {
+                          if ( rel_rho_err < 0.3) {
                              p.id() = -1;
                              continue;
                           }
