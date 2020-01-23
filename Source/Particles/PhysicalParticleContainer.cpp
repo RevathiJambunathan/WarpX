@@ -533,23 +533,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 
 #ifdef PULSAR
     amrex::Print() << " in add plasma" << PulsarParm::R_star << "\n";
-    // Steps to implement
-    // 1. inside PulsarBound p.id = -1 if not within R_star+dR_star -- done
-    // 2. find sigma of the cell the particle belongs to
-    //    2a. Cell Id of the particle
-    //    2b. Get x,y,z -> r,theta,phi of the cell. if r >R_star-dR and r<R_star+dR
-    //    2c. Compute Er_corotating of the cell
-    //    2d. Access Ex Ey Ez of the cell and convert to Er
-    //    2e. Compute epsilon*(Er_cell - Er_corotating) = sigma 
-    //    2f. sigma could be positive or negative. Introduce
-    //        particles if |sigma|>threshold.
-    //        Ninj = sigma*Area/wt
-    //    2g. We introduce Nc particles every timestep
-    //        Only Ninj are supposed to be injected.
-    //        inject every (ip%(Nc/Ninj)==0) particle
-    //        else p.id = -1
-     
-   
 #endif
 
     // If no part_realbox is provided, initialize particles in the whole domain
@@ -567,7 +550,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     Real scale_fac;
 #if AMREX_SPACEDIM==3
     scale_fac = dx[0]*dx[1]*dx[2]/num_ppc;
-    amrex::Print() << " scale_fac " << scale_fac << "\n";
 #elif AMREX_SPACEDIM==2
     scale_fac = dx[0]*dx[1]/num_ppc;
 #endif
@@ -607,7 +589,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& Ez_mf = WarpX::GetInstance().getEfield(lev,2);
     const MultiFab& rho_mf = WarpX::GetInstance().getRho(lev);
     const Real dt = WarpX::GetInstance().getdt(0);
-//    if (t > 100*dt) {return;}
 #endif
 
 #ifdef WARPX_DIM_RZ
