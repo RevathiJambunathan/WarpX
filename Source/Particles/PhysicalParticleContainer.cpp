@@ -934,7 +934,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 Real ey_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii+1,jj,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii+1,jj,kk+1));
                 Real ez_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii+1,jj,kk) + ex_arr(ii+1,jj+1,kk));
                 Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
-                Real sigma_inj = ((Er_ext + Er_cell - Er_cor));
+                Real sigma_inj = (( Er_cell + Er_ext - Er_cor));
                 Real max_dens = 5.54e6;
                 Real N_inj = 0.2*std::abs(sigma_inj) * dx[0]*dx[0]* 8.85e-12/(1.609e-19*max_dens*scale_fac);
                 if (t > 0) {
@@ -962,7 +962,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                    else {
                       Real rel_rho_err = std::abs((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
                       //amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
-                      //amrex::Print() << " Er_Cell " << Er_cell << " " << " Er_Ext " << Er_ext <<" Er cor " << Er_cor << "\n";
+                      amrex::Print() << " Er_Cell " << Er_cell << " " << " Er_Ext " << Er_ext <<" Er cor " << Er_cor << "\n";
                       if ( rel_rho_err < 0.1) {
                          p.id() = -1;
                          return;
@@ -1952,6 +1952,12 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     // If no particles, do not do anything
     if (np_to_push == 0) return;
 
+    // initializing the field value to the externally applied field before
+    // gathering fields from the grid to the particles.
+    AssignExternalFieldOnParticles(pti, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+                                  m_xp[thread_num], m_yp[thread_num],
+                                  m_zp[thread_num], lev);
+
     // Get cell size on gather_lev
     const std::array<Real,3>& dx = WarpX::CellSize(std::max(gather_lev,0));
 
@@ -2283,7 +2289,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                   Real r = std::sqrt((xp_data[i]-xc)*(xp_data[i]-xc)
                                    + (yp_data[i]-yc)*(yp_data[i]-yc)
                                    + (zp_data[i]-zc)*(zp_data[i]-zc));
-                  if (r<=PulsarParm::R_star - PulsarParm::dR_star) {
+                  if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
                       pp[i].id() = -1;
                   }
             });
