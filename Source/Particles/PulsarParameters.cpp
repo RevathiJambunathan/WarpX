@@ -10,6 +10,7 @@ namespace PulsarParm
    std::string pulsar_type;
 
    AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
+   AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time = -1.0;
    AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
    AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
    AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
@@ -37,6 +38,7 @@ namespace PulsarParm
       pp.query("EB_external",EB_external);
       pp.query("E_external_monopole",E_external_monopole);
       pp.query("damp_E_internal",damp_E_internal);
+      pp.query("ramp_omega_time", ramp_omega_time);
       amrex::Print() << " Pulsar center: " << center_star[0] << " " << center_star[1] << " " << center_star[2] << "\n";
       amrex::Print() << " Pulsar omega: " << omega_star << "\n";
       amrex::Print() << " Pulsar B_star : " << B_star << "\n";
@@ -67,23 +69,21 @@ namespace PulsarParm
         const amrex::Real s_theta = std::sin(theta);
         const amrex::Real c_phi = std::cos(phi);
         const amrex::Real s_phi = std::sin(phi);
-        amrex::Real omega = omega_star;
-        // ramping up omega
-        if (time < 2.0e-4) {
-           omega = omega_star*time/2.0e-4;
-        }
 
+        amrex::Real omega = PulsarParm::Omega(time);
+
+        // Inside star :: uniform B a,d E = - (omega X r) X B
         if (r<R_star) {
+           //amrex::Real Er = -2.0*B_star*omega_star*r*s_theta*s_theta;
+           //amrex::Real Etheta = -2.0*B_star*omega_star*r*s_theta*c_theta;
            amrex::Real r_ratio = R_star/r;
            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-           // Michel and Li -- eq 14 and 15 from michel and li
-           amrex::Real Er = B_star*omega*r_ratio*r_ratio*r*s_theta*s_theta;
-           amrex::Real Etheta = -B_star*omega*r_ratio*r_ratio*r*2.0*s_theta*c_theta;
+           amrex::Real Er = B_star*omega*r3*r*s_theta*s_theta;
+           amrex::Real Etheta = -B_star*omega*r3*r*2.0*s_theta*c_theta;
            Exp = Er*s_theta*c_phi + Etheta*c_theta*c_phi;
            Eyp = Er*s_theta*s_phi + Etheta*c_theta*s_phi;
            Ezp = Er*c_theta - Etheta*s_theta;
 
-           // dipole B field
            amrex::Real Br = 2.0*B_star*r3*c_theta;
            amrex::Real Btheta = B_star*r3*s_theta;
 

@@ -12,6 +12,7 @@ namespace PulsarParm
    extern std::string pulsar_type;
 
    extern AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
+   extern AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time;
    extern AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
    extern AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
    extern AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
@@ -56,6 +57,17 @@ namespace PulsarParm
 
             return r;
         }
+   }
+
+   AMREX_GPU_HOST_DEVICE AMREX_INLINE
+   amrex::Real Omega(const amrex::Real time)
+   {
+        amrex::Real omega = omega_star;
+        if (ramp_omega_time > 0.0 && time < ramp_omega_time) {
+            omega = omega_star * time / ramp_omega_time;
+        }
+
+        return omega;
    }
 
    AMREX_GPU_HOST_DEVICE AMREX_INLINE
