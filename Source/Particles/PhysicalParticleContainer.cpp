@@ -1121,17 +1121,17 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                        //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
                        //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
                        if (rho_GJ == 0) {
-                          amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rho gj is zero \n";
+                       //   amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rho gj is zero \n";
                           p.id() = -1;
-                          return;
+                          continue;
                        }
                        else {
                           Real rel_rho_err = std::abs((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
-                          amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
-                          amrex::Print() << " Er_Cell " << Er_cell << " " << " Er_Ext " << Er_ext <<" Er cor " << Er_cor << "\n";
+                          //amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
+                          //amrex::Print() << " Er_Cell " << Er_cell << " " << " Er_Ext " << Er_ext <<" Er cor " << Er_cor << "\n";
                           if ( rel_rho_err < 0.1) {
                              p.id() = -1;
-                             return;
+                             continue;
                           }
                        }
                     }
