@@ -250,7 +250,6 @@ public:
     const amrex::MultiFab& getcurrent_fp (int lev, int direction) {return *current_fp[lev][direction];}
     const amrex::MultiFab& getEfield_fp  (int lev, int direction) {return *Efield_fp[lev][direction];}
     const amrex::MultiFab& getBfield_fp  (int lev, int direction) {return *Bfield_fp[lev][direction];}
-    const amrex::MultiFab& getrho_fp (int lev) {return *rho_fp[lev];}
     const amrex::MultiFab& getphi_fp (int lev) {return *phi_fp[lev];}
     const amrex::MultiFab& getF_fp (int lev) {return *F_fp[lev];}
     bool DoPML () const {return do_pml;}
