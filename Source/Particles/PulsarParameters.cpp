@@ -52,5 +52,4 @@ namespace PulsarParm
         amrex::Print() << " pulsar rhoGJ scaling " << rhoGJ_scale << "\n";
         amrex::Print() << " EB_external : " << EB_external << "\n";
     }
-
 }
