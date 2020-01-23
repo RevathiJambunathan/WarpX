@@ -257,6 +257,12 @@ WarpX::Evolve (int numsteps)
         m_particle_boundary_buffer->gatherParticles(*mypc, amrex::GetVecOfConstPtrs(m_distance_to_eb));
 
 #ifdef PULSAR
+        if (!rho_fp[0]) {
+           amrex::Print() << " no rho -- compute rho! \n";
+        }
+        else {
+           amrex::Print() << " rho is computed \n";
+        }
         mypc->PulsarParticleRemoval(); 
         mypc->PulsarParticleInjection();
 #endif
