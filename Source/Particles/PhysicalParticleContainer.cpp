@@ -2097,6 +2097,12 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     // If no particles, do not do anything
     if (np_to_push == 0) return;
 
+    // initializing the field value to the externally applied field before
+    // gathering fields from the grid to the particles.
+    AssignExternalFieldOnParticles(pti, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+                                  m_xp[thread_num], m_yp[thread_num],
+                                  m_zp[thread_num], lev);
+
     // Get cell size on gather_lev
     const std::array<Real,3>& dx = WarpX::CellSize(std::max(gather_lev,0));
 
@@ -2469,7 +2475,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                   Real r = std::sqrt((xp_data[i]-xc)*(xp_data[i]-xc)
                                    + (yp_data[i]-yc)*(yp_data[i]-yc)
                                    + (zp_data[i]-zc)*(zp_data[i]-zc));
-                  if (r<=PulsarParm::R_star - PulsarParm::dR_star) {
+                  if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
                       pp[i].id() = -1;
                   }
             });
