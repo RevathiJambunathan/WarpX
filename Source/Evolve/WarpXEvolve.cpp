@@ -359,6 +359,12 @@ WarpX::Evolve (int numsteps)
 #endif
 
 #ifdef PULSAR
+        if (!rho_fp[0]) {
+           amrex::Print() << " no rho -- compute rho! \n";
+        }
+        else {
+           amrex::Print() << " rho is computed \n";
+        }
         mypc->PulsarParticleRemoval(); 
         mypc->PulsarParticleInjection();
         mypc->Redistribute();
