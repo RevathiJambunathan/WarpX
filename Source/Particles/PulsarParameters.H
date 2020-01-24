@@ -16,6 +16,7 @@ namespace PulsarParm
    extern AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
    extern AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
    extern AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
+   extern AMREX_GPU_DEVICE_MANAGED amrex::Real damping_scale;
    extern AMREX_GPU_DEVICE_MANAGED int EB_external;
    extern AMREX_GPU_DEVICE_MANAGED int E_external_monopole;
    extern AMREX_GPU_DEVICE_MANAGED
@@ -74,13 +75,14 @@ namespace PulsarParm
    void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield)
    {
        const amrex::Real r = Spherical::r(i, j, k, geom);
-       const amrex::Real R_inner = PulsarParm::R_star - PulsarParm::dR_star;
 
-       if (r < R_inner) {
-           // Damping function: Fd = 0.5*(tanh(7 * (r/R_inner-0.5))+1)
+       if (r < R_star) {
+           // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
+           // for damping_scale >= 10 or so:
            // Fd(0) ~ 0
-           // Fd(R_inner) ~ 1
-           const amrex::Real Fd = 0.5*(std::tanh(7 * (r/R_inner-0.5))+1);
+           // Fd(R_star) ~ 1
+
+           const amrex::Real Fd = std::tanh(damping_scale * (r / R_star - 1)) + 1;
            Efield(i, j, k) = Efield(i, j, k) * Fd;
        }
    }
