@@ -909,19 +909,18 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     const amrex::Real c_phi = std::cos(cc_phi);
                     const amrex::Real s_phi = std::sin(cc_phi);
                     amrex::Real omega = PulsarParm::omega_star;
-                    //if (t < 2.0e-4) {
-                    //   omega = PulsarParm::omega_star*t/2.0e-4;
-                    //}
+                    if (t < 2.0e-4) {
+                       omega = PulsarParm::omega_star*t/2.0e-4;
+                    }
                     amrex::Real ratio = PulsarParm::R_star/cc_rad;
                     amrex::Real r3 = ratio*ratio*ratio;
                     amrex::Real Er_cor =  PulsarParm::B_star
                                              *omega
                                              *cc_rad*s_theta*s_theta;
-                    Real Er_ext = omega*PulsarParm::B_star*PulsarParm::R_star
-                                  *(1.0-3.0*c_theta*c_theta);
-                    Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*PulsarParm::R_star;
-                    amrex::Real rho_GJ = 2*8.85e-12*PulsarParm::B_star*omega
-                                         *PulsarParm::R_star*(1.0-3.0*c_theta*c_theta);
+                    Real Er_ext = omega*PulsarParm::B_star*cc_rad*(1.0-3.0*c_theta*c_theta);
+                    Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
+                    amrex::Real rho_GJ = 2.*PhysConst::ep0*PulsarParm::B_star*omega*
+                                         cc_rad*(1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
                     int ii = Ex_lo.x + iv[0];
                     int jj = Ex_lo.y + iv[1];
                     int kk = Ex_lo.z + iv[2];
@@ -930,13 +929,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     Real ez_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii+1,jj,kk) + ex_arr(ii+1,jj+1,kk));
                     Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
                     // analytical surface charge density
-                    Real sigma_inj = PhysConst::ep0*(( Er_ext - Er_cor));
-                    // hard-coded input parameter -- ndenx = max_dens
-                    Real max_dens = 5.54e6;
-                    // hard-coded fraction of particles injected
-                    amrex::Real fraction = 0.05;
+                    Real sigma_inj = (( Er_ext - Er_cor));
+                    Real max_dens = PulsarParm::max_ndens;
+                    amrex::Real fraction = PulsarParm::Ninj_fraction;
                     // number of particle pairs injected
-                    Real N_inj = fraction*std::abs(sigma_inj) * dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
+                    Real N_inj = fraction*std::abs(sigma_inj) *PhysConst::ep0* dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
                     if (t > 0) {
                        if (N_inj >= 1) {
                           if (N_inj < num_ppc) {
@@ -955,18 +952,18 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                        //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
                        //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
                        // if rho is too smal -- we dont inject particles
-                       if (std::abs(rho_GJ) < 1E-25) {
-                       //   amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rho gj is zero \n";
+                       if (std::abs(rho_GJ) < 1E-35) {
                           p.id() = -1;
                           continue;
                        }
                        else {
+                          if (std::abs(rho_arr(ii,jj,kk)) > 0) {
                           Real rel_rho_err = std::abs((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
                           //amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
-                          //amrex::Print() << " Er_Cell " << Er_cell << " " << " Er_Ext " << Er_ext <<" Er cor " << Er_cor << "\n";
-                          if ( rel_rho_err < 0.3) {
+                          if ( rel_rho_err < 0.05) {
                              p.id() = -1;
                              continue;
+                          }
                           }
                        }
                     }
