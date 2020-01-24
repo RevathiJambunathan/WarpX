@@ -2443,7 +2443,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
 
 #ifdef PULSAR
 void PhysicalParticleContainer::PulsarParticleInjection() {
-    
+
      AddPlasma( 0 );
 }
 
@@ -2471,7 +2471,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
             ParticleType* pp = pti.GetArrayOfStructs()().data();
             amrex::ParallelFor(pti.numParticles(),
                   [=] AMREX_GPU_DEVICE (long i) {
-                    
+
                   Real r = std::sqrt((xp_data[i]-xc)*(xp_data[i]-xc)
                                    + (yp_data[i]-yc)*(yp_data[i]-yc)
                                    + (zp_data[i]-zc)*(zp_data[i]-zc));

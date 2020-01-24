@@ -162,7 +162,7 @@ struct InjectorPosition
     //    return (r>=R_star and r<=(R_star+dR_star));
         return (r<=R_star and r>=(R_star-dR_star));
     }
-#endif    
+#endif
 
 private:
     enum struct Type { random, regular };
