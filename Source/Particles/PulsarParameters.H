@@ -17,6 +17,9 @@ namespace PulsarParm
    extern AMREX_GPU_DEVICE_MANAGED int E_external_monopole;
    extern AMREX_GPU_DEVICE_MANAGED
           amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
+   extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
+   extern AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
+   extern AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
 
    extern AMREX_GPU_DEVICE_MANAGED int verbose;
 

@@ -46,7 +46,7 @@ my_constants.omega = 6245.676
 my_constants.c = 299792458.
 my_constants.B_star = 8.0323e-6                  # magnetic field of NS (T)
 my_constants.dR = 1.4e3
-my_constants.to = -2e-4
+my_constants.to = 2e-4
 interpolation.nox = 3
 interpolation.noy = 3
 interpolation.noz = 3
@@ -70,14 +70,9 @@ plasma_e.charge = -q_e
 plasma_e.mass = m_e
 plasma_e.injection_style = "NUniformPerCell"
 plasma_e.profile = parse_density_function
-#plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<(r_star+dR)) )*dens"
 plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_e.num_particles_per_cell_each_dim = 3 3 3
 plasma_e.momentum_distribution_type = parse_momentum_function
-#plasma_e.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(-( (t<to)*(t/to)*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*(t/to)*omega + (t>=to)*omega)  *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-#plasma_e.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*( ( (t<to)*(t/to)*omega + (t>=to)*omega ) *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*t/to*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-#plasma_e.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-#plasma_e.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 plasma_e.momentum_function_uz(x,y,z) = "0.0"
 plasma_e.momentum_function_ux(x,y,z) = "0.0"
 plasma_e.momentum_function_uy(x,y,z) = "0.0"
@@ -92,12 +87,6 @@ plasma_p.profile = parse_density_function
 plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_p.num_particles_per_cell_each_dim = 3 3 3
 plasma_p.momentum_distribution_type = parse_momentum_function
-#plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-#plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-#plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(-( (t<to)*(t/to)*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*(t/to)*omega + (t>=to)*omega)  *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-#plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*( ( (t<to)*(t/to)*omega + (t>=to)*omega ) *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*t/to*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-#plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-#plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 plasma_p.momentum_function_uz(x,y,z) = "0.0"
 plasma_p.momentum_function_ux(x,y,z) = "0.0"
 plasma_p.momentum_function_uy(x,y,z) = "0.0"
@@ -117,3 +106,6 @@ pulsar.dR = 1.4e3
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 1                  # [0/1]
+pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing density
+pulsar.Ninj_fraction = 0.5            # fraction of sigma injected
+pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ

@@ -18,6 +18,9 @@ namespace PulsarParm
    AMREX_GPU_DEVICE_MANAGED
    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
    AMREX_GPU_DEVICE_MANAGED int verbose = 0;
+   AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
+   AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
+   AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
 
    void ReadParameters() {
       amrex::ParmParse pp("pulsar");
@@ -35,6 +38,12 @@ namespace PulsarParm
       amrex::Print() << " Pulsar center: " << center_star[0] << " " << center_star[1] << " " << center_star[2] << "\n";
       amrex::Print() << " Pulsar omega: " << omega_star << "\n";
       amrex::Print() << " Pulsar B_star : " << B_star << "\n";
+      pp.get("max_ndens", max_ndens);
+      pp.get("Ninj_fraction",Ninj_fraction);
+      pp.get("rhoGJ_scale",rhoGJ_scale);
+      amrex::Print() << " pulsar max ndens " << max_ndens << "\n";
+      amrex::Print() << " pulsar ninj fraction " << Ninj_fraction << "\n";
+      amrex::Print() << " pulsar rhoGJ scaling " << rhoGJ_scale << "\n";
    }
 
    AMREX_GPU_HOST_DEVICE AMREX_INLINE 
