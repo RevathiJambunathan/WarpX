@@ -906,7 +906,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
                 // rho_GJ is known
                 amrex::Real rho_GJ = 2*PhysConst::ep0*PulsarParm::B_star*omega*
-                                     cc_rad*(1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
+                                    (1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
                 /// accessign efield
                 int ii = Ex_lo.x + iv[0];
                 int jj = Ex_lo.y + iv[1];
@@ -945,13 +945,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                       return;
                    }
                    else {
-                      if (std::abs(rho_arr(ii,jj,kk)) > 0) {
                       Real rel_rho_err = std::abs((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
                       //amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
                       if ( rel_rho_err < 0.05) {
                          p.id() = -1;
                          return;
-                      }
                       }
                    }
                 }
