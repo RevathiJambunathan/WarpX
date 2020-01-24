@@ -902,8 +902,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                              *cc_rad*s_theta*s_theta;
                     Real Er_ext = omega*PulsarParm::B_star*cc_rad*(1.0-3.0*c_theta*c_theta);
                     Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
-                    amrex::Real rho_GJ = 2.*PhysConst::ep0*PulsarParm::B_star*omega*
-                                         cc_rad*(1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
+                    amrex::Real rho_GJ = 2*PhysConst::ep0*PulsarParm::B_star*omega*
+                                        (1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
                     int ii = Ex_lo.x + iv[0];
                     int jj = Ex_lo.y + iv[1];
                     int kk = Ex_lo.z + iv[2];
