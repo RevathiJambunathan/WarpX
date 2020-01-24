@@ -75,16 +75,16 @@ plasma_e.num_particles_per_cell_each_dim = 3 3 3
 plasma_e.momentum_distribution_type = parse_momentum_function
 
 ## Inject pairs rotating at omega(t) x r velocity
-plasma_e.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(-( (t<to)*(t/to)*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*(t/to)*omega + (t>=to)*omega)  *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-plasma_e.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*( ( (t<to)*(t/to)*omega + (t>=to)*omega ) *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*t/to*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_e.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(-( (t<to)*(t/to)*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*(t/to)*omega + (t>=to)*omega)  *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_e.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*( ( (t<to)*(t/to)*omega + (t>=to)*omega ) *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*t/to*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 
 ## Inject pairs rotating at omega x r velocity
 #plasma_e.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 #plasma_e.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 
 ## Inject stationary pairs
-#plasma_e.momentum_function_ux(x,y,z) = "0.0"
-#plasma_e.momentum_function_uy(x,y,z) = "0.0"
+plasma_e.momentum_function_ux(x,y,z) = "0.0"
+plasma_e.momentum_function_uy(x,y,z) = "0.0"
 
 ## uz is always 0 for the injection methods above
 plasma_e.momentum_function_uz(x,y,z) = "0.0"
@@ -107,16 +107,16 @@ plasma_p.num_particles_per_cell_each_dim = 3 3 3
 plasma_p.momentum_distribution_type = parse_momentum_function
 
 ## Inject pairs rotating at omega(t) x r velocity
-plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(-( (t<to)*(t/to)*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*(t/to)*omega + (t>=to)*omega)  *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
-plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*( ( (t<to)*(t/to)*omega + (t>=to)*omega ) *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*t/to*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*(-( (t<to)*(t/to)*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*(t/to)*omega + (t>=to)*omega)  *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
+#plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)*( ( (t<to)*(t/to)*omega + (t>=to)*omega ) *(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-( ( (t<to)*t/to*omega + (t>=to)*omega )*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 
 ## Inject pairs rotating at omega x r velocity
 #plasma_p.momentum_function_ux(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(-omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (y-yc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 #plasma_p.momentum_function_uy(x,y,z) = "( (( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star)*(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/((1.0-(omega*(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5))/c)^2)^(0.5)) * (x-xc)/(((x-xc)*(x-xc) + (y-yc)*(y-yc))^(0.5)))"
 
 ## Inject stationary pairs
-#plasma_p.momentum_function_ux(x,y,z) = "0.0"
-#plasma_p.momentum_function_uy(x,y,z) = "0.0"
+plasma_p.momentum_function_ux(x,y,z) = "0.0"
+plasma_p.momentum_function_uy(x,y,z) = "0.0"
 
 ## uz is always 0 for the injection methods above
 plasma_p.momentum_function_uz(x,y,z) = "0.0"
