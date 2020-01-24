@@ -149,3 +149,4 @@ pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing
 pulsar.Ninj_fraction = 0.5            # fraction of sigma injected
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
 pulsar.damp_E_internal = 1             # Damp internal electric field
+pulsar.damping_scale = 10.0            # Damping scale factor for internal electric field
