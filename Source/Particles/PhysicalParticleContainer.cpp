@@ -767,9 +767,9 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         int loc_ionization_initial_level = ionization_initial_level;
 #ifdef PULSAR
         // Fab
-	const int Ex_nghost = Ex_mf.nGrow();
-	const int Ey_nghost = Ey_mf.nGrow();
-	const int Ez_nghost = Ez_mf.nGrow();
+        const int Ex_nghost = Ex_mf.nGrow();
+        const int Ey_nghost = Ey_mf.nGrow();
+        const int Ez_nghost = Ez_mf.nGrow();
         const FArrayBox& Ex_fab = Ex_mf[mfi];
         const FArrayBox& Ey_fab = Ey_mf[mfi];
         const FArrayBox& Ez_fab = Ez_mf[mfi];
