@@ -781,14 +781,14 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         amrex::Array4<const amrex::Real> const& ey_arr = Ey_fab.array();
         amrex::Array4<const amrex::Real> const& ez_arr = Ez_fab.array();
         amrex::Array4<const amrex::Real> const& rho_arr = rho_fab.array();
-        const Real q_pm = this->charge; 
+        const Real q_pm = this->charge;
         //amrex::Print() << " box " << x_box << "\n";
         //FArrayBox Ey_fab = Ey_mf[mfi];
         //Box Ey_box = Ey_fab.validbox();
         //FArrayBox Ez_fab = Ez_mf[mfi];
         //Box Ez_box = Ez_fab.validbox();
-        //amrex::Print() << " Ey box " << Ey_box << "\n"; 
-        //amrex::Print() << " Ez box " << Ez_box << "\n"; 
+        //amrex::Print() << " Ey box " << Ey_box << "\n";
+        //amrex::Print() << " Ez box " << Ez_box << "\n";
 #endif
 
         // Loop over all new particles and inject them (creates too many
@@ -874,10 +874,10 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     amrex::Real cc_y = overlap_corner[1] + iv[1]*dx[1] + 0.5*dx[1] ;
                     amrex::Real cc_z = overlap_corner[2] + iv[2]*dx[2] + 0.5*dx[2] ;
                     // get spherical r, theta, phi
-                    amrex::Real cc_rad = std::sqrt(  (cc_x-xc)*(cc_x-xc) 
+                    amrex::Real cc_rad = std::sqrt(  (cc_x-xc)*(cc_x-xc)
                                                    + (cc_y-yc)*(cc_y-yc)
                                                    + (cc_z-zc)*(cc_z-zc));
-                    amrex::Real cc_theta = 0; 
+                    amrex::Real cc_theta = 0;
                     if (cc_rad > 0 ) {
                         cc_theta = std::acos((cc_z-xc)/cc_rad);
                     }
@@ -923,7 +923,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                              }
                           }
                        }
-                       else 
+                       else
                        {
                           p.id() = -1;
                           continue;
@@ -2226,7 +2226,7 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 
 #ifdef PULSAR
 void PhysicalParticleContainer::PulsarParticleInjection() {
-    
+
      AddPlasma( 0 );
 }
 
@@ -2254,7 +2254,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
             ParticleType* pp = pti.GetArrayOfStructs()().data();
             amrex::ParallelFor(pti.numParticles(),
                   [=] AMREX_GPU_DEVICE (long i) {
-                    
+
                   Real r = std::sqrt((xp_data[i]-xc)*(xp_data[i]-xc)
                                    + (yp_data[i]-yc)*(yp_data[i]-yc)
                                    + (zp_data[i]-zc)*(zp_data[i]-zc));
