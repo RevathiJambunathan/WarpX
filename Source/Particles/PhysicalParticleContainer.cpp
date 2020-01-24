@@ -905,9 +905,10 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                          *cc_rad*s_theta*s_theta;
                 // Er_external is known
                 Real Er_ext = omega*PulsarParm::B_star*cc_rad*(1.0-3.0*c_theta*c_theta);
+                Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
                 // rho_GJ is known
-                amrex::Real rho_GJ = 2*PhysConst::ep0*PulsarParm::B_star*omega
-                                     *cc_rad*(1.0-3.0*c_theta*c_theta)*1e-5;
+                amrex::Real rho_GJ = 2*PhysConst::ep0*PulsarParm::B_star*omega*
+                                     cc_rad*(1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
                 /// accessign efield
                 int ii = Ex_lo.x + iv[0];
                 int jj = Ex_lo.y + iv[1];
@@ -918,13 +919,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
                
                 // analytical surface charge density
-                Real sigma_inj = PhysConst::ep0*(( Er_ext - Er_cor));
-                // hard-coded input parameter -- ndenx = max_dens
-                Real max_dens = 5.54e6;
-                // hard-coded fraction of particles injected
-                amrex::Real fraction = 0.05;
+                Real sigma_inj = (( Er_ext - Er_cor));
+                Real max_dens = PulsarParm::max_ndens;
+                amrex::Real fraction = PulsarParm::Ninj_fraction;
                 // number of particle pairs injected
-                Real N_inj = fraction*std::abs(sigma_inj) * dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
+                Real N_inj = fraction*std::abs(sigma_inj) *PhysConst::ep0* dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
                 if (t > 0) {
                    if (N_inj >= 1) {
                       if (N_inj < num_ppc) {
@@ -943,16 +942,18 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                    //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
                    //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
                    // if rho is too smal -- we dont inject particles
-                   if (std::abs(rho_GJ) < 1E-25) {
+                   if (std::abs(rho_GJ) < 1E-35) {
                       p.id() = -1;
                       return;
                    }
                    else {
+                      if (std::abs(rho_arr(ii,jj,kk)) > 0) {
                       Real rel_rho_err = std::abs((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
                       //amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
-                      if ( rel_rho_err < 0.3) {
+                      if ( rel_rho_err < 0.05) {
                          p.id() = -1;
                          return;
+                      }
                       }
                    }
                 }
