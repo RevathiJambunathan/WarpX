@@ -255,7 +255,7 @@ WarpX::Evolve (int numsteps)
         else {
            amrex::Print() << " rho is computed \n";
         }
-        mypc->PulsarParticleRemoval(); 
+        mypc->PulsarParticleRemoval();
         mypc->PulsarParticleInjection();
 #endif
 
