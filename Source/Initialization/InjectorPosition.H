@@ -141,7 +141,7 @@ struct InjectorPosition
     //    return (r>=R_star and r<=(R_star+dR_star));
         return (r<=R_star and r>=(R_star-dR_star));
     }
-#endif    
+#endif
 
     // bool: whether the region defined by lo and hi overaps with the plasma region
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
