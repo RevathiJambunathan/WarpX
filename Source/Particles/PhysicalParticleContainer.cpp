@@ -1049,9 +1049,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 
 #ifdef PULSAR
         if (PulsarParm::EB_external == 1) {
-           Real* const AMREX_RESTRICT xp_data = xp.dataPtr();
-           Real* const AMREX_RESTRICT yp_data = yp.dataPtr();
-           Real* const AMREX_RESTRICT zp_data = zp.dataPtr();
+           const auto GetPosition = GetParticlePosition(pti);
            Real* const AMREX_RESTRICT Exp_data = Exp.dataPtr();
            Real* const AMREX_RESTRICT Eyp_data = Eyp.dataPtr();
            Real* const AMREX_RESTRICT Ezp_data = Ezp.dataPtr();
@@ -1061,10 +1059,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
            Real time = warpx.gett_new(lev);
            amrex::ParallelFor(pti.numParticles(),
                  [=] AMREX_GPU_DEVICE (long i) {
-                 // spherical r, theta, phi, and cylidrical r
-                 PulsarParm::PulsarEBField(xp_data[i],yp_data[i],zp_data[i],
-                               Exp_data[i],Eyp_data[i],Ezp_data[i],
-                               Bxp_data[i],Byp_data[i],Bzp_data[i],time);
+                     ParticleReal x, y, z;
+                     GetPosition(i, x, y, z);
+                     PulsarParm::PulsarEBField(x, y, z,
+                                   Exp_data[i],Eyp_data[i],Ezp_data[i],
+                                   Bxp_data[i],Byp_data[i],Bzp_data[i],time);
            });
         }
 #endif
@@ -2259,23 +2258,21 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
 #endif
         for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
         {
-            pti.GetPosition(m_xp[thread_num], m_yp[thread_num], m_zp[thread_num]);
-            Real* const AMREX_RESTRICT xp_data = m_xp[thread_num].dataPtr();
-            Real* const AMREX_RESTRICT yp_data = m_yp[thread_num].dataPtr();
-            Real* const AMREX_RESTRICT zp_data = m_zp[thread_num].dataPtr();
+            const auto GetPosition = GetParticlePosition(pti);
             Real xc = PulsarParm::center_star[0];
             Real yc = PulsarParm::center_star[1];
             Real zc = PulsarParm::center_star[2];
             ParticleType* pp = pti.GetArrayOfStructs()().data();
             amrex::ParallelFor(pti.numParticles(),
                   [=] AMREX_GPU_DEVICE (long i) {
-
-                  Real r = std::sqrt((xp_data[i]-xc)*(xp_data[i]-xc)
-                                   + (yp_data[i]-yc)*(yp_data[i]-yc)
-                                   + (zp_data[i]-zc)*(zp_data[i]-zc));
-                  if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
-                      pp[i].id() = -1;
-                  }
+                      ParticleReal x, y, z;
+                      GetPosition(i, x, y, z);
+                      Real r = std::sqrt((x-xc)*(x-xc)
+                                       + (y-yc)*(y-yc)
+                                       + (z-zc)*(z-zc));
+                      if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
+                          pp[i].id() = -1;
+                      }
             });
         }
    }
