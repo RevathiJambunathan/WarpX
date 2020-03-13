@@ -51,4 +51,5 @@ namespace PulsarParm
       amrex::Print() << " pulsar ninj fraction " << Ninj_fraction << "\n";
       amrex::Print() << " pulsar rhoGJ scaling " << rhoGJ_scale << "\n";
    }
+
 }
