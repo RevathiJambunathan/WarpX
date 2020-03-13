@@ -25,6 +25,7 @@
     #include "Particles/PulsarParameters.H"
 #endif
 
+
 using namespace amrex;
 
 void
