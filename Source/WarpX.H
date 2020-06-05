@@ -212,7 +212,7 @@ public:
         };
     }
 
-#ifdef WARPX_MAG_LLG    
+#ifdef WARPX_MAG_LLG
     std::array<const amrex::MultiFab* const, 3>
     get_array_Mfield_aux  (const int lev) const {
         return {
@@ -221,7 +221,7 @@ public:
             Mfield_aux[lev][2].get()
         };
     }
-#endif 
+#endif
 
     amrex::MultiFab * get_pointer_Efield_aux  (int lev, int direction) const { return Efield_aux[lev][direction].get(); }
     amrex::MultiFab * get_pointer_Bfield_aux  (int lev, int direction) const { return Bfield_aux[lev][direction].get(); }
