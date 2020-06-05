@@ -971,7 +971,7 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
 #ifdef WARPX_MAG_LLG
             Mfield_aux[lev][idir].reset(new MultiFab(*Mfield_fp[lev][idir], amrex::make_alias, 0, 3     ));
 #endif
-    }
+        }
     }
     else
     {
