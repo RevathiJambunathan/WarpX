@@ -710,7 +710,7 @@ WarpX::ClearLevel (int lev)
         Bfield_aux[lev][i].reset();
 
 #ifdef WARPX_MAG_LLG 
-	Mfield_aux[lev][i].reset();
+    Mfield_aux[lev][i].reset();
 #endif
 
         current_fp[lev][i].reset();
@@ -970,9 +970,9 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
             Efield_aux[lev][idir].reset(new MultiFab(*Efield_fp[lev][idir], amrex::make_alias, 0, ncomps));
             Bfield_aux[lev][idir].reset(new MultiFab(*Bfield_fp[lev][idir], amrex::make_alias, 0, ncomps));
 #ifdef WARPX_MAG_LLG    
-	    Mfield_aux[lev][idir].reset(new MultiFab(*Mfield_fp[lev][idir], amrex::make_alias, 0, 3     ));
+        Mfield_aux[lev][idir].reset(new MultiFab(*Mfield_fp[lev][idir], amrex::make_alias, 0, 3     ));
 #endif 
-	}
+    }
     }
     else
     {
@@ -1011,7 +1011,7 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
         Efield_cp[lev][2].reset( new MultiFab(amrex::convert(cba,Ez_nodal_flag),dm,ncomps,ngE));
 
 #ifdef WARPX_MAG_LLG
-	// Create the MultiFabs for M
+    // Create the MultiFabs for M
         Mfield_cp[lev][0].reset( new MultiFab(amrex::convert(cba,Mx_nodal_flag),dm,3     ,ngE));
         Mfield_cp[lev][1].reset( new MultiFab(amrex::convert(cba,My_nodal_flag),dm,3     ,ngE));
         Mfield_cp[lev][2].reset( new MultiFab(amrex::convert(cba,Mz_nodal_flag),dm,3     ,ngE));
