@@ -163,9 +163,9 @@ WarpX::InitFromCheckpoint ()
             Efield_fp[lev][i]->setVal(0.0);
             Bfield_fp[lev][i]->setVal(0.0);
 #ifdef WARPX_MAG_LLG
-        Mfield_fp[lev][i]->setVal(0.0);
+            Mfield_fp[lev][i]->setVal(0.0);
 #endif
-    }
+        }
 
         if (lev > 0) {
             for (int i = 0; i < 3; ++i) {
@@ -180,7 +180,7 @@ WarpX::InitFromCheckpoint ()
 #ifdef WARPX_MAG_LLG
                 Mfield_cp[lev][i]->setVal(0.0);
 #endif
-        }
+            }
         }
 
         VisMF::Read(*Efield_fp[lev][0],

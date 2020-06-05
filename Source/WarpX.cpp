@@ -708,9 +708,8 @@ WarpX::ClearLevel (int lev)
     for (int i = 0; i < 3; ++i) {
         Efield_aux[lev][i].reset();
         Bfield_aux[lev][i].reset();
-
 #ifdef WARPX_MAG_LLG
-    Mfield_aux[lev][i].reset();
+        Mfield_aux[lev][i].reset();
 #endif
 
         current_fp[lev][i].reset();
@@ -970,7 +969,7 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
             Efield_aux[lev][idir].reset(new MultiFab(*Efield_fp[lev][idir], amrex::make_alias, 0, ncomps));
             Bfield_aux[lev][idir].reset(new MultiFab(*Bfield_fp[lev][idir], amrex::make_alias, 0, ncomps));
 #ifdef WARPX_MAG_LLG
-        Mfield_aux[lev][idir].reset(new MultiFab(*Mfield_fp[lev][idir], amrex::make_alias, 0, 3     ));
+            Mfield_aux[lev][idir].reset(new MultiFab(*Mfield_fp[lev][idir], amrex::make_alias, 0, 3     ));
 #endif
     }
     }
