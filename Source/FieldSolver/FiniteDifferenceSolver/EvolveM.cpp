@@ -39,9 +39,9 @@ void FiniteDifferenceSolver::EvolveM (
     } */
 
     if (m_fdtd_algo == MaxwellSolverAlgo::Yee) {
-        
+
         EvolveMCartesian <CartesianYeeAlgorithm> (Mfield, Bfield, dt);
-        
+
     }
     else {
        amrex::Abort("Only yee algorithm is compatible for M updates.");
