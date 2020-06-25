@@ -2,6 +2,9 @@
 #define WARPX_PARTICLES_GATHER_GETEXTERNALFIELDS_H_
 
 #include "Particles/Pusher/GetAndSetPosition.H"
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
 
 #include "Particles/WarpXParticleContainer_fwd.H"
 
