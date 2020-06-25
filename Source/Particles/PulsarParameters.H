@@ -63,11 +63,7 @@ namespace PulsarParm
          const amrex::Real s_theta = std::sin(theta);
          const amrex::Real c_phi = std::cos(phi);
          const amrex::Real s_phi = std::sin(phi);
-         amrex::Real omega = omega_star;
-         // ramping up omega
-         if (time < ramp_omega_time) {
-            omega = omega_star*time/ramp_omega_time;
-         }
+         amrex::Real omega = Omega(time);
 
          if (r<R_star) {
             amrex::Real r_ratio = R_star/r;
