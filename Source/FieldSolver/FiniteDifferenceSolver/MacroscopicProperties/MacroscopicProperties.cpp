@@ -104,7 +104,7 @@ MacroscopicProperties::InitializeMacroMultiFabUsingParser (
     for ( MFIter mfi(*macro_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
 
         // Initialize ghost cells in addition to valid cells by calling nGrow()
-        const Box& tb = mfi.growntilebox(iv, macro_mf->nGrow() );
+        const Box& tb = mfi.tilebox(iv, macro_mf->nGrowVect() );
 
         auto const& macro_fab =  macro_mf->array(mfi);
 
