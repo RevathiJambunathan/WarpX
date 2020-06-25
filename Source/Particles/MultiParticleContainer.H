@@ -29,6 +29,7 @@
 #   include "Particles/ElementaryProcess/QEDInternals/BreitWheelerEngineWrapper.H"
 #   include "Particles/ElementaryProcess/QEDInternals/QuantumSyncEngineWrapper.H"
 #endif
+
 #ifdef PULSAR
     #include "Particles/PulsarParameters.H"
 #endif

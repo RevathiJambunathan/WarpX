@@ -60,31 +60,6 @@ namespace PulsarParm
         }
    }
 
-   namespace Spherical
-   {
-        AMREX_GPU_HOST_DEVICE AMREX_INLINE
-        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom)
-        {
-            const auto domain_box = geom.Domain();
-            const auto domain_ilo = amrex::lbound(domain_box);
-            const auto domain_xlo = geom.ProbLo();
-            const auto domain_xhi = geom.ProbHi();
-            const auto domain_dx  = geom.CellSize();
-
-            const amrex::Real x = domain_xlo[0] + (i - domain_ilo.x + 0.5) * domain_dx[0];
-            const amrex::Real y = domain_xlo[1] + (j - domain_ilo.y + 0.5) * domain_dx[1];
-            const amrex::Real z = domain_xlo[2] + (k - domain_ilo.z + 0.5) * domain_dx[2];
-
-            const amrex::Real xc = 0.5 * (domain_xlo[0] + domain_xhi[0]);
-            const amrex::Real yc = 0.5 * (domain_xlo[1] + domain_xhi[1]);
-            const amrex::Real zc = 0.5 * (domain_xlo[2] + domain_xhi[2]);
-
-            const amrex::Real r = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
-
-            return r;
-        }
-   }
-
    AMREX_GPU_HOST_DEVICE AMREX_INLINE
    amrex::Real Omega(const amrex::Real time)
    {
