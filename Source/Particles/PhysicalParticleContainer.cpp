@@ -740,7 +740,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& Ex_mf = WarpX::GetInstance().getEfield(lev,0);
     const MultiFab& Ey_mf = WarpX::GetInstance().getEfield(lev,1);
     const MultiFab& Ez_mf = WarpX::GetInstance().getEfield(lev,2);
-    const MultiFab& rho_mf = WarpX::GetInstance().getRho(lev);
+    //const MultiFab& rho_mf = WarpX::GetInstance().getRho(lev);
+    const MultiFab& rho_mf = WarpX::GetInstance().getrho_fp(lev);
     const Real dt = WarpX::GetInstance().getdt(0);
 #endif
 
