@@ -20,7 +20,7 @@
 #include "Utils/WarpXAlgorithmSelection.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #ifdef PULSAR
-# include "Particles/PulsarParameters.H"
+#include "Particles/PulsarParameters.H"
 #endif
 
 #include <AMReX_ParmParse.H>
