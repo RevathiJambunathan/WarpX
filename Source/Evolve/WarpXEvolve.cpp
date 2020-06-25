@@ -18,13 +18,11 @@
 #   include "FieldSolver/SpectralSolver/SpectralSolver.H"
 #endif
 
-#include <cmath>
-#include <limits>
-
 #ifdef PULSAR
     #include "Particles/PulsarParameters.H"
 #endif
-
+#include <cmath>
+#include <limits>
 
 using namespace amrex;
 
@@ -155,9 +153,9 @@ WarpX::Evolve (int numsteps)
 #endif
                 for ( MFIter mfi(*Ex, TilingIfNotGPU()); mfi.isValid(); ++mfi )
                 {
-                    const Box& tex  = mfi.tilebox(Ex_nodal_flag);
-                    const Box& tey  = mfi.tilebox(Ey_nodal_flag);
-                    const Box& tez  = mfi.tilebox(Ez_nodal_flag);
+                    const Box& tex  = mfi.tilebox( Ex->ixType().toIntVect() );
+                    const Box& tey  = mfi.tilebox( Ey->ixType().toIntVect() );
+                    const Box& tez  = mfi.tilebox( Ez->ixType().toIntVect() );
 
                     auto const& Exfab = Ex->array(mfi);
                     auto const& Eyfab = Ey->array(mfi);
