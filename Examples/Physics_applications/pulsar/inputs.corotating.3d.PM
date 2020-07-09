@@ -13,14 +13,12 @@
 #################################
 ####### GENERAL PARAMETERS ######
 #################################
-max_step = 5000
+max_step = 100
 #amr.n_cell = 256 256 256
 amr.n_cell = 128 128 128
 amr.max_grid_size = 64
 amr.blocking_factor = 64
 amr.max_level = 0
-amr.plot_file = "plotfiles/plt"
-amr.plot_int = 2
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 0 0 0     # Is periodic?
 geometry.prob_lo     = 0.0    0.0    0.0
@@ -31,11 +29,9 @@ geometry.prob_hi     = 180000 180000 180000
 #################################
 algo.maxwell_fdtd_solver = yee
 warpx.verbose = 1
-warpx.plot_raw_fields = 0
 warpx.do_dive_cleaning = 0
 warpx.use_filter = 1
 warpx.cfl = .5
-warpx.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
 my_constants.pi    = 3.141592653589793
 my_constants.dens  = 5.544e6
 my_constants.xc  = 90000
@@ -129,24 +125,30 @@ plasma_p.momentum_function_uz(x,y,z) = "0.0"
 plasma_p.do_continuous_injection = 0
 plasma_p.density_min = 1E0
 
+diagnostics.diags_names = plt
+plt.diag_type = Full
+plt.period = 10
+plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
+
 
 #################################
 ######### PULSAR SETUP ##########
 #################################
 pulsar.pulsarType = "dead"             # [dead/active]: sets particle injection type
 pulsar.omega_star = 6245.676               # angular velocity of NS (rad/s)
-pulsar.ramp_omega_time = 2e-4              # time over which to ramp up NS angular velocity (s)
+pulsar.ramp_omega_time = 0.0              # time over which to ramp up NS angular velocity (s)
+#pulsar.ramp_omega_time = 2e-4              # time over which to ramp up NS angular velocity (s)
                                            # if ramp_omega_time < 0, omega = omega_star for any t
                                            # consistency requires ramp_omega_time = my_constants.to
 pulsar.center_star = 90000 90000 90000
-pulsar.R_star = 12.e3                  # radius of NS (m)
+pulsar.R_star = 12032                  # radius of NS (m)
 pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
-pulsar.dR = 1.4e3
+pulsar.dR = 1075
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 1                  # [0/1]
 pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing density
-pulsar.Ninj_fraction = 0.5            # fraction of sigma injected
+pulsar.Ninj_fraction = 0.1            # fraction of sigma injected
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
-pulsar.damp_E_internal = 1             # Damp internal electric field
+pulsar.damp_E_internal = 0             # Damp internal electric field
 pulsar.damping_scale = 10.0            # Damping scale factor for internal electric field
