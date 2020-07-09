@@ -146,13 +146,43 @@ WarpX::Evolve (int numsteps)
         }
 
 #ifdef PULSAR
-        if (PulsarParm::damp_E_internal) {
+        if (PulsarParm::damp_EB_internal) {
             MultiFab *Ex, *Ey, *Ez;
+            MultiFab *Bx, *By, *Bz;
             for (int lev = 0; lev <= finest_level; ++lev) {
                 Ex = Efield_fp[lev][0].get();
                 Ey = Efield_fp[lev][1].get();
                 Ez = Efield_fp[lev][2].get();
-
+                Bx = Bfield_fp[lev][0].get();
+                By = Bfield_fp[lev][1].get();
+                Bz = Bfield_fp[lev][2].get();
+                Gpu::ManagedVector<int> Ex_stag, Ey_stag, Ez_stag, Bx_stag, By_stag, Bz_stag;
+                Ex_stag.resize(3);
+                Ey_stag.resize(3);
+                Ez_stag.resize(3);
+                Bx_stag.resize(3);
+                By_stag.resize(3);
+                Bz_stag.resize(3);
+                amrex::IntVect ex_type = Ex->ixType().toIntVect();
+                amrex::IntVect ey_type = Ey->ixType().toIntVect();
+                amrex::IntVect ez_type = Ez->ixType().toIntVect();
+                amrex::IntVect bx_type = Bx->ixType().toIntVect();
+                amrex::IntVect by_type = By->ixType().toIntVect();
+                amrex::IntVect bz_type = Bz->ixType().toIntVect();
+                for (int idim = 0; idim < AMREX_SPACEDIM-1; ++idim) {
+                    Ex_stag[idim] = ex_type[idim];
+                    Ey_stag[idim] = ey_type[idim];
+                    Ez_stag[idim] = ez_type[idim];
+                    Bx_stag[idim] = bx_type[idim];
+                    By_stag[idim] = by_type[idim];
+                    Bz_stag[idim] = bz_type[idim];
+                }
+                int const* const AMREX_RESTRICT Ex_stag_ptr = Ex_stag.data();
+                int const* const AMREX_RESTRICT Ey_stag_ptr = Ey_stag.data();
+                int const* const AMREX_RESTRICT Ez_stag_ptr = Ez_stag.data();
+                int const* const AMREX_RESTRICT Bx_stag_ptr = Bx_stag.data();
+                int const* const AMREX_RESTRICT By_stag_ptr = By_stag.data();
+                int const* const AMREX_RESTRICT Bz_stag_ptr = Bz_stag.data();
                 auto geom = Geom(lev).data();
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -170,15 +200,39 @@ WarpX::Evolve (int numsteps)
                     amrex::ParallelFor(tex, tey, tez,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Exfab);
+                        PulsarParm::DampEField(i, j, k, geom, Exfab, Ex_stag_ptr);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Eyfab);
+                        PulsarParm::DampEField(i, j, k, geom, Eyfab, Ey_stag_ptr);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Ezfab);
+                        PulsarParm::DampEField(i, j, k, geom, Ezfab, Ez_stag_ptr);
+                    });
+                }
+                for ( MFIter mfi(*Bx, TilingIfNotGPU()); mfi.isValid(); ++mfi )
+                {
+                    const Box& tex  = mfi.tilebox( Bx->ixType().toIntVect() );
+                    const Box& tey  = mfi.tilebox( By->ixType().toIntVect() );
+                    const Box& tez  = mfi.tilebox( Bz->ixType().toIntVect() );
+
+                    auto const& Bxfab = Bx->array(mfi);
+                    auto const& Byfab = By->array(mfi);
+                    auto const& Bzfab = Bz->array(mfi);
+
+                    amrex::ParallelFor(tex, tey, tez,
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                    {
+                        PulsarParm::DampEField(i, j, k, geom, Bxfab, Bx_stag_ptr);
+                    },
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                    {
+                        PulsarParm::DampEField(i, j, k, geom, Byfab, By_stag_ptr);
+                    },
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                    {
+                        PulsarParm::DampEField(i, j, k, geom, Bzfab, Bz_stag_ptr);
                     });
                 }
             }
