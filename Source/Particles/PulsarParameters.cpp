@@ -19,7 +19,7 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED int E_external_monopole = 0;
     AMREX_GPU_DEVICE_MANAGED
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
-    AMREX_GPU_DEVICE_MANAGED int damp_E_internal = 0;
+    AMREX_GPU_DEVICE_MANAGED int damp_EB_internal = 0;
     AMREX_GPU_DEVICE_MANAGED int verbose = 0;
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
     AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
@@ -38,7 +38,7 @@ namespace PulsarParm
         pp.query("verbose",verbose);
         pp.query("EB_external",EB_external);
         pp.query("E_external_monopole",E_external_monopole);
-        pp.query("damp_E_internal",damp_E_internal);
+        pp.query("damp_EB_internal",damp_EB_internal);
         pp.query("damping_scale",damping_scale);
         pp.query("ramp_omega_time",ramp_omega_time);
         amrex::Print() << " Pulsar center: " << center_star[0] << " " << center_star[1] << " " << center_star[2] << "\n";

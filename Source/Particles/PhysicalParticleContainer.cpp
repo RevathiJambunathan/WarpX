@@ -1126,7 +1126,6 @@ PhysicalParticleContainer::Evolve (int lev,
  
         FArrayBox filtered_Ex, filtered_Ey, filtered_Ez;
         FArrayBox filtered_Bx, filtered_By, filtered_Bz;
-        amrex::Print() << " par iter loop \n" ;
         for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
         {
             if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
