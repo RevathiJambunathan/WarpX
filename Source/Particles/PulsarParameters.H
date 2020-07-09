@@ -219,7 +219,7 @@ namespace PulsarParm
     namespace Spherical
     {
         AMREX_GPU_HOST_DEVICE AMREX_INLINE
-        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom)
+        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom, const amrex::IntVect mf_ixType)
         {
             const auto domain_box = geom.Domain();
             const auto domain_ilo = amrex::lbound(domain_box);
@@ -227,9 +227,12 @@ namespace PulsarParm
             const auto domain_xhi = geom.ProbHi();
             const auto domain_dx  = geom.CellSize();
             
-            const amrex::Real x = domain_xlo[0] + (i - domain_ilo.x + 0.5) * domain_dx[0];
-            const amrex::Real y = domain_xlo[1] + (j - domain_ilo.y + 0.5) * domain_dx[1];
-            const amrex::Real z = domain_xlo[2] + (k - domain_ilo.z + 0.5) * domain_dx[2];
+            //const amrex::Real x = domain_xlo[0] + (i - domain_ilo.x + 0.5) * domain_dx[0] + (1.0 - mf_ixType[0])*domain_dx[0]*0.5;
+            //const amrex::Real y = domain_xlo[1] + (j - domain_ilo.y + 0.5) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
+            //const amrex::Real z = domain_xlo[2] + (k - domain_ilo.z + 0.5) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
+            const amrex::Real x = domain_xlo[0] + (i ) * domain_dx[0] + (1.0 - mf_ixType[0])*domain_dx[0]*0.5;
+            const amrex::Real y = domain_xlo[1] + (j ) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
+            const amrex::Real z = domain_xlo[2] + (k ) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
             
             const amrex::Real xc = 0.5 * (domain_xlo[0] + domain_xhi[0]);
             const amrex::Real yc = 0.5 * (domain_xlo[1] + domain_xhi[1]);
@@ -243,9 +246,9 @@ namespace PulsarParm
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield)
+    void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, const amrex::IntVect mf_ixtype)
     {
-        const amrex::Real r = Spherical::r(i, j, k, geom);
+        const amrex::Real r = Spherical::r(i, j, k, geom, mf_ixType);
         
         if (r < R_star) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
