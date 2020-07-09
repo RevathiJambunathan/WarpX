@@ -24,7 +24,7 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
-    extern AMREX_GPU_DEVICE_MANAGED int damp_E_internal;
+    extern AMREX_GPU_DEVICE_MANAGED int damp_EB_internal;
     
     extern AMREX_GPU_DEVICE_MANAGED int verbose;
     
@@ -220,7 +220,7 @@ namespace PulsarParm
     namespace Spherical
     {
         AMREX_GPU_HOST_DEVICE AMREX_INLINE
-        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom, const amrex::IntVect mf_ixType)
+        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom, int const* const AMREX_RESTRICT mf_ixType)
         {
             const auto domain_box = geom.Domain();
             const auto domain_ilo = amrex::lbound(domain_box);
@@ -247,9 +247,9 @@ namespace PulsarParm
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, const amrex::IntVect mf_ixtype)
+    void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, int const* const AMREX_RESTRICT mf_ixtype)
     {
-        const amrex::Real r = Spherical::r(i, j, k, geom, mf_ixType);
+        const amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
         
         if (r < R_star) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1

@@ -146,9 +146,9 @@ pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
 pulsar.dR = 1075
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
-pulsar.E_external_monopole = 1                  # [0/1]
+pulsar.E_external_monopole = 0                  # [0/1]
 pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing density
 pulsar.Ninj_fraction = 0.1            # fraction of sigma injected
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
-pulsar.damp_E_internal = 0             # Damp internal electric field
+pulsar.damp_EB_internal = 1             # Damp internal electric field
 pulsar.damping_scale = 10.0            # Damping scale factor for internal electric field
