@@ -1192,60 +1192,6 @@ PhysicalParticleContainer::AssignExternalFieldOnParticles(WarpXParIter& pti,
 }
 
 
-
-void
-PhysicalParticleContainer::FieldGather (int lev,
-                                        const amrex::MultiFab& Ex,
-                                        const amrex::MultiFab& Ey,
-                                        const amrex::MultiFab& Ez,
-                                        const amrex::MultiFab& Bx,
-                                        const amrex::MultiFab& By,
-                                        const amrex::MultiFab& Bz)
-{
-    const std::array<Real,3>& dx = WarpX::CellSize(lev);
-
-    BL_ASSERT(OnSameGrids(lev,Ex));
-
-    MultiFab* cost = WarpX::getCosts(lev);
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-    {
-#ifdef _OPENMP
-        int thread_num = omp_get_thread_num();
-#else
-        int thread_num = 0;
-#endif
-        for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
-        {
-            Real wt = amrex::second();
-
-            const Box& box = pti.validbox();
-
-            auto& attribs = pti.GetAttribs();
-
-            auto& Exp = attribs[PIdx::Ex];
-            auto& Eyp = attribs[PIdx::Ey];
-            auto& Ezp = attribs[PIdx::Ez];
-            auto& Bxp = attribs[PIdx::Bx];
-            auto& Byp = attribs[PIdx::By];
-            auto& Bzp = attribs[PIdx::Bz];
-
-            const long np = pti.numParticles();
-
-            // Data on the grid
-            const FArrayBox& exfab = Ex[pti];
-            const FArrayBox& eyfab = Ey[pti];
-            const FArrayBox& ezfab = Ez[pti];
-            const FArrayBox& bxfab = Bx[pti];
-            const FArrayBox& byfab = By[pti];
-            const FArrayBox& bzfab = Bz[pti];
->>>>>>> eba13527 (EOL whitespace)
-
-}
-
-
 void
 PhysicalParticleContainer::Evolve (int lev,
                                    const MultiFab& Ex, const MultiFab& Ey, const MultiFab& Ez,
@@ -1293,7 +1239,7 @@ PhysicalParticleContainer::Evolve (int lev,
 #else
         int thread_num = 0;
 #endif
-
+ 
         FArrayBox filtered_Ex, filtered_Ey, filtered_Ez;
         FArrayBox filtered_Bx, filtered_By, filtered_Bz;
         for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -1303,7 +1249,7 @@ PhysicalParticleContainer::Evolve (int lev,
                 amrex::Gpu::synchronize();
             }
             Real wt = amrex::second();
-
+          
             const Box& box = pti.validbox();
             auto& attribs = pti.GetAttribs();
 
