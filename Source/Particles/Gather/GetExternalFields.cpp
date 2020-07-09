@@ -22,7 +22,7 @@ GetExternalEField::GetExternalEField (const WarpXParIter& a_pti, int a_offset) n
         m_zfield_partparser = getParser(mypc.m_Ez_particle_parser);
     }
 #ifdef PULSAR
-    else if (PulsarParm::EB_external == 1)
+    if (PulsarParm::EB_external == 1)
     {
         m_type = Pulsar_Efield;
         m_time = warpx.gett_new(a_pti.GetLevel());
@@ -52,7 +52,7 @@ GetExternalBField::GetExternalBField (const WarpXParIter& a_pti, int a_offset) n
         m_zfield_partparser = getParser(mypc.m_Bz_particle_parser);
     }
 #ifdef PULSAR
-    else if (PulsarParm::EB_external == 1)
+    if (PulsarParm::EB_external == 1)
     {
         m_type = Pulsar_Bfield;
         m_time = warpx.gett_new(a_pti.GetLevel());
