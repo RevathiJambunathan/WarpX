@@ -929,8 +929,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                           p.id() = -1;
                           continue;
                        }
-                       //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
-                       //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
+                       if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
+                       if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
                        // if rho is too smal -- we dont inject particles
                        if (std::abs(rho_GJ) < 1E-35) {
                           p.id() = -1;
@@ -1110,7 +1110,7 @@ PhysicalParticleContainer::Evolve (int lev,
                 tmp_particle_data[t_lev][index][i].resize(np);
         }
     }
-
+    amrex::Print() << " we ppc evolve \n";
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1120,10 +1120,10 @@ PhysicalParticleContainer::Evolve (int lev,
 #else
         int thread_num = 0;
 #endif
-
+ 
         FArrayBox filtered_Ex, filtered_Ey, filtered_Ez;
         FArrayBox filtered_Bx, filtered_By, filtered_Bz;
-
+        amrex::Print() << " par iter loop \n" ;
         for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
         {
             if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
@@ -1131,9 +1131,8 @@ PhysicalParticleContainer::Evolve (int lev,
                 amrex::Gpu::synchronize();
             }
             Real wt = amrex::second();
-
+          
             const Box& box = pti.validbox();
-
             auto& attribs = pti.GetAttribs();
 
             auto&  wp = attribs[PIdx::w];
@@ -1206,7 +1205,6 @@ PhysicalParticleContainer::Evolve (int lev,
                 const long np_gather = (cEx) ? nfine_gather : np;
 
                 int e_is_nodal = Ex.is_nodal() and Ey.is_nodal() and Ez.is_nodal();
-
                 //
                 // Gather and push for particles not in the buffer
                 //
@@ -1579,7 +1577,6 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
             box.grow(Ex.nGrow());
 
             const long np = pti.numParticles();
-
             // Data on the grid
             const FArrayBox& exfab = Ex[pti];
             const FArrayBox& eyfab = Ey[pti];
@@ -1945,7 +1942,6 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 
     const auto getPosition = GetParticlePosition(pti, offset);
           auto setPosition = SetParticlePosition(pti, offset);
-
     const auto getExternalE = GetExternalEField(pti, offset);
     const auto getExternalB = GetExternalBField(pti, offset);
 
