@@ -129,7 +129,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
 
               // temporary normalized magnitude of M_xface field at the fixed point
               // re-investigate the way we do Ms interp, in case we encounter the case where Ms changes across two adjacent cells that you are doing interp
-          amrex::Real mag_normalized = std::sqrt( std::pow(M_xface(i, j, k, 0),2.0) + std::pow(M_xface(i, j, k, 1),2.0) + 
+          amrex::Real mag_normalized = std::sqrt( std::pow(M_xface(i, j, k, 0),2.0) + std::pow(M_xface(i, j, k, 1),2.0) +
                       std::pow(M_xface(i, j, k, 2),2.0) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr);
 
               // check the normalized error
@@ -190,7 +190,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
 
               // temporary normalized magnitude of M_yface field at the fixed point
               // re-investigate the way we do Ms interp, in case we encounter the case where Ms changes across two adjacent cells that you are doing interp
-          amrex::Real mag_normalized = std::sqrt( std::pow(M_yface(i, j, k, 0),2.0) + std::pow(M_yface(i, j, k, 1),2.0) + 
+          amrex::Real mag_normalized = std::sqrt( std::pow(M_yface(i, j, k, 0),2.0) + std::pow(M_yface(i, j, k, 1),2.0) +
                       std::pow(M_yface(i, j, k, 2),2.0) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_Ms_arr);
 
               // check the normalized error
@@ -250,7 +250,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
 
               // temporary normalized magnitude of M_zface field at the fixed point
               // re-investigate the way we do Ms interp, in case we encounter the case where Ms changes across two adjacent cells that you are doing interp
-          amrex::Real mag_normalized = std::sqrt( std::pow(M_zface(i, j, k, 0),2.0_rt) + std::pow(M_zface(i, j, k, 1),2.0_rt) + 
+          amrex::Real mag_normalized = std::sqrt( std::pow(M_zface(i, j, k, 0),2.0_rt) + std::pow(M_zface(i, j, k, 1),2.0_rt) +
                       std::pow(M_zface(i, j, k, 2),2.0_rt) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_Ms_arr);
 
               // check the normalized error
@@ -262,7 +262,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               // normalize the M_zface field
               M_zface(i,j,k,0) /= mag_normalized;
               M_zface(i,j,k,1) /= mag_normalized;
-              M_zface(i,j,k,2) /= mag_normalized;});              
+              M_zface(i,j,k,2) /= mag_normalized;});
         }
     }
 #endif

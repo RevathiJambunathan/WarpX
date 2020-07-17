@@ -72,7 +72,7 @@ class FiniteDifferenceSolver
                             std::array< std::unique_ptr<amrex::MultiFab>, 3> const& Bfield,
 #ifdef WARPX_MAG_LLG
                             std::array< std::unique_ptr<amrex::MultiFab>, 3> const& Mfield,
-#endif         
+#endif
                             std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Jfield,
                             amrex::Real const dt,
                             std::unique_ptr<MacroscopicProperties> const& macroscopic_properties);
