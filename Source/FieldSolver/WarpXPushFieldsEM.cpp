@@ -36,10 +36,12 @@ namespace {
 #endif
         std::array<std::unique_ptr<amrex::MultiFab>,3>& Efield,
         std::array<std::unique_ptr<amrex::MultiFab>,3>& Bfield,
+        std::array<std::unique_ptr<amrex::MultiFab>,3>& Efield_avg,
+        std::array<std::unique_ptr<amrex::MultiFab>,3>& Bfield_avg,
         std::array<std::unique_ptr<amrex::MultiFab>,3>& current,
         std::unique_ptr<amrex::MultiFab>& rho ) {
 
-        using Idx = SpectralFieldIndex;
+        using Idx = SpectralAvgFieldIndex;
 
         // Perform forward Fourier transform
 #ifdef WARPX_DIM_RZ
@@ -87,6 +89,18 @@ namespace {
         solver.BackwardTransform(*Bfield[1], Idx::By);
 #endif
         solver.BackwardTransform(*Bfield[2], Idx::Bz);
+
+#ifndef WARPX_DIM_RZ
+        if (WarpX::fft_do_time_averaging){
+            solver.BackwardTransform(*Efield_avg[0], Idx::Ex_avg);
+            solver.BackwardTransform(*Efield_avg[1], Idx::Ey_avg);
+            solver.BackwardTransform(*Efield_avg[2], Idx::Ez_avg);
+
+            solver.BackwardTransform(*Bfield_avg[0], Idx::Bx_avg);
+            solver.BackwardTransform(*Bfield_avg[1], Idx::By_avg);
+            solver.BackwardTransform(*Bfield_avg[2], Idx::Bz_avg);
+        }
+#endif
     }
 }
 
@@ -109,119 +123,10 @@ WarpX::PushPSATD (int lev, amrex::Real /* dt */)
 {
     // Update the fields on the fine and coarse patch
     PushPSATDSinglePatch( *spectral_solver_fp[lev],
-        Efield_fp[lev], Bfield_fp[lev], current_fp[lev], rho_fp[lev] );
+        Efield_fp[lev], Bfield_fp[lev], Efield_avg_fp[lev], Bfield_avg_fp[lev], current_fp[lev], rho_fp[lev] );
     if (spectral_solver_cp[lev]) {
         PushPSATDSinglePatch( *spectral_solver_cp[lev],
-             Efield_cp[lev], Bfield_cp[lev], current_cp[lev], rho_cp[lev] );
-    }
-}
-#endif
-
-#ifdef WARPX_MAG_LLG
-// define WarpX::EvolveM
-void
-WarpX::EvolveM (amrex::Real a_dt)
-{
-    for (int lev = 0; lev <= finest_level; ++lev) {
-        EvolveM(lev, a_dt);
-    }
-}
-
-void
-WarpX::EvolveM (int lev, amrex::Real a_dt)
-{
-    WARPX_PROFILE("WarpX::EvolveM()");
-    EvolveM(lev, PatchType::fine, a_dt);
-    if (lev > 0)
-    {
-        EvolveM(lev, PatchType::coarse, a_dt);
-    }
-}
-
-void
-WarpX::EvolveM (int lev, PatchType patch_type, amrex::Real a_dt)
-{
-
-    if (patch_type == PatchType::fine) {
-        m_fdtd_solver_fp[lev]->EvolveM( Mfield_fp[lev], Bfield_fp[lev], a_dt );
-        // the object m_fdtd_solver_fp belongs to class FiniteDifferenceSolver,
-        // which defines EvolveM. See WarpX.H Line 848
-    } else {
-        amrex::Abort("Mfield is only defined on fine patch for now");
-        // m_fdtd_solver_cp[lev]->EvolveM( Mfield_cp[lev], Bfield_cp[lev], a_dt );
-    }
-
-    const int patch_level = (patch_type == PatchType::fine) ? lev : lev-1;
-    const std::array<Real,3>& dx = WarpX::CellSize(patch_level);
-    const Real dtsdx = a_dt/dx[0], dtsdy = a_dt/dx[1], dtsdz = a_dt/dx[2];
-
-    if (do_pml && pml[lev]->ok())
-    {
-        amrex::Abort("EvolveM is implemented without PML yet");
-        /*
-        const auto& pml_B = (patch_type == PatchType::fine) ? pml[lev]->GetB_fp() : pml[lev]->GetB_cp();
-        const auto& pml_E = (patch_type == PatchType::fine) ? pml[lev]->GetE_fp() : pml[lev]->GetE_cp();
-
-#ifdef _OPENMP
-#pragma omp parallel if (Gpu::notInLaunchRegion())
-#endif
-        for ( MFIter mfi(*pml_B[0], TilingIfNotGPU()); mfi.isValid(); ++mfi )
-        {
-            const Box& tbx  = mfi.tilebox(Bx_nodal_flag);
-            const Box& tby  = mfi.tilebox(By_nodal_flag);
-            const Box& tbz  = mfi.tilebox(Bz_nodal_flag);
-            auto const& pml_Bxfab = pml_B[0]->array(mfi);
-            auto const& pml_Byfab = pml_B[1]->array(mfi);
-            auto const& pml_Bzfab = pml_B[2]->array(mfi);
-            auto const& pml_Exfab = pml_E[0]->array(mfi);
-            auto const& pml_Eyfab = pml_E[1]->array(mfi);
-            auto const& pml_Ezfab = pml_E[2]->array(mfi);
-            if (WarpX::maxwell_fdtd_solver_id == 0) {
-               amrex::ParallelFor(tbx, tby, tbz,
-               [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                   warpx_push_pml_bx_yee(i,j,k,pml_Bxfab,pml_Eyfab,pml_Ezfab,
-                                        dtsdy,dtsdz);
-               },
-               [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                   warpx_push_pml_by_yee(i,j,k,pml_Byfab,pml_Exfab,pml_Ezfab,
-                                         dtsdx,dtsdz);
-               },
-               [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                   warpx_push_pml_bz_yee(i,j,k,pml_Bzfab,pml_Exfab,pml_Eyfab,
-                                        dtsdx,dtsdy);
-               });
-            }  else if (WarpX::maxwell_fdtd_solver_id == 1) {
-               Real betaxy, betaxz, betayx, betayz, betazx, betazy;
-               Real gammax, gammay, gammaz;
-               Real alphax, alphay, alphaz;
-               warpx_calculate_ckc_coefficients(dtsdx, dtsdy, dtsdz,
-                                                betaxy, betaxz, betayx, betayz,
-                                                betazx, betazy, gammax, gammay,
-                                                gammaz, alphax, alphay, alphaz);
-
-               amrex::ParallelFor(tbx, tby, tbz,
-               [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                   warpx_push_pml_bx_ckc(i,j,k,pml_Bxfab,pml_Eyfab,pml_Ezfab,
-                                         betaxy, betaxz, betayx, betayz,
-                                         betazx, betazy, gammax, gammay,
-                                         gammaz, alphax, alphay, alphaz);
-               },
-               [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                   warpx_push_pml_by_ckc(i,j,k,pml_Byfab,pml_Exfab,pml_Ezfab,
-                                         betaxy, betaxz, betayx, betayz,
-                                         betazx, betazy, gammax, gammay,
-                                         gammaz, alphax, alphay, alphaz);
-               },
-               [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                   warpx_push_pml_bz_ckc(i,j,k,pml_Bzfab,pml_Exfab,pml_Eyfab,
-                                         betaxy, betaxz, betayx, betayz,
-                                         betazx, betazy, gammax, gammay,
-                                         gammaz, alphax, alphay, alphaz);
-               });
-
-            }
-        }
-        */
+             Efield_cp[lev], Bfield_cp[lev], Efield_avg_cp[lev], Bfield_avg_cp[lev], current_cp[lev], rho_cp[lev] );
     }
 }
 #endif
@@ -404,6 +309,41 @@ WarpX::MacroscopicEvolveE (int lev, PatchType patch_type, amrex::Real a_dt) {
     }
 }
 
+#ifdef WARPX_MAG_LLG
+// define WarpX::MacroscopicEvolveM
+void
+WarpX::MacroscopicEvolveM (amrex::Real a_dt)
+{
+    for (int lev = 0; lev <= finest_level; ++lev ) {
+        MacroscopicEvolveM(lev, a_dt);
+    }
+}
+
+void
+WarpX::MacroscopicEvolveM (int lev, amrex::Real a_dt) {
+
+    WARPX_PROFILE("WarpX::MacroscopicEvolveM()");
+    MacroscopicEvolveM(lev, PatchType::fine, a_dt);
+    if (lev > 0) {
+        amrex::Abort("Macroscopic EvolveM is not implemented for lev>0, yet.");
+    }
+}
+
+void
+WarpX::MacroscopicEvolveM (int lev, PatchType patch_type, amrex::Real a_dt) {
+    if (patch_type == PatchType::fine) {
+        m_fdtd_solver_fp[lev]->MacroscopicEvolveM( Mfield_fp[lev], H_biasfield_fp[lev], Bfield_fp[lev],
+                                             a_dt, m_macroscopic_properties);
+    }
+    else {
+        amrex::Abort("Macroscopic EvolveM is not implemented for lev > 0 yet");
+    }
+    if (do_pml) {
+        amrex::Abort("Macroscopic EvolveM is not implemented for pml boundary condition yet");
+    }
+}
+#endif
+
 #ifdef WARPX_DIM_RZ
 // This scales the current by the inverse volume and wraps around the depostion at negative radius.
 // It is faster to apply this on the grid than to do it particle by particle.
@@ -443,6 +383,8 @@ WarpX::ApplyInverseVolumeScalingToCurrentDensity (MultiFab* Jx, MultiFab* Jy, Mu
         const Real rminz = xyzmin[0] + (tbz.type(0) == NODE ? 0. : 0.5*dx[0]);
         const Dim3 lo = lbound(tilebox);
         const int irmin = lo.x;
+
+        // For ishift, 1 means cell centered, 0 means node centered
         int const ishift_t = (rmint > rmin ? 1 : 0);
         int const ishift_z = (rminz > rmin ? 1 : 0);
 
@@ -480,13 +422,12 @@ WarpX::ApplyInverseVolumeScalingToCurrentDensity (MultiFab* Jx, MultiFab* Jy, Mu
             Jr_arr(i,j,0,0) /= (2.*MathConst::pi*r);
 
             for (int imode=1 ; imode < nmodes ; imode++) {
-                const Real ifact = ( (imode%2) == 0 ? +1. : -1.);
                 // Wrap the current density deposited in the guard cells around
                 // to the cells above the axis.
                 // Note that Jr(i==0) is at 1/2 dr.
                 if (rmin == 0. && 0 <= i && i < ngJ) {
-                    Jr_arr(i,j,0,2*imode-1) -= ifact*Jr_arr(-1-i,j,0,2*imode-1);
-                    Jr_arr(i,j,0,2*imode) -= ifact*Jr_arr(-1-i,j,0,2*imode);
+                    Jr_arr(i,j,0,2*imode-1) -= Jr_arr(-1-i,j,0,2*imode-1);
+                    Jr_arr(i,j,0,2*imode) -= Jr_arr(-1-i,j,0,2*imode);
                 }
                 // Apply the inverse volume scaling
                 // Since Jr is never node centered in r, no need for distinction
@@ -501,8 +442,8 @@ WarpX::ApplyInverseVolumeScalingToCurrentDensity (MultiFab* Jx, MultiFab* Jy, Mu
             // to the cells above the axis.
             // If Jt is node centered, Jt[0] is located on the boundary.
             // If Jt is cell centered, Jt[0] is at 1/2 dr.
-            if (rmin == 0. && 0 < i && i <= ngJ-ishift_t) {
-                Jt_arr(i,j,0,0) += Jt_arr(-ishift_t-i,j,0,0);
+            if (rmin == 0. && 1-ishift_t <= i && i <= ngJ-ishift_t) {
+                Jt_arr(i,j,0,0) -= Jt_arr(-ishift_t-i,j,0,0);
             }
 
             // Apply the inverse volume scaling
@@ -515,12 +456,11 @@ WarpX::ApplyInverseVolumeScalingToCurrentDensity (MultiFab* Jx, MultiFab* Jy, Mu
             }
 
             for (int imode=1 ; imode < nmodes ; imode++) {
-                const Real ifact = ( (imode%2) == 0 ? +1. : -1.);
                 // Wrap the current density deposited in the guard cells around
                 // to the cells above the axis.
-                if (rmin == 0. && 0 < i && i <= ngJ-ishift_t) {
-                    Jt_arr(i,j,0,2*imode-1) += ifact*Jt_arr(-ishift_t-i,j,0,2*imode-1);
-                    Jt_arr(i,j,0,2*imode) += ifact*Jt_arr(-ishift_t-i,j,0,2*imode);
+                if (rmin == 0. && 1-ishift_t <= i && i <= ngJ-ishift_t) {
+                    Jt_arr(i,j,0,2*imode-1) -= Jt_arr(-ishift_t-i,j,0,2*imode-1);
+                    Jt_arr(i,j,0,2*imode) -= Jt_arr(-ishift_t-i,j,0,2*imode);
                 }
 
                 // Apply the inverse volume scaling
@@ -540,8 +480,8 @@ WarpX::ApplyInverseVolumeScalingToCurrentDensity (MultiFab* Jx, MultiFab* Jy, Mu
             // to the cells above the axis.
             // If Jz is node centered, Jt[0] is located on the boundary.
             // If Jz is cell centered, Jt[0] is at 1/2 dr.
-            if (rmin == 0. && 0 < i && i <= ngJ-ishift_z) {
-                Jz_arr(i,j,0,0) += Jz_arr(-ishift_z-i,j,0,0);
+            if (rmin == 0. && 1-ishift_z <= i && i <= ngJ-ishift_z) {
+                Jz_arr(i,j,0,0) -= Jz_arr(-ishift_z-i,j,0,0);
             }
 
             // Apply the inverse volume scaling
@@ -554,12 +494,11 @@ WarpX::ApplyInverseVolumeScalingToCurrentDensity (MultiFab* Jx, MultiFab* Jy, Mu
             }
 
             for (int imode=1 ; imode < nmodes ; imode++) {
-                const Real ifact = ( (imode%2) == 0 ? +1. : -1.);
                 // Wrap the current density deposited in the guard cells around
                 // to the cells above the axis.
-                if (rmin == 0. && 0 < i && i <= ngJ-ishift_z) {
-                    Jz_arr(i,j,0,2*imode-1) += ifact*Jz_arr(-ishift_z-i,j,0,2*imode-1);
-                    Jz_arr(i,j,0,2*imode) += ifact*Jz_arr(-ishift_z-i,j,0,2*imode);
+                if (rmin == 0. && 1-ishift_z <= i && i <= ngJ-ishift_z) {
+                    Jz_arr(i,j,0,2*imode-1) -= Jz_arr(-ishift_z-i,j,0,2*imode-1);
+                    Jz_arr(i,j,0,2*imode) -= Jz_arr(-ishift_z-i,j,0,2*imode);
                 }
 
                 // Apply the inverse volume scaling
@@ -625,8 +564,8 @@ WarpX::ApplyInverseVolumeScalingToChargeDensity (MultiFab* Rho, int lev)
             // Wrap the charge density deposited in the guard cells around
             // to the cells above the axis.
             // Rho is located on the boundary
-            if (rmin == 0. && 0 < i && i <= ngRho-ishift) {
-                Rho_arr(i,j,0,icomp) += Rho_arr(-ishift-i,j,0,icomp);
+            if (rmin == 0. && 1-ishift <= i && i <= ngRho-ishift) {
+                Rho_arr(i,j,0,icomp) -= Rho_arr(-ishift-i,j,0,icomp);
             }
 
             // Apply the inverse volume scaling

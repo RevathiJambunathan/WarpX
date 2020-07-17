@@ -119,12 +119,16 @@ WarpX::Evolve (int numsteps)
 #endif
             // E and B: enough guard cells to update Aux or call Field Gather in fp and cp
             // Need to update Aux on lower levels, to interpolate to higher levels.
+            if (fft_do_time_averaging)
+            {
+                FillBoundaryE_avg(guard_cells.ng_FieldGather, guard_cells.ng_Extra);
+                FillBoundaryB_avg(guard_cells.ng_FieldGather, guard_cells.ng_Extra);
+            }
 #ifndef WARPX_USE_PSATD
             FillBoundaryAux(guard_cells.ng_UpdateAux);
 #endif
             UpdateAuxilaryData();
         }
-
         if (do_subcycling == 0 || finest_level == 0) {
             OneStep_nosub(cur_time);
             // E : guard cells are up-to-date
@@ -168,6 +172,8 @@ WarpX::Evolve (int numsteps)
 
         cur_time += dt[0];
 
+        ShiftGalileanBoundary();
+
         if (do_back_transformed_diagnostics) {
             std::unique_ptr<MultiFab> cell_centered_data = nullptr;
             if (WarpX::do_back_transformed_fields) {
@@ -179,8 +185,6 @@ WarpX::Evolve (int numsteps)
         bool move_j = is_synchronized;
         // If is_synchronized we need to shift j too so that next step we can evolve E by dt/2.
         // We might need to move j because we are going to make a plotfile.
-
-        ShiftGalileanBoundary();
 
         int num_moved = MoveWindow(move_j);
 
@@ -273,7 +277,8 @@ WarpX::OneStep_nosub (Real cur_time)
 
     // Loop over species. For each ionizable species, create particles in
     // product species.
-    mypc->doFieldIonization();
+    doFieldIonization();
+
     mypc->doCoulombCollisions();
 #ifdef WARPX_QED
     mypc->doQEDSchwinger();
@@ -293,33 +298,27 @@ WarpX::OneStep_nosub (Real cur_time)
     if (warpx_py_afterdeposition) warpx_py_afterdeposition();
 #endif
 
+// TODO
+// Apply current correction in Fourier space: for domain decomposition with local
+// FFTs over guard cells, apply this before calling SyncCurrent
 #ifdef WARPX_USE_PSATD
-    // Apply current correction in Fourier space
-    // (equation (19) of https://doi.org/10.1016/j.jcp.2013.03.010)
-    if ( fft_periodic_single_box == false ) {
-        // For domain decomposition with local FFT over guard cells,
-        // apply this before `SyncCurrent`, i.e. before exchanging guard cells for J
-        if ( do_current_correction ) CurrentCorrection();
-    }
+    if ( !fft_periodic_single_box && current_correction )
+        amrex::Abort("\nCurrent correction does not guarantee charge conservation with local FFTs over guard cells:\n"
+                     "set psatd.periodic_single_box_fft=1 too, in order to guarantee charge conservation");
 #endif
 
 #ifdef WARPX_QED
-    //Do QED processes
-    mypc->doQedEvents();
+    doQEDEvents();
 #endif
 
     // Synchronize J and rho
     SyncCurrent();
     SyncRho();
 
+// Apply current correction in Fourier space: for periodic single-box global FFTs
+// without guard cells, apply this after calling SyncCurrent
 #ifdef WARPX_USE_PSATD
-    // Apply current correction in Fourier space
-    // (equation (19) of https://doi.org/10.1016/j.jcp.2013.03.010)
-    if ( fft_periodic_single_box == true ) {
-        // For periodic, single-box FFT (FFT without guard cells)
-        // apply this after `SyncCurrent`, i.e. after exchanging guard cells for J
-        if ( do_current_correction ) CurrentCorrection();
-    }
+    if ( fft_periodic_single_box && current_correction ) CurrentCorrection();
 #endif
 
 
@@ -355,15 +354,18 @@ WarpX::OneStep_nosub (Real cur_time)
 #else
         EvolveF(0.5*dt[0], DtType::FirstHalf);
         FillBoundaryF(guard_cells.ng_FieldSolverF);
-#ifdef WARPX_MAG_LLG
-        EvolveM(0.5*dt[0]); // we now have M^{n+1/2}
-#endif
+
         EvolveB(0.5*dt[0]); // We now have B^{n+1/2}
+        FillBoundaryB(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
 
 #ifdef WARPX_MAG_LLG
-        FillBoundaryM(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
+        if (WarpX::em_solver_medium == MediumForEM::Macroscopic) { //evolveM is not applicable to vacuum
+            MacroscopicEvolveM(0.5*dt[0]); // we now have M^{n+1/2}
+            FillBoundaryM(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
+        } else {
+            amrex::Abort("unsupported em_solver_medium for M field");
+        }
 #endif
-        FillBoundaryB(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
         if (WarpX::em_solver_medium == MediumForEM::Vacuum) {
             // vacuum medium
             EvolveE(dt[0]); // We now have E^{n+1}
@@ -376,10 +378,9 @@ WarpX::OneStep_nosub (Real cur_time)
 
         FillBoundaryE(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
         EvolveF(0.5*dt[0], DtType::SecondHalf);
-#ifdef WARPX_MAG_LLG
-        EvolveM(0.5*dt[0]); // we now have M^{n+1}
-#endif
+
         EvolveB(0.5*dt[0]); // We now have B^{n+1}
+
         //why not implementing FillBoundary here? possibly: implemented in if{safe_guard_cells} Line 452
         if (do_pml) {
             FillBoundaryF(guard_cells.ng_alloc_F);
@@ -391,12 +392,20 @@ WarpX::OneStep_nosub (Real cur_time)
         // E and B are up-to-date in the domain, but all guard cells are
         // outdated.
         if ( safe_guard_cells ){
-#ifdef WARPX_MAG_LLG
-            FillBoundaryM(guard_cells.ng_alloc_EB, guard_cells.ng_Extra);
-#endif
             FillBoundaryB(guard_cells.ng_alloc_EB, guard_cells.ng_Extra);
         }
-#endif
+#ifdef WARPX_MAG_LLG
+        if (WarpX::em_solver_medium == MediumForEM::Macroscopic) {
+            MacroscopicEvolveM(0.5*dt[0]); // we now have M^{n+1}
+            if ( safe_guard_cells ){
+                FillBoundaryM(guard_cells.ng_alloc_EB, guard_cells.ng_Extra);
+            }
+        }
+        else {
+                amrex::Abort("unsupported em_solver_medium for M field");
+        }
+#endif //
+#endif // end for PSATD
     }
 }
 
@@ -428,11 +437,10 @@ WarpX::OneStep_sub1 (Real curtime)
     // TODO: we could save some charge depositions
     // Loop over species. For each ionizable species, create particles in
     // product species.
-    mypc->doFieldIonization();
+    doFieldIonization();
 
 #ifdef WARPX_QED
-    //Do QED processes
-    mypc->doQedEvents();
+    doQEDEvents();
 #endif
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(finest_level == 1, "Must have exactly two levels");
@@ -570,6 +578,40 @@ WarpX::OneStep_sub1 (Real curtime)
 }
 
 void
+WarpX::doFieldIonization ()
+{
+    for (int lev = 0; lev <= finest_level; ++lev) {
+        doFieldIonization(lev);
+    }
+}
+
+void
+WarpX::doFieldIonization (int lev)
+{
+    mypc->doFieldIonization(lev,
+                            *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
+                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2]);
+}
+
+#ifdef WARPX_QED
+void
+WarpX::doQEDEvents ()
+{
+    for (int lev = 0; lev <= finest_level; ++lev) {
+        doQEDEvents(lev);
+    }
+}
+
+void
+WarpX::doQEDEvents (int lev)
+{
+    mypc->doQedEvents(lev,
+                      *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
+                      *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2]);
+}
+#endif
+
+void
 WarpX::PushParticlesandDepose (amrex::Real cur_time)
 {
     // Evolve particles to p^{n+1/2} and x^{n+1}
@@ -585,6 +627,8 @@ WarpX::PushParticlesandDepose (int lev, amrex::Real cur_time, DtType a_dt_type)
     mypc->Evolve(lev,
                  *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
                  *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2],
+                 *Efield_avg_aux[lev][0],*Efield_avg_aux[lev][1],*Efield_avg_aux[lev][2],
+                 *Bfield_avg_aux[lev][0],*Bfield_avg_aux[lev][1],*Bfield_avg_aux[lev][2],
                  *current_fp[lev][0],*current_fp[lev][1],*current_fp[lev][2],
                  current_buf[lev][0].get(), current_buf[lev][1].get(), current_buf[lev][2].get(),
                  rho_fp[lev].get(), charge_buf[lev].get(),

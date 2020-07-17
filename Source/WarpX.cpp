@@ -37,16 +37,23 @@ using namespace amrex;
 
 Vector<Real> WarpX::E_external_grid(3, 0.0); // this is fill constructor
 Vector<Real> WarpX::B_external_grid(3, 0.0);
+
+#ifdef WARPX_MAG_LLG
 Vector<Real> WarpX::M_external_grid(3, 0.0);
+Vector<Real> WarpX::H_bias_external_grid(3, 0.0);
 // M could be one 9-comp vector or a vector of vectors
+#endif
 
 std::string WarpX::authors = "";
 std::string WarpX::B_ext_grid_s = "default";
 std::string WarpX::E_ext_grid_s = "default";
-std::string WarpX::M_ext_grid_s = "default";
-// "default" sets M to zero but will be overwritten by user defined input file
 
-// no M parser yet
+#ifdef WARPX_MAG_LLG
+std::string WarpX::M_ext_grid_s = "default";
+std::string WarpX::H_bias_ext_grid_s = "default";
+// "default" sets M to zero but will be overwritten by user defined input file
+#endif
+
 // Parser for B_external on the grid
 std::string WarpX::str_Bx_ext_grid_function;
 std::string WarpX::str_By_ext_grid_function;
@@ -56,9 +63,22 @@ std::string WarpX::str_Ex_ext_grid_function;
 std::string WarpX::str_Ey_ext_grid_function;
 std::string WarpX::str_Ez_ext_grid_function;
 
+#ifdef WARPX_MAG_LLG
+// Parser for M_external on the grid
+std::string WarpX::str_Mx_ext_grid_function;
+std::string WarpX::str_My_ext_grid_function;
+std::string WarpX::str_Mz_ext_grid_function;
+// Parser for H_bias_external on the grid
+std::string WarpX::str_Hx_bias_ext_grid_function;
+std::string WarpX::str_Hy_bias_ext_grid_function;
+std::string WarpX::str_Hz_bias_ext_grid_function;
+#endif
+
 int WarpX::do_moving_window = 0;
 int WarpX::moving_window_dir = -1;
 Real WarpX::moving_window_v = std::numeric_limits<amrex::Real>::max();
+
+bool WarpX::fft_do_time_averaging = false;
 
 Real WarpX::quantum_xi_c2 = PhysConst::xi_c2;
 Real WarpX::gamma_boost = 1.;
@@ -147,7 +167,6 @@ WarpX::ResetInstance ()
 WarpX::WarpX ()
 {
     m_instance = this;
-
     ReadParameters();
 
     BackwardCompatibility();
@@ -196,7 +215,11 @@ WarpX::WarpX ()
     Bfield_aux.resize(nlevs_max);
 #ifdef WARPX_MAG_LLG
     Mfield_aux.resize(nlevs_max);
+    H_biasfield_aux.resize(nlevs_max);
 #endif
+
+    Efield_avg_aux.resize(nlevs_max);
+    Bfield_avg_aux.resize(nlevs_max);
 
     F_fp.resize(nlevs_max);
     rho_fp.resize(nlevs_max);
@@ -205,7 +228,10 @@ WarpX::WarpX ()
     Bfield_fp.resize(nlevs_max);
 #ifdef WARPX_MAG_LLG
     Mfield_fp.resize(nlevs_max);
+    H_biasfield_fp.resize(nlevs_max);
 #endif
+    Efield_avg_fp.resize(nlevs_max);
+    Bfield_avg_fp.resize(nlevs_max);
 
     current_store.resize(nlevs_max);
 
@@ -216,10 +242,17 @@ WarpX::WarpX ()
     Bfield_cp.resize(nlevs_max);
 #ifdef WARPX_MAG_LLG
     Mfield_cp.resize(nlevs_max);
+    H_biasfield_cp.resize(nlevs_max);
 #endif
+    Efield_avg_cp.resize(nlevs_max);
+    Bfield_avg_cp.resize(nlevs_max);
 
     Efield_cax.resize(nlevs_max);
     Bfield_cax.resize(nlevs_max);
+#ifdef WARPX_MAG_LLG
+    Mfield_cax.resize(nlevs_max);
+    H_biasfield_cax.resize(nlevs_max);
+#endif
     current_buffer_masks.resize(nlevs_max);
     gather_buffer_masks.resize(nlevs_max);
     current_buf.resize(nlevs_max);
@@ -311,6 +344,7 @@ WarpX::~WarpX ()
     }
 
     delete reduced_diags;
+
 }
 
 void
@@ -479,7 +513,6 @@ WarpX::ReadParameters ()
 #endif
         pp.query("sort_int", sort_int_string);
         sort_intervals = IntervalsParser(sort_int_string);
-
         Vector<int> vect_sort_bin_size(AMREX_SPACEDIM,1);
         bool sort_bin_size_is_specified = pp.queryarr("sort_bin_size", vect_sort_bin_size);
         if (sort_bin_size_is_specified){
@@ -568,6 +601,11 @@ WarpX::ReadParameters ()
 
         // Only needs to be set with WARPX_DIM_RZ, otherwise defaults to 1
         pp.query("n_rz_azimuthal_modes", n_rz_azimuthal_modes);
+
+#if defined WARPX_DIM_RZ
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Geom(0).isPeriodic(0) == 0,
+                   "The problem must not be periodic in the radial direction");
+#endif
 #if (defined WARPX_DIM_RZ) && (defined WARPX_USE_PSATD)
         // Force do_nodal=true (that is, not staggered) and
         // use same shape factors in all directions, for gathering
@@ -611,11 +649,42 @@ WarpX::ReadParameters ()
         ParmParse pp("psatd");
         pp.query("periodic_single_box_fft", fft_periodic_single_box);
         pp.query("fftw_plan_measure", fftw_plan_measure);
-        pp.query("nox", nox_fft);
-        pp.query("noy", noy_fft);
-        pp.query("noz", noz_fft);
-        pp.query("do_current_correction", do_current_correction);
+        std::string nox_str;
+        std::string noy_str;
+        std::string noz_str;
+
+        pp.query("nox", nox_str);
+        pp.query("noy", noy_str);
+        pp.query("noz", noz_str);
+
+        if(nox_str == "inf"){
+            nox_fft = -1;
+        } else{
+            pp.query("nox", nox_fft);
+        }
+        if(noy_str == "inf"){
+            noy_fft = -1;
+        } else{
+            pp.query("noy", noy_fft);
+        }
+        if(noz_str == "inf"){
+            noz_fft = -1;
+        } else{
+            pp.query("noz", noz_fft);
+        }
+
+
+        if (!fft_periodic_single_box) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(nox_fft > 0, "PSATD order must be finite unless psatd.periodic_single_box_fft is used");
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(noy_fft > 0, "PSATD order must be finite unless psatd.periodic_single_box_fft is used");
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(noz_fft > 0, "PSATD order must be finite unless psatd.periodic_single_box_fft is used");
+        }
+
+        pp.query("current_correction", current_correction);
+        pp.query("update_with_rho", update_with_rho);
         pp.query("v_galilean", v_galilean);
+        pp.query("do_time_averaging", fft_do_time_averaging);
+
       // Scale the velocity by the speed of light
         for (int i=0; i<3; i++) v_galilean[i] *= PhysConst::c;
     }
@@ -684,6 +753,7 @@ WarpX::BackwardCompatibility ()
                      "Please use the new syntax for diagnostics, see documentation.");
     }
     if (ppw.query("plot_finepatch", backward_int)){
+
         amrex::Abort("warpx.plot_finepatch is not supported anymore. "
                      "Please use the new syntax for diagnostics, see documentation.");
     }
@@ -710,15 +780,15 @@ WarpX::ClearLevel (int lev)
         Bfield_aux[lev][i].reset();
 #ifdef WARPX_MAG_LLG
         Mfield_aux[lev][i].reset();
+        H_biasfield_aux[lev][i].reset();
 #endif
-
         current_fp[lev][i].reset();
         Efield_fp [lev][i].reset();
         Bfield_fp [lev][i].reset();
 #ifdef WARPX_MAG_LLG
         Mfield_fp [lev][i].reset();
+        H_biasfield_fp [lev][i].reset();
 #endif
-
         current_store[lev][i].reset();
 
         current_cp[lev][i].reset();
@@ -726,10 +796,14 @@ WarpX::ClearLevel (int lev)
         Bfield_cp [lev][i].reset();
 #ifdef WARPX_MAG_LLG
         Mfield_cp [lev][i].reset();
+        H_biasfield_cp [lev][i].reset();
 #endif
-
         Efield_cax[lev][i].reset();
         Bfield_cax[lev][i].reset();
+#ifdef WARPX_MAG_LLG
+        Mfield_cax[lev][i].reset();
+        H_biasfield_cax[lev][i].reset();
+#endif
         current_buf[lev][i].reset();
     }
 
@@ -797,6 +871,8 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     IntVect Ex_nodal_flag, Ey_nodal_flag, Ez_nodal_flag;
     IntVect Bx_nodal_flag, By_nodal_flag, Bz_nodal_flag;
     IntVect Mx_nodal_flag, My_nodal_flag, Mz_nodal_flag;
+    IntVect Hx_nodal_flag, Hy_nodal_flag, Hz_nodal_flag;
+    IntVect Hx_bias_nodal_flag, Hy_bias_nodal_flag, Hz_bias_nodal_flag;
     IntVect jx_nodal_flag, jy_nodal_flag, jz_nodal_flag;
     IntVect rho_nodal_flag;
 
@@ -809,9 +885,14 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     Bx_nodal_flag = IntVect(1,0);
     By_nodal_flag = IntVect(0,0);
     Bz_nodal_flag = IntVect(0,1);
+#ifdef WARPX_MAG_LLG
     Mx_nodal_flag = IntVect(1,0);
     My_nodal_flag = IntVect(0,0);
     Mz_nodal_flag = IntVect(0,1);
+    Hx_bias_nodal_flag = IntVect(1,0);
+    Hy_bias_nodal_flag = IntVect(0,0);
+    Hz_bias_nodal_flag = IntVect(0,1);
+#endif
     jx_nodal_flag = IntVect(0,1);
     jy_nodal_flag = IntVect(1,1);
     jz_nodal_flag = IntVect(1,0);
@@ -822,9 +903,14 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     Bx_nodal_flag = IntVect(1,0,0);
     By_nodal_flag = IntVect(0,1,0);
     Bz_nodal_flag = IntVect(0,0,1);
+#ifdef WARPX_MAG_LLG
     Mx_nodal_flag = IntVect(1,0,0);
     My_nodal_flag = IntVect(0,1,0);
     Mz_nodal_flag = IntVect(0,0,1);
+    Hx_bias_nodal_flag = IntVect(1,0,0);
+    Hy_bias_nodal_flag = IntVect(0,1,0);
+    Hz_bias_nodal_flag = IntVect(0,0,1);
+#endif
     jx_nodal_flag = IntVect(0,1,1);
     jy_nodal_flag = IntVect(1,0,1);
     jz_nodal_flag = IntVect(1,1,0);
@@ -839,11 +925,16 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
         Bx_nodal_flag  = IntVect::TheNodeVector();
         By_nodal_flag  = IntVect::TheNodeVector();
         Bz_nodal_flag  = IntVect::TheNodeVector();
+#ifdef WARPX_MAG_LLG
         // M is not nodal and is unlikely to be nodal
         // so this definition is unlikely to be used
         Mx_nodal_flag  = IntVect::TheNodeVector();
         My_nodal_flag  = IntVect::TheNodeVector();
         Mz_nodal_flag  = IntVect::TheNodeVector();
+        Hx_bias_nodal_flag  = IntVect::TheNodeVector();
+        Hy_bias_nodal_flag  = IntVect::TheNodeVector();
+        Hz_bias_nodal_flag  = IntVect::TheNodeVector();
+#endif
         jx_nodal_flag  = IntVect::TheNodeVector();
         jy_nodal_flag  = IntVect::TheNodeVector();
         jz_nodal_flag  = IntVect::TheNodeVector();
@@ -885,18 +976,31 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     Efield_fp[lev][0].reset( new MultiFab(amrex::convert(ba,Ex_nodal_flag),dm,ncomps,ngE+ngextra));
     Efield_fp[lev][1].reset( new MultiFab(amrex::convert(ba,Ey_nodal_flag),dm,ncomps,ngE+ngextra));
     Efield_fp[lev][2].reset( new MultiFab(amrex::convert(ba,Ez_nodal_flag),dm,ncomps,ngE+ngextra));
-
 #ifdef WARPX_MAG_LLG
-    Mfield_fp[lev][0].reset( new MultiFab(amrex::convert(ba,Mx_nodal_flag),dm,3,ngE+ngextra));
-    Mfield_fp[lev][1].reset( new MultiFab(amrex::convert(ba,My_nodal_flag),dm,3,ngE+ngextra));
-    Mfield_fp[lev][2].reset( new MultiFab(amrex::convert(ba,Mz_nodal_flag),dm,3,ngE+ngextra)); // each Mfield[] is three components
-#endif
+    Mfield_fp[lev][0].reset( new MultiFab(amrex::convert(ba,Mx_nodal_flag),dm,3     ,ngE+ngextra));
+    Mfield_fp[lev][1].reset( new MultiFab(amrex::convert(ba,My_nodal_flag),dm,3     ,ngE+ngextra));
+    Mfield_fp[lev][2].reset( new MultiFab(amrex::convert(ba,Mz_nodal_flag),dm,3     ,ngE+ngextra));
+    // each Mfield[] is three components
 
+    H_biasfield_fp[lev][0].reset( new MultiFab(amrex::convert(ba,Hx_bias_nodal_flag),dm,ncomps,ngE+ngextra));
+    H_biasfield_fp[lev][1].reset( new MultiFab(amrex::convert(ba,Hy_bias_nodal_flag),dm,ncomps,ngE+ngextra));
+    H_biasfield_fp[lev][2].reset( new MultiFab(amrex::convert(ba,Hz_bias_nodal_flag),dm,ncomps,ngE+ngextra));
+    // H_biasfield is very similar to Bfield setup
+#endif
     current_fp[lev][0].reset( new MultiFab(amrex::convert(ba,jx_nodal_flag),dm,ncomps,ngJ));
     current_fp[lev][1].reset( new MultiFab(amrex::convert(ba,jy_nodal_flag),dm,ncomps,ngJ));
     current_fp[lev][2].reset( new MultiFab(amrex::convert(ba,jz_nodal_flag),dm,ncomps,ngJ));
 
-    if (do_dive_cleaning || plot_rho)
+
+    Bfield_avg_fp[lev][0].reset( new MultiFab(amrex::convert(ba,Bx_nodal_flag),dm,ncomps,ngE));
+    Bfield_avg_fp[lev][1].reset( new MultiFab(amrex::convert(ba,By_nodal_flag),dm,ncomps,ngE));
+    Bfield_avg_fp[lev][2].reset( new MultiFab(amrex::convert(ba,Bz_nodal_flag),dm,ncomps,ngE));
+
+    Efield_avg_fp[lev][0].reset( new MultiFab(amrex::convert(ba,Ex_nodal_flag),dm,ncomps,ngE));
+    Efield_avg_fp[lev][1].reset( new MultiFab(amrex::convert(ba,Ey_nodal_flag),dm,ncomps,ngE));
+    Efield_avg_fp[lev][2].reset( new MultiFab(amrex::convert(ba,Ez_nodal_flag),dm,ncomps,ngE));
+
+    if (do_dive_cleaning || (plot_rho && do_back_transformed_diagnostics))
     {
         rho_fp[lev].reset(new MultiFab(amrex::convert(ba,rho_nodal_flag),dm,2*ncomps,ngRho));
     }
@@ -943,7 +1047,7 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     bool const pml=false;
     spectral_solver_fp[lev].reset( new SpectralSolver( realspace_ba, dm,
         nox_fft, noy_fft, noz_fft, do_nodal, v_galilean, dx_vect, dt[lev],
-        pml, fft_periodic_single_box ) );
+        pml, fft_periodic_single_box, update_with_rho, fft_do_time_averaging ) );
 #   endif
 #endif
     m_fdtd_solver_fp[lev].reset(
@@ -962,6 +1066,15 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
         Efield_aux[lev][0].reset( new MultiFab(nba,dm,ncomps,ngE));
         Efield_aux[lev][1].reset( new MultiFab(nba,dm,ncomps,ngE));
         Efield_aux[lev][2].reset( new MultiFab(nba,dm,ncomps,ngE));
+#ifdef WARPX_MAG_LLG
+        Mfield_aux[lev][0].reset( new MultiFab(nba,dm,3     ,ngE));
+        Mfield_aux[lev][1].reset( new MultiFab(nba,dm,3     ,ngE));
+        Mfield_aux[lev][2].reset( new MultiFab(nba,dm,3     ,ngE));
+
+        H_biasfield_aux[lev][0].reset( new MultiFab(nba,dm,ncomps,ngE));
+        H_biasfield_aux[lev][1].reset( new MultiFab(nba,dm,ncomps,ngE));
+        H_biasfield_aux[lev][2].reset( new MultiFab(nba,dm,ncomps,ngE));
+#endif
     }
     else if (lev == 0)
     {
@@ -969,8 +1082,13 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
             Efield_aux[lev][idir].reset(new MultiFab(*Efield_fp[lev][idir], amrex::make_alias, 0, ncomps));
             Bfield_aux[lev][idir].reset(new MultiFab(*Bfield_fp[lev][idir], amrex::make_alias, 0, ncomps));
 #ifdef WARPX_MAG_LLG
+            H_biasfield_aux[lev][idir].reset(new MultiFab(*H_biasfield_fp[lev][idir], amrex::make_alias, 0, ncomps));
             Mfield_aux[lev][idir].reset(new MultiFab(*Mfield_fp[lev][idir], amrex::make_alias, 0, 3     ));
 #endif
+
+
+            Efield_avg_aux[lev][idir].reset(new MultiFab(*Efield_avg_fp[lev][idir], amrex::make_alias, 0, ncomps));
+            Bfield_avg_aux[lev][idir].reset(new MultiFab(*Bfield_avg_fp[lev][idir], amrex::make_alias, 0, ncomps));
         }
     }
     else
@@ -987,7 +1105,20 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
         Mfield_aux[lev][0].reset( new MultiFab(amrex::convert(ba,Mx_nodal_flag),dm,3     ,ngE));
         Mfield_aux[lev][1].reset( new MultiFab(amrex::convert(ba,My_nodal_flag),dm,3     ,ngE));
         Mfield_aux[lev][2].reset( new MultiFab(amrex::convert(ba,Mz_nodal_flag),dm,3     ,ngE));
+
+        H_biasfield_aux[lev][0].reset( new MultiFab(amrex::convert(ba,Hx_bias_nodal_flag),dm,ncomps,ngE));
+        H_biasfield_aux[lev][1].reset( new MultiFab(amrex::convert(ba,Hy_bias_nodal_flag),dm,ncomps,ngE));
+        H_biasfield_aux[lev][2].reset( new MultiFab(amrex::convert(ba,Hz_bias_nodal_flag),dm,ncomps,ngE));
 #endif
+
+        Bfield_avg_aux[lev][0].reset( new MultiFab(amrex::convert(ba,Bx_nodal_flag),dm,ncomps,ngE));
+        Bfield_avg_aux[lev][1].reset( new MultiFab(amrex::convert(ba,By_nodal_flag),dm,ncomps,ngE));
+        Bfield_avg_aux[lev][2].reset( new MultiFab(amrex::convert(ba,Bz_nodal_flag),dm,ncomps,ngE));
+
+        Efield_avg_aux[lev][0].reset( new MultiFab(amrex::convert(ba,Ex_nodal_flag),dm,ncomps,ngE));
+        Efield_avg_aux[lev][1].reset( new MultiFab(amrex::convert(ba,Ey_nodal_flag),dm,ncomps,ngE));
+        Efield_avg_aux[lev][2].reset( new MultiFab(amrex::convert(ba,Ez_nodal_flag),dm,ncomps,ngE));
+
     }
 
     //
@@ -1014,14 +1145,29 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
         Mfield_cp[lev][0].reset( new MultiFab(amrex::convert(cba,Mx_nodal_flag),dm,3     ,ngE));
         Mfield_cp[lev][1].reset( new MultiFab(amrex::convert(cba,My_nodal_flag),dm,3     ,ngE));
         Mfield_cp[lev][2].reset( new MultiFab(amrex::convert(cba,Mz_nodal_flag),dm,3     ,ngE));
+
+        // Create the MultiFabs for H_bias
+        H_biasfield_cp[lev][0].reset( new MultiFab(amrex::convert(cba,Hx_bias_nodal_flag),dm,ncomps,ngE));
+        H_biasfield_cp[lev][1].reset( new MultiFab(amrex::convert(cba,Hy_bias_nodal_flag),dm,ncomps,ngE));
+        H_biasfield_cp[lev][2].reset( new MultiFab(amrex::convert(cba,Hz_bias_nodal_flag),dm,ncomps,ngE));
+
 #endif
+        // Create the MultiFabs for B_avg
+        Bfield_avg_cp[lev][0].reset( new MultiFab(amrex::convert(cba,Bx_nodal_flag),dm,ncomps,ngE));
+        Bfield_avg_cp[lev][1].reset( new MultiFab(amrex::convert(cba,By_nodal_flag),dm,ncomps,ngE));
+        Bfield_avg_cp[lev][2].reset( new MultiFab(amrex::convert(cba,Bz_nodal_flag),dm,ncomps,ngE));
+
+        // Create the MultiFabs for E_avg
+        Efield_avg_cp[lev][0].reset( new MultiFab(amrex::convert(cba,Ex_nodal_flag),dm,ncomps,ngE));
+        Efield_avg_cp[lev][1].reset( new MultiFab(amrex::convert(cba,Ey_nodal_flag),dm,ncomps,ngE));
+        Efield_avg_cp[lev][2].reset( new MultiFab(amrex::convert(cba,Ez_nodal_flag),dm,ncomps,ngE));
 
         // Create the MultiFabs for the current
         current_cp[lev][0].reset( new MultiFab(amrex::convert(cba,jx_nodal_flag),dm,ncomps,ngJ));
         current_cp[lev][1].reset( new MultiFab(amrex::convert(cba,jy_nodal_flag),dm,ncomps,ngJ));
         current_cp[lev][2].reset( new MultiFab(amrex::convert(cba,jz_nodal_flag),dm,ncomps,ngJ));
 
-        if (do_dive_cleaning || plot_rho){
+        if (do_dive_cleaning || (plot_rho && do_back_transformed_diagnostics)) {
             rho_cp[lev].reset(new MultiFab(amrex::convert(cba,rho_nodal_flag),dm,2*ncomps,ngRho));
         }
         if (do_dive_cleaning)
@@ -1050,7 +1196,8 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
 #   else
         realspace_ba.grow(ngE); // add guard cells
         spectral_solver_cp[lev].reset( new SpectralSolver( realspace_ba, dm,
-            nox_fft, noy_fft, noz_fft, do_nodal, v_galilean, cdx_vect, dt[lev] ) );
+            nox_fft, noy_fft, noz_fft, do_nodal, v_galilean, cdx_vect, dt[lev],
+            pml, fft_periodic_single_box, update_with_rho, fft_do_time_averaging ) );
 #   endif
 #endif
         m_fdtd_solver_cp[lev].reset(
@@ -1075,6 +1222,14 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
                 Efield_cax[lev][0].reset( new MultiFab(cnba,dm,ncomps,ngE));
                 Efield_cax[lev][1].reset( new MultiFab(cnba,dm,ncomps,ngE));
                 Efield_cax[lev][2].reset( new MultiFab(cnba,dm,ncomps,ngE));
+#ifdef WARPX_MAG_LLG
+                Mfield_cax[lev][0].reset( new MultiFab(cnba,dm,3     ,ngE));
+                Mfield_cax[lev][1].reset( new MultiFab(cnba,dm,3     ,ngE));
+                Mfield_cax[lev][2].reset( new MultiFab(cnba,dm,3     ,ngE));
+                H_biasfield_cax[lev][0].reset( new MultiFab(cnba,dm,ncomps,ngE));
+                H_biasfield_cax[lev][1].reset( new MultiFab(cnba,dm,ncomps,ngE));
+                H_biasfield_cax[lev][2].reset( new MultiFab(cnba,dm,ncomps,ngE));
+#endif
             } else {
                 // Create the MultiFabs for B
                 Bfield_cax[lev][0].reset( new MultiFab(amrex::convert(cba,Bx_nodal_flag),dm,ncomps,ngE));
@@ -1085,6 +1240,17 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
                 Efield_cax[lev][0].reset( new MultiFab(amrex::convert(cba,Ex_nodal_flag),dm,ncomps,ngE));
                 Efield_cax[lev][1].reset( new MultiFab(amrex::convert(cba,Ey_nodal_flag),dm,ncomps,ngE));
                 Efield_cax[lev][2].reset( new MultiFab(amrex::convert(cba,Ez_nodal_flag),dm,ncomps,ngE));
+#ifdef WARPX_MAG_LLG
+                // Create the MultiFabs for M
+                Mfield_cax[lev][0].reset( new MultiFab(amrex::convert(cba,Mx_nodal_flag),dm,3     ,ngE));
+                Mfield_cax[lev][1].reset( new MultiFab(amrex::convert(cba,My_nodal_flag),dm,3     ,ngE));
+                Mfield_cax[lev][2].reset( new MultiFab(amrex::convert(cba,Mz_nodal_flag),dm,3     ,ngE));
+
+                // Create the MultiFabs for H
+                H_biasfield_cax[lev][0].reset( new MultiFab(amrex::convert(cba,Hx_bias_nodal_flag),dm,ncomps,ngE));
+                H_biasfield_cax[lev][1].reset( new MultiFab(amrex::convert(cba,Hy_bias_nodal_flag),dm,ncomps,ngE));
+                H_biasfield_cax[lev][2].reset( new MultiFab(amrex::convert(cba,Hz_bias_nodal_flag),dm,ncomps,ngE));
+#endif
             }
 
             gather_buffer_masks[lev].reset( new iMultiFab(ba, dm, ncomps, 1) );
@@ -1158,6 +1324,15 @@ WarpX::UpperCorner(const Box& bx, int lev)
 #elif (AMREX_SPACEDIM == 2)
     return { xyzmax[0], std::numeric_limits<Real>::max(), xyzmax[1] };
 #endif
+}
+
+std::array<Real,3>
+WarpX::LowerCornerWithGalilean (const Box& bx, const amrex::Array<amrex::Real,3>& v_galilean, int lev)
+{
+    amrex::Real cur_time = gett_new(lev);
+    amrex::Real time_shift = (cur_time - time_of_last_gal_shift);
+    amrex::Array<amrex::Real,3> galilean_shift = { v_galilean[0]*time_shift, v_galilean[1]*time_shift, v_galilean[2]*time_shift };
+    return WarpX::LowerCorner(bx, galilean_shift, lev);
 }
 
 IntVect
@@ -1418,14 +1593,4 @@ WarpX::PicsarVersion ()
 #else
     return std::string("Unknown");
 #endif
-}
-
-void
-WarpX::FieldGather ()
-{
-    for (int lev = 0; lev <= finest_level; ++lev) {
-        mypc->FieldGather(lev,
-                          *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
-                          *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2]);
-    }
 }

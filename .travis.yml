@@ -28,7 +28,7 @@ before_install:
 
 install:
     - python -m pip install --upgrade pip
-    - python -m pip install --upgrade cmake matplotlib mpi4py numpy scipy yt
+    - python -m pip install --upgrade cmake matplotlib==3.2.2 mpi4py numpy scipy yt
     - export CEI_CMAKE="/home/travis/.local/bin/cmake"
     - sudo curl -L -o /usr/local/bin/cmake-easyinstall https://git.io/JvLxY && sudo chmod a+x /usr/local/bin/cmake-easyinstall
     - if [ "${WARPX_CI_OPENPMD}" != "FALSE" ]; then
@@ -46,4 +46,4 @@ script:
 
     # Run the script that prepares the test environment and runs the tests
     - export OMP_NUM_THREADS=1
-    - ./run_test.sh
+    - travis_wait 50 ./run_test.sh
