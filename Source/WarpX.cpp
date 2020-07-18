@@ -533,7 +533,7 @@ WarpX::ReadParameters ()
         pp.query("do_pml_j_damping", do_pml_j_damping);
         pp.query("do_pml_in_domain", do_pml_in_domain);
 
-	// Read the value of the time advancement scheme of M field
+    // Read the value of the time advancement scheme of M field
         pp.query("time_scheme_order", time_scheme_order);
 
 #ifdef WARPX_DIM_RZ

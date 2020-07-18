@@ -156,11 +156,11 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt)
 
     // Evolve B field in regular cells
     if (patch_type == PatchType::fine) {
-	if (time_scheme_order==2){
+    if (time_scheme_order==2){
                 for (int i = 0; i < 3; i++){
                 MultiFab::Copy(*Bfield_fp_old[lev][i],*Bfield_fp[lev][i],0,0,1,Bfield_fp[lev][i]->nGrow());
                 }
-	}
+    }
         m_fdtd_solver_fp[lev]->EvolveB( Bfield_fp[lev], Efield_fp[lev], a_dt );
     } else {
         m_fdtd_solver_cp[lev]->EvolveB( Bfield_cp[lev], Efield_cp[lev], a_dt );

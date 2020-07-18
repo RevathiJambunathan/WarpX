@@ -137,25 +137,25 @@ public:
                                 a(i, j, k, 2) * b(i, j, k, 2);
          amrex::Real M_half;
 
-	 if(n==0){
+     if(n==0){
              amrex::Real a_cross_b_x = a(i, j, k, 1) * b(i, j, k, 2) - 
                                        a(i, j, k, 2) * b(i, j, k, 1);
              M_half = ( b(i, j, k, 0) + a_dot_b * a(i, j, k, 0) - a_cross_b_x ) / ( 1.0 + a_square);     
-	 }
-	 else if(n==1){
-	     amrex::Real a_cross_b_y = a(i, j, k, 2) * b(i, j, k, 0) - 
+     }
+     else if(n==1){
+         amrex::Real a_cross_b_y = a(i, j, k, 2) * b(i, j, k, 0) - 
                                        a(i, j, k, 0) * b(i, j, k, 2);
              M_half = ( b(i, j, k, 1) + a_dot_b * a(i, j, k, 1) - a_cross_b_y ) / ( 1.0 + a_square);     
-	 }
+     }
          else if(n==2){
-	     amrex::Real a_cross_b_z = a(i, j, k, 0) * b(i, j, k, 1) - 
+         amrex::Real a_cross_b_z = a(i, j, k, 0) * b(i, j, k, 1) - 
                                        a(i, j, k, 1) * b(i, j, k, 0);
              M_half = ( b(i, j, k, 2) + a_dot_b * a(i, j, k, 2) - a_cross_b_z ) / ( 1.0 + a_square);     
-	 }
-	 else{
+     }
+     else{
              printf("n=%d\n", n);
              amrex::Abort("Wrong component n of the M_half field");
-	 };
+     };
 
          return M_half;
      };

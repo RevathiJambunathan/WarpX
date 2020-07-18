@@ -44,7 +44,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         std::unique_ptr<MacroscopicProperties> const& macroscopic_properties )
     {
 
-	amrex::Print() << "In the MacroscopicEvolveMCartesian_2nd() " << std::endl;
+    amrex::Print() << "In the MacroscopicEvolveMCartesian_2nd() " << std::endl;
 
         // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp
         std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_prev;
@@ -70,7 +70,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         b_temp[i]->setVal(0.0);
         }
 
-    	// calculate the b_temp, a_temp_static
+        // calculate the b_temp, a_temp_static
         for (MFIter mfi(*Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) /* remember to FIX */
         {
           auto& mag_Ms_mf = macroscopic_properties->getmag_Ms_mf();
@@ -92,8 +92,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
             Array4<Real> const& By_old = Bfield_old[1]->array(mfi); // By is the y component at |_y faces
             Array4<Real> const& Bz_old = Bfield_old[2]->array(mfi); // Bz is the z component at |_z faces
 
-	    // extract field data of a_temp_static and b_temp
-	    Array4<Real> const& a_temp_static_xface = a_temp_static[0]->array(mfi); 
+        // extract field data of a_temp_static and b_temp
+        Array4<Real> const& a_temp_static_xface = a_temp_static[0]->array(mfi); 
             Array4<Real> const& a_temp_static_yface = a_temp_static[1]->array(mfi); 
             Array4<Real> const& a_temp_static_zface = a_temp_static[2]->array(mfi); 
             Array4<Real> const& b_temp_xface= b_temp[0]->array(mfi); 
@@ -143,8 +143,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real a_temp_static_coeff = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr)
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr);
 
-	      Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
-		                (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
+          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
+                        (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_static_xface
               // x component on x-faces of grid
@@ -193,8 +193,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real a_temp_static_coeff = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr)
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_Ms_arr);
 
-	      Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
-		                (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr), 2.0))/ 2.0;
+          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
+                        (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_static_yface
               // x component on y-faces of grid
@@ -243,8 +243,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real a_temp_static_coeff = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr)
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_Ms_arr);
 
-	      Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
-		                (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
+          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
+                        (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_static_zface
               // x component on z-faces of grid
@@ -298,11 +298,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
             Array4<Real> const& By = Bfield[1]->array(mfi); // By is the y component at |_y faces
             Array4<Real> const& Bz = Bfield[2]->array(mfi); // Bz is the z component at |_z faces
 
-	    // extract field data of Mfield_prev, Mfield_error, a_temp, a_temp_static, and b_temp
-	    Array4<Real> const& M_prev_xface = Mfield_prev[0]->array(mfi);
+        // extract field data of Mfield_prev, Mfield_error, a_temp, a_temp_static, and b_temp
+        Array4<Real> const& M_prev_xface = Mfield_prev[0]->array(mfi);
             Array4<Real> const& M_prev_yface = Mfield_prev[1]->array(mfi);
             Array4<Real> const& M_prev_zface = Mfield_prev[2]->array(mfi);
- 	    Array4<Real> const& M_error_xface = Mfield_error[0]->array(mfi);
+         Array4<Real> const& M_error_xface = Mfield_error[0]->array(mfi);
             Array4<Real> const& M_error_yface = Mfield_error[1]->array(mfi);
             Array4<Real> const& M_error_zface = Mfield_error[2]->array(mfi);
             Array4<Real> const& a_temp_xface = a_temp[0]->array(mfi); 
@@ -328,8 +328,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
             Box const& tby = mfi.tilebox(Bfield[1]->ixType().toIntVect());
             Box const& tbz = mfi.tilebox(Bfield[2]->ixType().toIntVect());
 
-	    // reset the value of the M_iter_maxerror
-	    M_iter_maxerror = -1.0;
+        // reset the value of the M_iter_maxerror
+        M_iter_maxerror = -1.0;
 
             // loop over cells and update fields
             amrex::ParallelFor(tbx, tby, tbz,
@@ -358,10 +358,10 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_gamma_arr); 
 
-	      Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
-		                (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
+          Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
+                        (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
 
-	      // calculate a_temp_xface
+          // calculate a_temp_xface
               // x component on x-faces of grid
               a_temp_xface(i, j, k, 0) = -( dt * a_temp_dynamic_coeff * Hx_eff + a_temp_static_xface(i, j, k, 0) );
 
@@ -416,8 +416,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_gamma_arr); 
 
- 	      Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
-		                (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr), 2.0))/ 2.0;
+           Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
+                        (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_yface
               // x component on y-faces of grid
@@ -473,8 +473,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_gamma_arr);
 
- 	      Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
-		                (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
+           Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
+                        (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_zface
               // x component on z-faces of grid
@@ -519,7 +519,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
         if (M_iter_maxerror <= M_tol) {
            stop_iter = 1;
-	}
+    }
         else {
            // Copy Mfield to Mfield_previous
            for (int i = 0; i < 3; i++){
@@ -532,7 +532,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         }
         else {
            M_iter++;
-	   amrex::Print() << "Finish " << M_iter << " times iteration with M_iter_maxerror = " << M_iter_maxerror << " and M_tol = " << M_tol << std::endl;
+       amrex::Print() << "Finish " << M_iter << " times iteration with M_iter_maxerror = " << M_iter_maxerror << " and M_tol = " << M_tol << std::endl;
         }
 
         }
