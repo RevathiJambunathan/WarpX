@@ -407,8 +407,8 @@ WarpX::OneStep_nosub (Real cur_time)
         } else if (time_scheme_order==2){
         MacroscopicEvolveM_2nd(0.5*dt[0]); // we now have M^{n+1}
         } else {
-        amrex::Abort("unsupported time_scheme_order for M field");        
-        } 
+        amrex::Abort("unsupported time_scheme_order for M field");
+        }
             if ( safe_guard_cells ){
                 FillBoundaryM(guard_cells.ng_alloc_EB, guard_cells.ng_Extra);
             }

@@ -18,7 +18,7 @@ using namespace amrex;
 
 void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
     std::array< std::unique_ptr<amrex::MultiFab>, 3 >& Mfield, // Mfield contains three components MultiFab
-    std::array< std::unique_ptr<amrex::MultiFab>, 3 >& H_biasfield, // H bias 
+    std::array< std::unique_ptr<amrex::MultiFab>, 3 >& H_biasfield, // H bias
     std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Bfield,
     std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Bfield_old,
     amrex::Real const dt,
@@ -93,12 +93,12 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
             Array4<Real> const& Bz_old = Bfield_old[2]->array(mfi); // Bz is the z component at |_z faces
 
         // extract field data of a_temp_static and b_temp
-        Array4<Real> const& a_temp_static_xface = a_temp_static[0]->array(mfi); 
-            Array4<Real> const& a_temp_static_yface = a_temp_static[1]->array(mfi); 
-            Array4<Real> const& a_temp_static_zface = a_temp_static[2]->array(mfi); 
-            Array4<Real> const& b_temp_xface= b_temp[0]->array(mfi); 
-            Array4<Real> const& b_temp_yface= b_temp[1]->array(mfi); 
-            Array4<Real> const& b_temp_zface= b_temp[2]->array(mfi); 
+        Array4<Real> const& a_temp_static_xface = a_temp_static[0]->array(mfi);
+            Array4<Real> const& a_temp_static_yface = a_temp_static[1]->array(mfi);
+            Array4<Real> const& a_temp_static_zface = a_temp_static[2]->array(mfi);
+            Array4<Real> const& b_temp_xface= b_temp[0]->array(mfi);
+            Array4<Real> const& b_temp_yface= b_temp[1]->array(mfi);
+            Array4<Real> const& b_temp_zface= b_temp[2]->array(mfi);
 
             // extract stencil coefficients
             Real const * const AMREX_RESTRICT coefs_x = m_stencil_coefs_x.dataPtr();
@@ -139,11 +139,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
-              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_gamma_arr); 
+              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_gamma_arr);
               Real a_temp_static_coeff = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr)
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr);
 
-          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
+          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_static_xface
@@ -189,11 +189,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
-              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_gamma_arr); 
+              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_gamma_arr);
               Real a_temp_static_coeff = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr)
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_Ms_arr);
 
-          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
+          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_static_yface
@@ -239,11 +239,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
-              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_gamma_arr); 
+              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_gamma_arr);
               Real a_temp_static_coeff = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr)
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_Ms_arr);
 
-          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp * 
+          Real b_temp_coeff = PhysConst::mu0 * mag_gamma_interp *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_static_zface
@@ -268,7 +268,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               });
         }
 
-        // initialize M_max_iter, M_iter, M_tol, M_iter_error 
+        // initialize M_max_iter, M_iter, M_tol, M_iter_error
         amrex::Real M_max_iter = 100;
         amrex::Real M_iter = 0.0;
         amrex::Real M_tol = 0.0001;
@@ -305,15 +305,15 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
          Array4<Real> const& M_error_xface = Mfield_error[0]->array(mfi);
             Array4<Real> const& M_error_yface = Mfield_error[1]->array(mfi);
             Array4<Real> const& M_error_zface = Mfield_error[2]->array(mfi);
-            Array4<Real> const& a_temp_xface = a_temp[0]->array(mfi); 
-            Array4<Real> const& a_temp_yface = a_temp[1]->array(mfi); 
-            Array4<Real> const& a_temp_zface = a_temp[2]->array(mfi); 
-            Array4<Real> const& a_temp_static_xface = a_temp_static[0]->array(mfi); 
-            Array4<Real> const& a_temp_static_yface = a_temp_static[1]->array(mfi); 
-            Array4<Real> const& a_temp_static_zface = a_temp_static[2]->array(mfi); 
-            Array4<Real> const& b_temp_xface= b_temp[0]->array(mfi); 
-            Array4<Real> const& b_temp_yface= b_temp[1]->array(mfi); 
-            Array4<Real> const& b_temp_zface= b_temp[2]->array(mfi); 
+            Array4<Real> const& a_temp_xface = a_temp[0]->array(mfi);
+            Array4<Real> const& a_temp_yface = a_temp[1]->array(mfi);
+            Array4<Real> const& a_temp_zface = a_temp[2]->array(mfi);
+            Array4<Real> const& a_temp_static_xface = a_temp_static[0]->array(mfi);
+            Array4<Real> const& a_temp_static_yface = a_temp_static[1]->array(mfi);
+            Array4<Real> const& a_temp_static_zface = a_temp_static[2]->array(mfi);
+            Array4<Real> const& b_temp_xface= b_temp[0]->array(mfi);
+            Array4<Real> const& b_temp_yface= b_temp[1]->array(mfi);
+            Array4<Real> const& b_temp_zface= b_temp[2]->array(mfi);
 
             // extract stencil coefficients
             Real const * const AMREX_RESTRICT coefs_x = m_stencil_coefs_x.dataPtr();
@@ -356,9 +356,9 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
-              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_gamma_arr); 
+              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_gamma_arr);
 
-          Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
+          Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
 
           // calculate a_temp_xface
@@ -371,15 +371,15 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // z component on x-faces of grid
               a_temp_xface(i, j, k, 2) = -( dt * a_temp_dynamic_coeff * Hz_eff + a_temp_static_xface(i, j, k, 2) );
 
-              // calculate M_xface 
+              // calculate M_xface
               // x component on x-faces of grid
-              M_xface(i, j, k, 0) = MacroscopicProperties::getM_half (i, j, k, 0, a_temp_xface, b_temp_xface); 
+              M_xface(i, j, k, 0) = MacroscopicProperties::getM_half (i, j, k, 0, a_temp_xface, b_temp_xface);
 
               // y component on x-faces of grid
-              M_xface(i, j, k, 1) = MacroscopicProperties::getM_half (i, j, k, 1, a_temp_xface, b_temp_xface); 
+              M_xface(i, j, k, 1) = MacroscopicProperties::getM_half (i, j, k, 1, a_temp_xface, b_temp_xface);
 
               // z component on x-faces of grid
-              M_xface(i, j, k, 2) = MacroscopicProperties::getM_half (i, j, k, 2, a_temp_xface, b_temp_xface); 
+              M_xface(i, j, k, 2) = MacroscopicProperties::getM_half (i, j, k, 2, a_temp_xface, b_temp_xface);
 
               // x component on x-faces of grid
               M_error_xface(i, j, k, 0) = std::abs((M_xface(i, j, k, 0) - M_prev_xface(i, j, k, 0))) / (std::abs(M_prev_xface(i, j, k, 0)) + 1.0e-12);
@@ -414,9 +414,9 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
-              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_gamma_arr); 
+              Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_gamma_arr);
 
-           Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
+           Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_yface
@@ -473,7 +473,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_gamma_arr);
 
-           Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) * 
+           Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_zface
@@ -512,7 +512,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
             for (int j = 0; j < 3; j++){
                 Real M_iter_error = Mfield_error[i]->norm0(j);
                 if(M_iter_error >= M_iter_maxerror) {
-                     M_iter_maxerror = M_iter_error;  
+                     M_iter_maxerror = M_iter_error;
                 }
             }
         }
