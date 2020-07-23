@@ -17,6 +17,8 @@ using namespace amrex;
 // update M field over one timestep
 
 void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
+    // The MField here is a vector of three multifabs, with M on each face, and each multifab is a three-component multifab.
+    // Each M-multifab has three components, one for each component in x, y, z. (All multifabs are four dimensional, (i,j,k,n)), where, n=1 for E, B, but, n=3 for M_xface, M_yface, M_zface
     std::array< std::unique_ptr<amrex::MultiFab>, 3 >& Mfield, // Mfield contains three components MultiFab
     std::array< std::unique_ptr<amrex::MultiFab>, 3 >& H_biasfield, // H bias
     std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Bfield,
