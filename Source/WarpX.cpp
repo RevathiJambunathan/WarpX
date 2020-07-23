@@ -791,8 +791,8 @@ WarpX::ClearLevel (int lev)
         current_fp[lev][i].reset();
         Efield_fp [lev][i].reset();
         Bfield_fp [lev][i].reset();
-        Bfield_fp_old [lev][i].reset();
 #ifdef WARPX_MAG_LLG
+        Bfield_fp_old [lev][i].reset();
         Mfield_fp [lev][i].reset();
         H_biasfield_fp [lev][i].reset();
 #endif
