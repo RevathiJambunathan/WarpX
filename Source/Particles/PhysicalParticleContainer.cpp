@@ -923,8 +923,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                        }
                        //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
                        //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
-                       //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
-                       //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
+                       if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
+                       if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
                        // if rho is too smal -- we dont inject particles
                        if (std::abs(rho_GJ) < 1.0E-20) {
                           p.id() = -1;
@@ -2245,7 +2245,8 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                       Real r = std::sqrt((x-xc)*(x-xc)
                                        + (y-yc)*(y-yc)
                                        + (z-zc)*(z-zc));
-                      if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
+                      //if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
+                      if (r<=(PulsarParm::R_star)) {
                           pp[i].id() = -1;
                       }
             });
