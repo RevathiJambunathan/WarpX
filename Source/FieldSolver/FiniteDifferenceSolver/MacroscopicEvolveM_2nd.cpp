@@ -269,6 +269,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         }
 
         // initialize M_max_iter, M_iter, M_tol, M_iter_error
+        // change these to user-defined input in the next PR
         int M_max_iter = 100;
         int M_iter = 0;
         amrex::Real M_tol = 0.0001;
