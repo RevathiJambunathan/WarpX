@@ -362,13 +362,13 @@ WarpX::OneStep_nosub (Real cur_time)
 
 #ifdef WARPX_MAG_LLG
         if (WarpX::em_solver_medium == MediumForEM::Macroscopic) { //evolveM is not applicable to vacuum
-        if (time_scheme_order==1){
-            MacroscopicEvolveM(0.5*dt[0]); // we now have M^{n+1/2}
-        } else if (time_scheme_order==2){
-        MacroscopicEvolveM_2nd(0.5*dt[0]); // we now have M^{n+1/2}
-        } else {
-        amrex::Abort("unsupported time_scheme_order for M field");
-        }
+            if (time_scheme_order==1){
+                MacroscopicEvolveM(0.5*dt[0]); // we now have M^{n+1/2}
+            } else if (time_scheme_order==2){
+                MacroscopicEvolveM_2nd(0.5*dt[0]); // we now have M^{n+1/2}
+            } else {
+                amrex::Abort("unsupported time_scheme_order for M field");
+            }
             FillBoundaryM(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
         } else {
             amrex::Abort("unsupported em_solver_medium for M field");
