@@ -148,13 +148,13 @@ struct GetExternalField
         {
             amrex::ParticleReal x, y, z;
             m_get_position(i, x, y, z);
-            PulsarParm::PulsarEField(x, y, z, field_x, field_y, field_z, m_time); 
+            PulsarParm::PulsarEField(x, y, z, field_x, field_y, field_z, m_time);
         }
         else if (m_type == Pulsar_Bfield)
         {
             amrex::ParticleReal x, y, z;
             m_get_position(i, x, y, z);
-            PulsarParm::PulsarBField(x, y, z, field_x, field_y, field_z, m_time); 
+            PulsarParm::PulsarBField(x, y, z, field_x, field_y, field_z, m_time);
         }
 #endif
         else
