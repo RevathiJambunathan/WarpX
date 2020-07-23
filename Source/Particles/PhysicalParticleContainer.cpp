@@ -956,8 +956,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                        }
                        //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
                        //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
-                       if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
-                       if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
                        // if rho is too smal -- we dont inject particles
                        if (std::abs(rho_GJ) < 1.0E-20) {
                           p.id() = -1;
