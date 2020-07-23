@@ -230,9 +230,9 @@ namespace PulsarParm
             const amrex::Real xc = 0.5 * (domain_xlo[0] + domain_xhi[0]);
             const amrex::Real yc = 0.5 * (domain_xlo[1] + domain_xhi[1]);
             const amrex::Real zc = 0.5 * (domain_xlo[2] + domain_xhi[2]);
-            
+
             const amrex::Real r = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
-            
+
             return r;
         }
     }
