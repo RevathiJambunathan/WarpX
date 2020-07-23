@@ -789,7 +789,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         amrex::ParallelForRNG(overlap_box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
         {
-            IntVect iv = IntVect(AMREX_D_DECL(i, j, k));
+            amrex::IntVect iv = amrex::IntVect(AMREX_D_DECL(i, j, k));            
             const auto index = overlap_box.index(iv);
             for (int i_part = 0; i_part < pcounts[index]; ++i_part)
             {
@@ -886,23 +886,26 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     amrex::Real Er_cor =  PulsarParm::B_star
                                              *omega
                                              *cc_rad*s_theta*s_theta;
-                    Real Er_ext = omega*PulsarParm::B_star*cc_rad*(1.0-3.0*c_theta*c_theta);
-                    Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
+                    //// Er_external is known
+                    //Real Er_ext = omega*PulsarParm::B_star*cc_rad*(1.0-3.0*c_theta*c_theta);
+                    //Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
+                    //// rho_GJ is known
                     amrex::Real rho_GJ = 2*PhysConst::ep0*PulsarParm::B_star*omega*
                                         (1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
                     int ii = Ex_lo.x + iv[0];
                     int jj = Ex_lo.y + iv[1];
                     int kk = Ex_lo.z + iv[2];
                     Real ex_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii,jj+1,kk+1));
-                    Real ey_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii+1,jj,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii+1,jj,kk+1));
-                    Real ez_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii+1,jj,kk) + ex_arr(ii+1,jj+1,kk));
+                    Real ey_avg = 0.25*(ey_arr(ii,jj,kk) + ey_arr(ii+1,jj,kk)+ey_arr(ii,jj,kk+1) + ey_arr(ii+1,jj,kk+1));
+                    Real ez_avg = 0.25*(ez_arr(ii,jj,kk) + ez_arr(ii,jj+1,kk)+ez_arr(ii+1,jj,kk) + ez_arr(ii+1,jj+1,kk));
                     Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
                     // analytical surface charge density
-                    Real sigma_inj = (( Er_ext - Er_cor));
+                    //Real sigma_inj = (( Er_ext - Er_cor));
+                    Real sigma_inj = (( Er_cell - Er_cor));
                     Real max_dens = PulsarParm::max_ndens;
                     amrex::Real fraction = PulsarParm::Ninj_fraction;
                     // number of particle pairs injected
-                    Real N_inj = fraction*std::abs(sigma_inj) *PhysConst::ep0* dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
+                    Real N_inj = fraction*amrex::Math::abs(sigma_inj) *PhysConst::ep0* dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
                     if (t > 0) {
                        if (N_inj >= 1) {
                           if (N_inj < num_ppc) {
@@ -918,18 +921,19 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                           p.id() = -1;
                           continue;
                        }
-                       if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
-                       if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
+                       //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
+                       //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
+                       //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
+                       //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
                        // if rho is too smal -- we dont inject particles
-                       if (std::abs(rho_GJ) < 1E-35) {
+                       if (std::abs(rho_GJ) < 1.0E-20) {
                           p.id() = -1;
                           continue;
                        }
                        else {
-                          if (std::abs(rho_arr(ii,jj,kk)) > 0) {
-                          Real rel_rho_err = std::abs((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
-                          //amrex::Print() << " rho is " << rho_arr(ii,jj,kk) << " rho_GJ " << rho_GJ << " rel err : " << rel_rho_err << "\n";
-                          if ( rel_rho_err < 0.05) {
+                          Real rel_rho_err = ((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
+                          // If current rho is much higher than rho_GJ, particles are not introduced.
+                          if ( amrex::Math::abs(rel_rho_err) > 0.05) {
                              p.id() = -1;
                              continue;
                           }
