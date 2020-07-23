@@ -33,7 +33,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
     else {
        amrex::Abort("Only yee algorithm is compatible for M updates.");
     }
-    } // closes function EvolveM
+    } // closes function MacroscopicEvolveM_2nd
 #endif
 #ifdef WARPX_MAG_LLG
     template<typename T_Algo>
