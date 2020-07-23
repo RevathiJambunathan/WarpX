@@ -1640,7 +1640,7 @@ PhysicalParticleContainer::Evolve (int lev,
 #else
         int thread_num = 0;
 #endif
- 
+
         FArrayBox filtered_Ex, filtered_Ey, filtered_Ez;
         FArrayBox filtered_Bx, filtered_By, filtered_Bz;
         for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -1650,7 +1650,7 @@ PhysicalParticleContainer::Evolve (int lev,
                 amrex::Gpu::synchronize();
             }
             Real wt = amrex::second();
-          
+
             const Box& box = pti.validbox();
             auto& attribs = pti.GetAttribs();
 
