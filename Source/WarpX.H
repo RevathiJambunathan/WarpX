@@ -851,8 +851,10 @@ private:
     // Macroscopic properties
     std::unique_ptr<MacroscopicProperties> m_macroscopic_properties;
 
+#ifdef WARPX_MAG_LLG
     // time advancement scheme of M field
     int time_scheme_order = 1;
+#endif
 
     // Load balancing
     /** Load balancing intervals that reads the "load_balance_int" string int the input file
