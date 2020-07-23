@@ -13,8 +13,7 @@
 #################################
 ####### GENERAL PARAMETERS ######
 #################################
-max_step = 100
-#amr.n_cell = 256 256 256
+max_step = 50000
 amr.n_cell = 128 128 128
 amr.max_grid_size = 64
 amr.blocking_factor = 64
@@ -66,7 +65,7 @@ plasma_e.charge = -q_e
 plasma_e.mass = m_e
 plasma_e.injection_style = "NUniformPerCell"
 plasma_e.profile = parse_density_function
-plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
+plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star+dR)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star)) )*dens"
 plasma_e.num_particles_per_cell_each_dim = 3 3 3
 plasma_e.momentum_distribution_type = parse_momentum_function
 
@@ -98,7 +97,7 @@ plasma_p.mass = m_e
 plasma_p.injection_style = "NUniformPerCell"
 plasma_p.profile = parse_density_function
 #plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=r_star)* ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<(r_star+dR)))*dens"
-plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=r_star) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
+plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star+dR)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star)) )*dens"
 plasma_p.num_particles_per_cell_each_dim = 3 3 3
 plasma_p.momentum_distribution_type = parse_momentum_function
 
@@ -127,7 +126,7 @@ plasma_p.density_min = 1E0
 
 diagnostics.diags_names = plt
 plt.diag_type = Full
-plt.period = 10
+plt.period = 200
 plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
 
 
@@ -136,8 +135,7 @@ plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
 #################################
 pulsar.pulsarType = "dead"             # [dead/active]: sets particle injection type
 pulsar.omega_star = 6245.676               # angular velocity of NS (rad/s)
-pulsar.ramp_omega_time = 0.0              # time over which to ramp up NS angular velocity (s)
-#pulsar.ramp_omega_time = 2e-4              # time over which to ramp up NS angular velocity (s)
+pulsar.ramp_omega_time = 0.e-5              # time over which to ramp up NS angular velocity (s)
                                            # if ramp_omega_time < 0, omega = omega_star for any t
                                            # consistency requires ramp_omega_time = my_constants.to
 pulsar.center_star = 90000 90000 90000
