@@ -10,7 +10,7 @@
 namespace PulsarParm
 {
     extern std::string pulsar_type;
-    
+
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
@@ -25,9 +25,9 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
     extern AMREX_GPU_DEVICE_MANAGED int damp_EB_internal;
-    
+
     extern AMREX_GPU_DEVICE_MANAGED int verbose;
-    
+
     void ReadParameters();
 
 
@@ -38,7 +38,7 @@ namespace PulsarParm
          if (ramp_omega_time > 0.0 && time < ramp_omega_time) {
              omega = omega_star * time / ramp_omega_time;
          }
-    
+
          return omega;
     }
 
@@ -68,7 +68,7 @@ namespace PulsarParm
          if (time < ramp_omega_time) {
             omega = omega_star*time/ramp_omega_time;
          }
-    
+
          if (r<R_star) {
             amrex::Real r_ratio = R_star/r;
             amrex::Real r3 = r_ratio*r_ratio*r_ratio;
@@ -79,7 +79,7 @@ namespace PulsarParm
             Eyp = Er*s_theta*s_phi + Etheta*c_theta*s_phi;
             Ezp = Er*c_theta - Etheta*s_theta;
          }
-    
+
          // On and outside star surface -- dipole B and E with monopole
          if (r >= R_star ) {
             amrex::Real r_ratio = R_star/r;
@@ -90,7 +90,7 @@ namespace PulsarParm
                  Er += (2.0/3.0)*omega*B_star*R_star*r_ratio*r_ratio;
             }
             amrex::Real Etheta = (-1.0)*B_star*omega*R_star*r_ratio*r3*(2.0*s_theta*c_theta);
-    
+
             Exp = Er*s_theta*c_phi + Etheta*c_theta*c_phi;
             Eyp = Er*s_theta*s_phi + Etheta*c_theta*s_phi;
             Ezp = Er*c_theta - Etheta*s_theta;
@@ -226,20 +226,20 @@ namespace PulsarParm
             const auto domain_xlo = geom.ProbLo();
             const auto domain_xhi = geom.ProbHi();
             const auto domain_dx  = geom.CellSize();
-            
+
             //const amrex::Real x = domain_xlo[0] + (i - domain_ilo.x + 0.5) * domain_dx[0] + (1.0 - mf_ixType[0])*domain_dx[0]*0.5;
             //const amrex::Real y = domain_xlo[1] + (j - domain_ilo.y + 0.5) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
             //const amrex::Real z = domain_xlo[2] + (k - domain_ilo.z + 0.5) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
             const amrex::Real x = domain_xlo[0] + (i ) * domain_dx[0] + (1.0 - mf_ixType[0])*domain_dx[0]*0.5;
             const amrex::Real y = domain_xlo[1] + (j ) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
             const amrex::Real z = domain_xlo[2] + (k ) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
-            
+
             const amrex::Real xc = 0.5 * (domain_xlo[0] + domain_xhi[0]);
             const amrex::Real yc = 0.5 * (domain_xlo[1] + domain_xhi[1]);
             const amrex::Real zc = 0.5 * (domain_xlo[2] + domain_xhi[2]);
-            
+
             const amrex::Real r = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
-            
+
             return r;
         }
     }
@@ -249,13 +249,13 @@ namespace PulsarParm
     void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, int const* const AMREX_RESTRICT mf_ixtype)
     {
         const amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
-        
+
         if (r < R_star) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
             // for damping_scale >= 10 or so:
             // Fd(0) ~ 0
             // Fd(R_star) ~ 1
-        
+
             const amrex::Real Fd = std::tanh(damping_scale * (r / R_star - 1.0)) + 1.0;
             Efield(i, j, k) = Efield(i, j, k) * Fd;
         }
