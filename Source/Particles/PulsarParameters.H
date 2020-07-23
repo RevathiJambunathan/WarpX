@@ -125,7 +125,7 @@ namespace PulsarParm
             const amrex::Real zc = PulsarParm::center_star[2];
 
             const amrex::Real r = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
-            
+
             return r;
         }
     }
