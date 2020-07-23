@@ -226,8 +226,8 @@ WarpX::WarpX ()
     current_fp.resize(nlevs_max);
     Efield_fp.resize(nlevs_max);
     Bfield_fp.resize(nlevs_max);
-    Bfield_fp_old.resize(nlevs_max);
 #ifdef WARPX_MAG_LLG
+    Bfield_fp_old.resize(nlevs_max);
     Mfield_fp.resize(nlevs_max);
     H_biasfield_fp.resize(nlevs_max);
 #endif
