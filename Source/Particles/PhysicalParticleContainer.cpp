@@ -896,64 +896,67 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     s_phi = (cc_y-yc)/r_cl;
                 }
 
-                amrex::Real omega = PulsarParm::Omega(t);
-                amrex::Real ratio = PulsarParm::R_star/cc_rad;
-                amrex::Real r3 = ratio*ratio*ratio;
-                amrex::Real Er_cor =  PulsarParm::B_star
-                                         *omega
-                                         *cc_rad*s_theta*s_theta;
-                //// Er_external is known
-                //Real Er_ext = omega*PulsarParm::B_star*cc_rad*(1.0-3.0*c_theta*c_theta);
-                //Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
-                // rho_GJ is known
-                amrex::Real rho_GJ = 2*PhysConst::ep0*PulsarParm::B_star*omega*
-                                    (1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
-                /// accessign efield
-                int ii = Ex_lo.x + iv[0];
-                int jj = Ex_lo.y + iv[1];
-                int kk = Ex_lo.z + iv[2];
-                Real ex_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii,jj+1,kk+1));
-                Real ey_avg = 0.25*(ey_arr(ii,jj,kk) + ey_arr(ii+1,jj,kk)+ey_arr(ii,jj,kk+1) + ey_arr(ii+1,jj,kk+1));
-                Real ez_avg = 0.25*(ez_arr(ii,jj,kk) + ez_arr(ii,jj+1,kk)+ez_arr(ii+1,jj,kk) + ez_arr(ii+1,jj+1,kk));
-                Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
+                    amrex::Real omega = PulsarParm::Omega(t);
+                    amrex::Real ratio = PulsarParm::R_star/cc_rad;
+                    amrex::Real r3 = ratio*ratio*ratio;
+                    amrex::Real Er_cor =  PulsarParm::B_star
+                                             *omega
+                                             *cc_rad*s_theta*s_theta;
+                    //// Er_external is known
+                    //Real Er_ext = omega*PulsarParm::B_star*cc_rad*(1.0-3.0*c_theta*c_theta);
+                    //Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
+                    //// rho_GJ is known
+                    amrex::Real rho_GJ = 2*PhysConst::ep0*PulsarParm::B_star*omega*
+                                        (1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
+                    /// accessign efield
+                    int ii = Ex_lo.x + iv[0];
+                    int jj = Ex_lo.y + iv[1];
+                    int kk = Ex_lo.z + iv[2];
+                    Real ex_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii,jj+1,kk+1));
+                    Real ey_avg = 0.25*(ey_arr(ii,jj,kk) + ey_arr(ii+1,jj,kk)+ey_arr(ii,jj,kk+1) + ey_arr(ii+1,jj,kk+1));
+                    Real ez_avg = 0.25*(ez_arr(ii,jj,kk) + ez_arr(ii,jj+1,kk)+ez_arr(ii+1,jj,kk) + ez_arr(ii+1,jj+1,kk));
+                    Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
 
-                // analytical surface charge density
-                Real sigma_inj = (( Er_cell - Er_cor));
-                Real max_dens = PulsarParm::max_ndens;
-                amrex::Real fraction = PulsarParm::Ninj_fraction;
-                // number of particle pairs injected
-                Real N_inj = fraction*std::abs(sigma_inj) *PhysConst::ep0* dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
-                if (t > 0) {
-                   if (N_inj >= 1) {
-                      if (N_inj < num_ppc) {
-                         int part_freq = floor(num_ppc / N_inj);
-                         if (i_part%part_freq!=0) {
-                            p.id() = -1;
-                            return;
-                         }
-                      }
-                   }
-                   else
-                   {
-                      p.id() = -1;
-                      return;
-                   }
-                   //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; return;}
-                   //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; return;}
-                   // if rho is too smal -- we dont inject particles
-                   if (std::abs(rho_GJ) < 1E-20) {
-                      p.id() = -1;
-                      return;
-                   }
-                   else {
-                      Real rel_rho_err = ((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
-                      // If current rho is much higher than rho_GJ, particles are not introduced.
-                      if ( rel_rho_err > 0.05) {
-                         p.id() = -1;
-                         return;
-                      }
-                   }
-                }
+                    // analytical surface charge density
+                    //Real sigma_inj = (( Er_ext - Er_cor));
+                    Real sigma_inj = (( Er_cell - Er_cor));
+                    Real max_dens = PulsarParm::max_ndens;
+                    amrex::Real fraction = PulsarParm::Ninj_fraction;
+                    // number of particle pairs injected
+                    Real N_inj = fraction*amrex::Math::abs(sigma_inj) *PhysConst::ep0* dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
+                    if (t > 0) {
+                       if (N_inj >= 1) {
+                          if (N_inj < num_ppc) {
+                             int part_freq = floor(num_ppc / N_inj);
+                             if (i_part%part_freq!=0) {
+                                p.id() = -1;
+                                continue;
+                             }
+                          }
+                       }
+                       else
+                       {
+                          p.id() = -1;
+                          continue;
+                       }
+                       //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
+                       //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
+                       if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
+                       if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
+                       // if rho is too smal -- we dont inject particles
+                       if (std::abs(rho_GJ) < 1.0E-20) {
+                          p.id() = -1;
+                          continue;
+                       }
+                       else {
+                          Real rel_rho_err = ((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
+                          // If current rho is much higher than rho_GJ, particles are not introduced.
+                          if ( amrex::Math::abs(rel_rho_err) > 0.05) {
+                             p.id() = -1;
+                             continue;
+                          }
+                       }
+                    }
 
 #endif
 
@@ -2265,7 +2268,8 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                       Real r = std::sqrt((x-xc)*(x-xc)
                                        + (y-yc)*(y-yc)
                                        + (z-zc)*(z-zc));
-                      if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
+                      //if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
+                      if (r<=(PulsarParm::R_star)) {
                           pp[i].id() = -1;
                       }
             });
