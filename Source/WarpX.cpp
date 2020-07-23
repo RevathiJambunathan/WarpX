@@ -532,9 +532,10 @@ WarpX::ReadParameters ()
         pp.query("pml_has_particles", pml_has_particles);
         pp.query("do_pml_j_damping", do_pml_j_damping);
         pp.query("do_pml_in_domain", do_pml_in_domain);
-
-    // Read the value of the time advancement scheme of M field
+#ifdef WARPX_MAG_LLG
+        // Read the value of the time advancement scheme of M field
         pp.query("time_scheme_order", time_scheme_order);
+#endif
 
 #ifdef WARPX_DIM_RZ
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( do_pml==0,
