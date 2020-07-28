@@ -117,12 +117,12 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // Hy and Hz can be acquired by interpolation
 
               // Uncomment these lines when we couple LLG with Maxwell
-	      // // H_maxwell
+              // // H_maxwell
               // Real Hx_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Bx_old, M_xface);
               // Real Hy_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), By_old, M_xface);
               // Real Hz_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Bz_old, M_xface);
 
-	      // H_bias
+              // H_bias
               Real Hx_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Hx_bias);
               Real Hy_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), Hy_bias);
               Real Hz_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Hz_bias);
@@ -132,7 +132,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real Hz_eff = Hz_bias_xface;
 
               // Uncomment these lines when we couple LLG with Maxwell
-	      // Real Hx_eff = Hx_xface + Hx_bias_xface;
+              // Real Hx_eff = Hx_xface + Hx_bias_xface;
               // Real Hy_eff = Hy_xface + Hy_bias_xface;
               // Real Hz_eff = Hz_xface + Hz_bias_xface;
 
@@ -143,7 +143,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr);
 
               // calculate the b_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
-	      Real b_temp_static_coeff = PhysConst::mu0 * mag_gamma_interp *
+          Real b_temp_static_coeff = PhysConst::mu0 * mag_gamma_interp *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_static_xface
@@ -172,13 +172,13 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // when working on M_yface(i,j,k,0:2) we have direct access to M_yface(i,j,k,0:2) and Hy(i,j,k)
               // Hy and Hz can be acquired by interpolation
 
-	      // Uncomment these lines when we couple LLG with Maxwell
+              // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
               // Real Hx_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Bx_old, M_yface);
               // Real Hy_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), By_old, M_yface);
               // Real Hz_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Bz_old, M_yface);
 
-	      // H_bias
+              // H_bias
               Real Hx_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Hx_bias);
               Real Hy_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), Hy_bias);
               Real Hz_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Hz_bias);
@@ -188,7 +188,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real Hy_eff = Hy_bias_yface;
               Real Hz_eff = Hz_bias_yface;
 
-	      // Uncomment these lines when we couple LLG with Maxwell
+              // Uncomment these lines when we couple LLG with Maxwell
               // Real Hx_eff = Hx_yface + Hx_bias_yface;
               // Real Hy_eff = Hy_yface + Hy_bias_yface;
               // Real Hz_eff = Hz_yface + Hz_bias_yface;
@@ -229,13 +229,13 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // when working on M_zface(i,j,k,0:2) we have direct access to M_zface(i,j,k,0:2) and Hz(i,j,k)
               // Hy and Hz can be acquired by interpolation
 
-	      // Uncomment these lines when we couple LLG with Maxwell
+              // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
               // Real Hx_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Bx_old, M_zface);
               // Real Hy_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), By_old, M_zface);
               // Real Hz_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Bz_old, M_zface);
 
-	      // H_bias
+              // H_bias
               Real Hx_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Hx_bias);
               Real Hy_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), Hy_bias);
               Real Hz_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Hz_bias);
@@ -244,7 +244,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real Hy_eff = Hy_bias_zface;
               Real Hz_eff = Hz_bias_zface;
 
-	      // Uncomment these lines when we couple LLG with Maxwell
+              // Uncomment these lines when we couple LLG with Maxwell
               // Real Hx_eff = Hx_zface + Hx_bias_zface;
               // Real Hy_eff = Hy_zface + Hy_bias_zface;
               // Real Hz_eff = Hz_zface + Hz_bias_zface;
@@ -255,7 +255,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real a_temp_static_coeff = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr)
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_Ms_arr);
 
-	      // calculate the b_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
+              // calculate the b_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
               Real b_temp_static_coeff = PhysConst::mu0 * mag_gamma_interp *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
 
@@ -290,7 +290,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         int stop_iter = 0;
 
         // calculate the maximum absolute value of the Mfield_prev
-	amrex::GpuArray< amrex::Real, 3 > Mfield_prev_max; 
+        amrex::GpuArray< amrex::Real, 3 > Mfield_prev_max; 
         for (int i = 0; i < 3; i++){
         Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
         }
@@ -358,13 +358,13 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // when working on M_xface(i,j,k, 0:2) we have direct access to M_xface(i,j,k,0:2) and Hx(i,j,k)
               // Hy and Hz can be acquired by interpolation
 
-	      // Uncomment these lines when we couple LLG with Maxwell
+              // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
               // Real Hx_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Bx, M_prev_xface);
               // Real Hy_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), By, M_prev_xface);
               // Real Hz_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Bz, M_prev_xface);
 
-	      // H_bias
+              // H_bias
               Real Hx_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Hx_bias);
               Real Hy_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), Hy_bias);
               Real Hz_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Hz_bias);
@@ -382,7 +382,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_gamma_arr);
 
- 	      // calculate the a_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
+              // calculate the a_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
               Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
 
@@ -429,7 +429,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // Real Hy_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), By, M_prev_yface);
               // Real Hz_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Bz, M_prev_yface);
 
-	      // H_bias
+              // H_bias
               Real Hx_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Hx_bias);
               Real Hy_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), Hy_bias);
               Real Hz_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Hz_bias);
@@ -438,7 +438,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real Hy_eff = Hy_bias_yface;
               Real Hz_eff = Hz_bias_yface;
 
-	      // Uncomment these lines when we couple LLG with Maxwell
+              // Uncomment these lines when we couple LLG with Maxwell
               // Real Hx_eff = Hx_yface + Hx_bias_yface;
               // Real Hy_eff = Hy_yface + Hy_bias_yface;
               // Real Hz_eff = Hz_yface + Hz_bias_yface;
@@ -447,7 +447,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_gamma_arr);
 
- 	      // calculate the a_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
+              // calculate the a_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
               Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_alpha_arr), 2.0))/ 2.0;
 
@@ -487,13 +487,13 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // when working on M_zface(i,j,k,0:2) we have direct access to M_zface(i,j,k,0:2) and Hz(i,j,k)
               // Hy and Hz can be acquired by interpolation
 
-	      // Uncomment these lines when we couple LLG with Maxwell
+              // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
               // Real Hx_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Bx, M_prev_zface);
               // Real Hy_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), By, M_prev_zface);
               // Real Hz_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Bz, M_prev_zface);
 
-	      // H_bias
+              // H_bias
               Real Hx_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Hx_bias);
               Real Hy_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), Hy_bias);
               Real Hz_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Hz_bias);
@@ -502,7 +502,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real Hy_eff = Hy_bias_zface;
               Real Hz_eff = Hz_bias_zface;
 
-	      // Uncomment these lines when we couple LLG with Maxwell
+              // Uncomment these lines when we couple LLG with Maxwell
               // Real Hx_eff = Hx_zface + Hx_bias_zface;
               // Real Hy_eff = Hy_zface + Hy_bias_zface;
               // Real Hz_eff = Hz_zface + Hz_bias_zface;
@@ -511,7 +511,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_gamma_arr);
 
- 	      // calculate the a_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
+              // calculate the a_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
               Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
 
@@ -564,14 +564,14 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
              // Copy Mfield to Mfield_previous and re-calculate Mfield_prev_max
              for (int i = 0; i < 3; i++){
              MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
-	     Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
-	     }
+             Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
+             }
         }
 
         if(M_iter >= M_max_iter) {
            amrex::Abort("The M_iter exceeds the M_max_iter");
            amrex::Print() << "The M_iter = " << M_iter << " exceeds the M_max_iter = " << M_max_iter << std::endl;
- 	}
+        }
         else {
            M_iter++;
            amrex::Print() << "Finish " << M_iter << " times iteration with M_iter_maxerror = " << M_iter_maxerror << " and M_tol = " << M_tol << std::endl;
