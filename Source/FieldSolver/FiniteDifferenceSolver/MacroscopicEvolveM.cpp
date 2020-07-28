@@ -134,11 +134,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
                       std::pow(M_xface(i, j, k, 2),2.0) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr);
 
               // check the normalized error
-<<<<<<< HEAD
-              if ( std::abs(1.-mag_normalized) > mag_normalized_error ){
-=======
               if ( amrex::Math::abs(1._rt-mag_normalized) > mag_normalized_error ){
->>>>>>> 15bfd9f969b40ebcf0eb3c5392adf310168804a1
                   printf("i = %d, j=%d, k=%d\n", i, j, k);
                   printf("mag_normalized = %f, mag_normalized_error=%f", mag_normalized, mag_normalized_error);
                   amrex::Abort("Exceed the normalized error of the M_xface field");
@@ -199,11 +195,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
                       std::pow(M_yface(i, j, k, 2),2.0) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_Ms_arr);
 
               // check the normalized error
-<<<<<<< HEAD
-              if ( std::abs(1.-mag_normalized) > mag_normalized_error ){
-=======
               if ( amrex::Math::abs(1._rt-mag_normalized) > mag_normalized_error ){
->>>>>>> 15bfd9f969b40ebcf0eb3c5392adf310168804a1
                  printf("i = %d, j=%d, k=%d\n", i, j, k);
                  printf("mag_normalized = %f, mag_normalized_error=%f",mag_normalized, mag_normalized_error);
                  amrex::Abort("Exceed the normalized error of the M_yface field");
@@ -263,7 +255,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
                       std::pow(M_zface(i, j, k, 2),2.0_rt) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_Ms_arr);
 
               // check the normalized error
-              if ( std::abs(1.-mag_normalized) > mag_normalized_error ){
+              if ( amrex::Math::abs(1.-mag_normalized) > mag_normalized_error ){
                  printf("i = %d, j=%d, k=%d\n", i, j, k);
                  printf("mag_normalized = %f, mag_normalized_error=%f", mag_normalized, mag_normalized_error);
                  amrex::Abort("Exceed the normalized error of the M_zface field");

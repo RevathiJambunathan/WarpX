@@ -534,7 +534,7 @@ WarpX::ReadParameters ()
         pp.query("do_pml_in_domain", do_pml_in_domain);
 #ifdef WARPX_MAG_LLG
         // Read the value of the time advancement scheme of M field
-        pp.query("time_scheme_order", time_scheme_order);
+        pp.query("mag_time_scheme_order", mag_time_scheme_order);
 #endif
 
 #ifdef WARPX_DIM_RZ

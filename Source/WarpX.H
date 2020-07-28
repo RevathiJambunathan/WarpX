@@ -853,7 +853,7 @@ private:
 
 #ifdef WARPX_MAG_LLG
     // time advancement scheme of M field
-    int time_scheme_order = 1;
+    int mag_time_scheme_order = 1;
 #endif
 
     // Load balancing

@@ -47,11 +47,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
     {
 
         // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp
-        std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_prev;
-        std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_error;
-        std::array< std::unique_ptr<amrex::MultiFab>, 3 > a_temp;
-        std::array< std::unique_ptr<amrex::MultiFab>, 3 > a_temp_static;
-        std::array< std::unique_ptr<amrex::MultiFab>, 3 > b_temp;
+        std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_prev; // M^n before the iteration
+        std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_error; // The error of the M field between the twoiterations 
+        std::array< std::unique_ptr<amrex::MultiFab>, 3 > a_temp; // right-hand side of vector a, see the documentation
+        std::array< std::unique_ptr<amrex::MultiFab>, 3 > a_temp_static; // α M^n/|M| in the right-hand side of vector a, see the documentation
+        std::array< std::unique_ptr<amrex::MultiFab>, 3 > b_temp; // right-hand side of vector b, see the documentation
 
         // initialize Mfield_previous
         for (int i = 0; i < 3; i++){
@@ -362,7 +362,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
 
-          // calculate a_temp_xface
+              // calculate a_temp_xface
               // x component on x-faces of grid
               a_temp_xface(i, j, k, 0) = -( dt * a_temp_dynamic_coeff * Hx_eff + a_temp_static_xface(i, j, k, 0) );
 
