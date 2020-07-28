@@ -48,7 +48,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
         // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp_static
         std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_prev; // M^n before the iteration
-        std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_error; // The error of the M field between the twoiterations 
+        std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_error; // The error of the M field between the twoiterations
         std::array< std::unique_ptr<amrex::MultiFab>, 3 > a_temp; // right-hand side of vector a, see the documentation
         std::array< std::unique_ptr<amrex::MultiFab>, 3 > a_temp_static; // α M^n/|M| in the right-hand side of vector a, see the documentation
         std::array< std::unique_ptr<amrex::MultiFab>, 3 > b_temp_static; // right-hand side of vector b, see the documentation
@@ -143,7 +143,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr);
 
               // calculate the b_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
-          Real b_temp_static_coeff = PhysConst::mu0 * mag_gamma_interp *
+              Real b_temp_static_coeff = PhysConst::mu0 * mag_gamma_interp *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_static_xface
@@ -248,7 +248,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // Real Hx_eff = Hx_zface + Hx_bias_zface;
               // Real Hy_eff = Hy_zface + Hy_bias_zface;
               // Real Hz_eff = Hz_zface + Hz_bias_zface;
- 
+
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_gamma_arr);
@@ -290,7 +290,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         int stop_iter = 0;
 
         // calculate the maximum absolute value of the Mfield_prev
-        amrex::GpuArray< amrex::Real, 3 > Mfield_prev_max; 
+        amrex::GpuArray< amrex::Real, 3 > Mfield_prev_max;
         for (int i = 0; i < 3; i++){
         Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
         }
@@ -442,7 +442,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // Real Hx_eff = Hx_yface + Hx_bias_yface;
               // Real Hy_eff = Hy_yface + Hy_bias_yface;
               // Real Hz_eff = Hz_yface + Hz_bias_yface;
- 
+
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_gamma_arr);
@@ -506,7 +506,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // Real Hx_eff = Hx_zface + Hx_bias_zface;
               // Real Hy_eff = Hy_zface + Hy_bias_zface;
               // Real Hz_eff = Hz_zface + Hz_bias_zface;
- 
+
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_gamma_arr);
@@ -561,11 +561,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
            stop_iter = 1;
         }
         else {
-             // Copy Mfield to Mfield_previous and re-calculate Mfield_prev_max
-             for (int i = 0; i < 3; i++){
-             MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
-             Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
-             }
+           // Copy Mfield to Mfield_previous and re-calculate Mfield_prev_max
+           for (int i = 0; i < 3; i++){
+           MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
+           Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
+           }
         }
 
         if(M_iter >= M_max_iter) {
