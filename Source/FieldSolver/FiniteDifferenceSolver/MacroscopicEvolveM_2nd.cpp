@@ -276,6 +276,12 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         amrex::Real M_iter_maxerror = -1.0;
         int stop_iter = 0;
 
+        // calculate the maximum absolute value of the Mfield_prev
+        std::array< amrex::Real, 3 > Mfield_prev_max; 
+        for (int i = 0; i < 3; i++){
+        Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
+        }
+
         // begin the iteration
         while (!stop_iter) {
         for (MFIter mfi(*Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) /* remember to FIX */
@@ -372,24 +378,25 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // z component on x-faces of grid
               a_temp_xface(i, j, k, 2) = -( dt * a_temp_dynamic_coeff * Hz_eff + a_temp_static_xface(i, j, k, 2) );
 
-              // calculate M_xface
+              // update M_xface from a and b using the updateM_field
               // x component on x-faces of grid
-              M_xface(i, j, k, 0) = MacroscopicProperties::getM_half (i, j, k, 0, a_temp_xface, b_temp_xface);
+              M_xface(i, j, k, 0) = MacroscopicProperties::updateM_field(i, j, k, 0, a_temp_xface, b_temp_xface);
 
               // y component on x-faces of grid
-              M_xface(i, j, k, 1) = MacroscopicProperties::getM_half (i, j, k, 1, a_temp_xface, b_temp_xface);
+              M_xface(i, j, k, 1) = MacroscopicProperties::updateM_field(i, j, k, 1, a_temp_xface, b_temp_xface);
 
               // z component on x-faces of grid
-              M_xface(i, j, k, 2) = MacroscopicProperties::getM_half (i, j, k, 2, a_temp_xface, b_temp_xface);
+              M_xface(i, j, k, 2) = MacroscopicProperties::updateM_field(i, j, k, 2, a_temp_xface, b_temp_xface);
 
+              // calculate M_error_xface
               // x component on x-faces of grid
-              M_error_xface(i, j, k, 0) = std::abs((M_xface(i, j, k, 0) - M_prev_xface(i, j, k, 0))) / (std::abs(M_prev_xface(i, j, k, 0)) + 1.0e-12);
+              M_error_xface(i, j, k, 0) = std::abs((M_xface(i, j, k, 0) - M_prev_xface(i, j, k, 0))) / Mfield_prev_max[0];
 
               // y component on x-faces of grid
-              M_error_xface(i, j, k, 1) = std::abs((M_xface(i, j, k, 1) - M_prev_xface(i, j, k, 1))) / (std::abs(M_prev_xface(i, j, k, 1)) + 1.0e-12);
+              M_error_xface(i, j, k, 1) = std::abs((M_xface(i, j, k, 1) - M_prev_xface(i, j, k, 1))) / Mfield_prev_max[1];
 
               // z component on x-faces of grid
-              M_error_xface(i, j, k, 2) = std::abs((M_xface(i, j, k, 2) - M_prev_xface(i, j, k, 2))) / (std::abs(M_prev_xface(i, j, k, 2)) + 1.0e-12);
+              M_error_xface(i, j, k, 2) = std::abs((M_xface(i, j, k, 2) - M_prev_xface(i, j, k, 2))) / Mfield_prev_max[2];
 
               },
 
@@ -430,24 +437,25 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // z component on y-faces of grid
               a_temp_yface(i, j, k, 2) = -( dt * a_temp_dynamic_coeff * Hz_eff + a_temp_static_yface(i, j, k, 2) );
 
-              // calculate M_yface
+              // update M_yface from a and b using the updateM_field
               // x component on y-faces of grid
-              M_yface(i, j, k, 0) = MacroscopicProperties::getM_half (i, j, k, 0, a_temp_yface, b_temp_yface);
+              M_yface(i, j, k, 0) = MacroscopicProperties::updateM_field(i, j, k, 0, a_temp_yface, b_temp_yface);
 
               // y component on y-faces of grid
-              M_yface(i, j, k, 1) = MacroscopicProperties::getM_half (i, j, k, 1, a_temp_yface, b_temp_yface);
+              M_yface(i, j, k, 1) = MacroscopicProperties::updateM_field(i, j, k, 1, a_temp_yface, b_temp_yface);
 
               // z component on y-faces of grid
-              M_yface(i, j, k, 2) = MacroscopicProperties::getM_half (i, j, k, 2, a_temp_yface, b_temp_yface);
+              M_yface(i, j, k, 2) = MacroscopicProperties::updateM_field(i, j, k, 2, a_temp_yface, b_temp_yface);
 
+              // calculate M_error_yface
               // x component on y-faces of grid
-              M_error_yface(i, j, k, 0) = std::abs((M_yface(i, j, k, 0) - M_prev_yface(i, j, k, 0))) / (std::abs(M_prev_yface(i, j, k, 0)) + 1.0e-12);
+              M_error_yface(i, j, k, 0) = std::abs((M_yface(i, j, k, 0) - M_prev_yface(i, j, k, 0))) / Mfield_prev_max[0];
 
               // y component on y-faces of grid
-              M_error_yface(i, j, k, 1) = std::abs((M_yface(i, j, k, 1) - M_prev_yface(i, j, k, 1))) / (std::abs(M_prev_yface(i, j, k, 1)) + 1.0e-12);
+              M_error_yface(i, j, k, 1) = std::abs((M_yface(i, j, k, 1) - M_prev_yface(i, j, k, 1))) / Mfield_prev_max[1];
 
               // z component on y-faces of grid
-              M_error_yface(i, j, k, 2) = std::abs((M_yface(i, j, k, 2) - M_prev_yface(i, j, k, 2))) / (std::abs(M_prev_yface(i, j, k, 2)) + 1.0e-12);
+              M_error_yface(i, j, k, 2) = std::abs((M_yface(i, j, k, 2) - M_prev_yface(i, j, k, 2))) / Mfield_prev_max[2];
               },
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
@@ -487,24 +495,25 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // z component on z-faces of grid
               a_temp_zface(i, j, k, 2) = -( dt * a_temp_dynamic_coeff * Hz_eff + a_temp_static_zface(i, j, k, 2) );
 
-              // calculate M_zface
+              // update M_zface from a and b using the updateM_field
               // x component on z-faces of grid
-              M_zface(i, j, k, 0) = MacroscopicProperties::getM_half (i, j, k, 0, a_temp_zface, b_temp_zface);
+              M_zface(i, j, k, 0) = MacroscopicProperties::updateM_field(i, j, k, 0, a_temp_zface, b_temp_zface);
 
               // y component on z-faces of grid
-              M_zface(i, j, k, 1) = MacroscopicProperties::getM_half (i, j, k, 1, a_temp_zface, b_temp_zface);
+              M_zface(i, j, k, 1) = MacroscopicProperties::updateM_field(i, j, k, 1, a_temp_zface, b_temp_zface);
 
               // z component on z-faces of grid
-              M_zface(i, j, k, 2) = MacroscopicProperties::getM_half (i, j, k, 2, a_temp_zface, b_temp_zface);
+              M_zface(i, j, k, 2) = MacroscopicProperties::updateM_field(i, j, k, 2, a_temp_zface, b_temp_zface);
 
+              // calculate M_error_zface
               // x component on z-faces of grid
-              M_error_zface(i, j, k, 0) = std::abs((M_zface(i, j, k, 0) - M_prev_zface(i, j, k, 0))) / (std::abs(M_prev_zface(i, j, k, 0)) + 1.0e-12);
+              M_error_zface(i, j, k, 0) = std::abs((M_zface(i, j, k, 0) - M_prev_zface(i, j, k, 0))) / Mfield_prev_max[0];
 
               // y component on z-faces of grid
-              M_error_zface(i, j, k, 1) = std::abs((M_zface(i, j, k, 1) - M_prev_zface(i, j, k, 1))) / (std::abs(M_prev_zface(i, j, k, 1)) + 1.0e-12);
+              M_error_zface(i, j, k, 1) = std::abs((M_zface(i, j, k, 1) - M_prev_zface(i, j, k, 1))) / Mfield_prev_max[1];
 
               // z component on z-faces of grid
-              M_error_zface(i, j, k, 2) = std::abs((M_zface(i, j, k, 2) - M_prev_zface(i, j, k, 2))) / (std::abs(M_prev_zface(i, j, k, 2)) + 1.0e-12);
+              M_error_zface(i, j, k, 2) = std::abs((M_zface(i, j, k, 2) - M_prev_zface(i, j, k, 2))) / Mfield_prev_max[2];
               });
         }
 
@@ -522,10 +531,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
            stop_iter = 1;
         }
         else {
-             // Copy Mfield to Mfield_previous
+             // Copy Mfield to Mfield_previous and re-calculate Mfield_prev_max
              for (int i = 0; i < 3; i++){
              MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
-             }
+	     Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
+	     }
         }
 
         if(M_iter >= M_max_iter) {
