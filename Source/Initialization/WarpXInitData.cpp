@@ -599,7 +599,6 @@ WarpX::InitializeExternalFieldsOnGridUsingParser (
         "The number of components for the three Multifabs must be equal");
     // Number of multifab components
     int ncomp = mfx->nComp();
-    // Add abort
     for ( MFIter mfi(*mfx, TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
 
