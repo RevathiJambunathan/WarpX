@@ -512,7 +512,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real mag_gamma_interp = MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_gamma_arr);
 
               // calculate the a_temp_static_coeff (it is divided by 2.0 because the input dt is actually dt/2.0)
-              Real a_temp_dynamic_coeff = PhysConst::mu0 * std::abs(mag_gamma_interp) *
+              Real a_temp_dynamic_coeff = PhysConst::mu0 * amrex::Math::abs(mag_gamma_interp) *
                         (1.0 + std::pow(MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_alpha_arr), 2.0))/ 2.0;
 
               // calculate a_temp_zface
