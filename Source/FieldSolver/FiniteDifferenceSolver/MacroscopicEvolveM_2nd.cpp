@@ -540,7 +540,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               M_error_zface(i, j, k, 0) = amrex::Math::abs((M_zface(i, j, k, 0) - M_prev_zface(i, j, k, 0))) / Mfield_prev_max[0];
 
               // y component on z-faces of grid
-              M_error_zface(i, j, k, 1) = std::abs((M_zface(i, j, k, 1) - M_prev_zface(i, j, k, 1))) / Mfield_prev_max[1];
+              M_error_zface(i, j, k, 1) = amrex::Math::abs((M_zface(i, j, k, 1) - M_prev_zface(i, j, k, 1))) / Mfield_prev_max[1];
 
               // z component on z-faces of grid
               M_error_zface(i, j, k, 2) = std::abs((M_zface(i, j, k, 2) - M_prev_zface(i, j, k, 2))) / Mfield_prev_max[2];
