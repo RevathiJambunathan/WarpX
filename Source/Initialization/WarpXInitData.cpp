@@ -598,7 +598,7 @@ WarpX::InitializeExternalFieldsOnGridUsingParser (
         mfx->nComp() == mfy->nComp() and mfx->nComp() == mfz->nComp(),
         "The number of components for the three Multifabs must be equal");
     // Number of multifab components
-    int ncomp = mfx->nComp(); 
+    int ncomp = mfx->nComp();
     // Add abort
     for ( MFIter mfi(*mfx, TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -633,7 +633,7 @@ WarpX::InitializeExternalFieldsOnGridUsingParser (
                     mfxfab(i,j,k,0) = (*xfield_parser)(x,y,z);
                     mfxfab(i,j,k,1) = (*yfield_parser)(x,y,z);
                     mfxfab(i,j,k,2) = (*zfield_parser)(x,y,z);
-                } else 
+                } else
 #endif
                 {
                     mfxfab(i,j,k) = (*xfield_parser)(x,y,z);
@@ -659,7 +659,7 @@ WarpX::InitializeExternalFieldsOnGridUsingParser (
                     mfyfab(i,j,k,0) = (*xfield_parser)(x,y,z);
                     mfyfab(i,j,k,1) = (*yfield_parser)(x,y,z);
                     mfyfab(i,j,k,2) = (*zfield_parser)(x,y,z);
-                } else 
+                } else
 #endif
                 {
                     mfyfab(i,j,k)  = (*yfield_parser)(x,y,z);
