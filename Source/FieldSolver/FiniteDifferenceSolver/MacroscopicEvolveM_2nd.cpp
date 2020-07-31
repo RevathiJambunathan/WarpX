@@ -563,8 +563,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         else {
            // Copy Mfield to Mfield_previous and re-calculate Mfield_prev_max
            for (int i = 0; i < 3; i++){
-           MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
-           Mfield_prev_max[i] = std::max(std::abs((*Mfield_prev[i]).max(i,0)),std::abs((*Mfield_prev[i]).min(i,0)));
+               MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
+               Mfield_prev_max[i] = std::max(amrex::Math::abs((*Mfield_prev[i]).max(i,0)),amrex::Math::abs((*Mfield_prev[i]).min(i,0)));
            }
         }
 
