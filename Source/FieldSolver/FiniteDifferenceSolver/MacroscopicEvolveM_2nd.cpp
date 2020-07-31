@@ -297,7 +297,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
         // begin the iteration
         while (!stop_iter) {
-        for (MFIter mfi(*Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) /* remember to FIX */
+        for (MFIter mfi(*Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
           auto& mag_Ms_mf = macroscopic_properties->getmag_Ms_mf();
           auto& mag_alpha_mf = macroscopic_properties->getmag_alpha_mf();
