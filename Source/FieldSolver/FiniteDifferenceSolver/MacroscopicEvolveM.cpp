@@ -45,7 +45,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
     {
 
         // normalization error of M field for checking
-    amrex::Real mag_normalized_error = macroscopic_properties->getmag_normalized_error();
+        amrex::Real mag_normalized_error = macroscopic_properties->getmag_normalized_error();
 
         for (MFIter mfi(*Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) /* remember to FIX */
         {
