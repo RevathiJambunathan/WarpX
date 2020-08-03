@@ -179,7 +179,8 @@ private:
      /** gyromagnetic ratio, should be a negative value, only applies for magnetic materials */
      amrex::Real m_mag_gamma;
 
-     // normalization error of M field for checking, default 0.1
+     // If the magnitude of the magnetization deviates by more than this amount relative
+     // to the user-defined Ms, abort.  Default 0.1.
      amrex::Real m_mag_normalized_error;
 
      // maximum iteration count for the second-order time advancement scheme of M field, default 100
