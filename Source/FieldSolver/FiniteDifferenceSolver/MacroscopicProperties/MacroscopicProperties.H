@@ -182,7 +182,7 @@ private:
      // normalization error of M field for checking, default 0.1
      amrex::Real m_mag_normalized_error;
 
-     // maximum iteration time for the second-order time advancement scheme of M field, default 100
+     // maximum iteration count for the second-order time advancement scheme of M field, default 100
      int m_mag_max_iter;
 
      // the relative tolerance for the second-order time advancement scheme of M field, default 0.0001
