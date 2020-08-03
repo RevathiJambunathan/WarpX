@@ -44,7 +44,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
         std::unique_ptr<MacroscopicProperties> const& macroscopic_properties )
     {
 
-        // normalization error of M field for checking
+        // obtain the maximum relative amount we let M deviate from Ms before aborting
         amrex::Real mag_normalized_error = macroscopic_properties->getmag_normalized_error();
 
         for (MFIter mfi(*Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) /* remember to FIX */
