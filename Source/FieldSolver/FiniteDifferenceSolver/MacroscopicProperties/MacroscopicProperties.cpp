@@ -75,13 +75,13 @@ MacroscopicProperties::ReadParameters ()
     }
 
     m_mag_normalized_error = 0.1;
-    pp.get("mag_normalized_error",m_mag_normalized_error);
+    pp.query("mag_normalized_error",m_mag_normalized_error);
 
     m_mag_max_iter = 100;
-    pp.get("mag_max_iter",m_mag_max_iter);
+    pp.query("mag_max_iter",m_mag_max_iter);
 
     m_mag_tol = 0.0001;
-    pp.get("mag_tol",m_mag_tol);
+    pp.query("mag_tol",m_mag_tol);
 
 #endif
 }
