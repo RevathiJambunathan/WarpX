@@ -285,6 +285,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         // change these to user-defined input in the next PR
         int M_max_iter = macroscopic_properties->getmag_max_iter();
         int M_iter = 0;
+        // relative tolerance stopping criteria for 2nd-order iterative algorithm
         amrex::Real M_tol = macroscopic_properties->getmag_tol();
         amrex::Real M_iter_maxerror = -1.0;
         int stop_iter = 0;
