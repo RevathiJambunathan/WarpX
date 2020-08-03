@@ -282,7 +282,6 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
         }
 
         // initialize M_max_iter, M_iter, M_tol, M_iter_error
-        // change these to user-defined input in the next PR
         // maximum number of iterations allowed
         int M_max_iter = macroscopic_properties->getmag_max_iter();
         int M_iter = 0;
