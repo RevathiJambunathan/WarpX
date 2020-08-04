@@ -79,15 +79,6 @@ public:
     void InitData ();
 
     ///
-    /// Performs the field gather operation using the input fields E and B, for all the species
-    /// in the MultiParticleContainer. This is the electromagnetic version of the field gather.
-    ///
-    void FieldGather (int lev,
-                      const amrex::MultiFab& Ex, const amrex::MultiFab& Ey,
-                      const amrex::MultiFab& Ez, const amrex::MultiFab& Bx,
-                      const amrex::MultiFab& By, const amrex::MultiFab& Bz);
-
-    ///
     /// This evolves all the particles by one PIC time step, including current deposition, the
     /// field solve, and pushing the particles, for all the species in the MultiParticleContainer.
     /// This is the electromagnetic version.
@@ -95,6 +86,8 @@ public:
     void Evolve (int lev,
                  const amrex::MultiFab& Ex, const amrex::MultiFab& Ey, const amrex::MultiFab& Ez,
                  const amrex::MultiFab& Bx, const amrex::MultiFab& By, const amrex::MultiFab& Bz,
+                 const amrex::MultiFab& Ex_avg, const amrex::MultiFab& Ey_avg, const amrex::MultiFab& Ez_avg,
+                 const amrex::MultiFab& Bx_avg, const amrex::MultiFab& By_avg, const amrex::MultiFab& Bz_avg,
                  amrex::MultiFab& jx,  amrex::MultiFab& jy, amrex::MultiFab& jz,
                  amrex::MultiFab* cjx,  amrex::MultiFab* cjy, amrex::MultiFab* cjz,
                  amrex::MultiFab* rho, amrex::MultiFab* crho,
@@ -125,7 +118,9 @@ public:
     ///
     std::unique_ptr<amrex::MultiFab> GetChargeDensity(int lev, bool local = false);
 
-    void doFieldIonization ();
+    void doFieldIonization (int lev,
+                            const amrex::MultiFab& Ex, const amrex::MultiFab& Ey, const amrex::MultiFab& Ez,
+                            const amrex::MultiFab& Bx, const amrex::MultiFab& By, const amrex::MultiFab& Bz);
 
     void doCoulombCollisions ();
 
@@ -165,7 +160,7 @@ public:
     void SetParticleBoxArray (int lev, amrex::BoxArray& new_ba);
     void SetParticleDistributionMap (int lev, amrex::DistributionMapping& new_dm);
 
-    int nSpecies() const {return nspecies;}
+    int nSpecies() const {return species_names.size();}
 
     int nSpeciesBackTransformedDiagnostics() const {return nspecies_back_transformed_diagnostics;}
     int mapSpeciesBackTransformedDiagnostics(int i) const {return map_species_back_transformed_diagnostics[i];}
@@ -219,7 +214,13 @@ public:
     /**
     * \brief Performs QED events (Breit-Wheeler process and photon emission)
     */
-    void doQedEvents();
+    void doQedEvents (int lev,
+                      const amrex::MultiFab& Ex,
+                      const amrex::MultiFab& Ey,
+                      const amrex::MultiFab& Ez,
+                      const amrex::MultiFab& Bx,
+                      const amrex::MultiFab& By,
+                      const amrex::MultiFab& Bz);
 #endif
 
     int getSpeciesID (std::string product_str) const;
@@ -230,12 +231,24 @@ protected:
     /**
     * \brief Performs Breit-Wheeler process for the species for which it is enabled
     */
-    void doQedBreitWheeler();
+    void doQedBreitWheeler (int lev,
+                            const amrex::MultiFab& Ex,
+                            const amrex::MultiFab& Ey,
+                            const amrex::MultiFab& Ez,
+                            const amrex::MultiFab& Bx,
+                            const amrex::MultiFab& By,
+                            const amrex::MultiFab& Bz);
 
     /**
     * \brief Performs QED photon emission for the species for which it is enabled
     */
-    void doQedQuantumSync();
+    void doQedQuantumSync (int lev,
+                           const amrex::MultiFab& Ex,
+                           const amrex::MultiFab& Ey,
+                           const amrex::MultiFab& Ez,
+                           const amrex::MultiFab& Bx,
+                           const amrex::MultiFab& By,
+                           const amrex::MultiFab& Bz);
 #endif
 
     // Particle container types
@@ -368,12 +381,7 @@ private:
     std::vector<int> map_species_back_transformed_diagnostics;
     int do_back_transformed_diagnostics = 0;
 
-    // runtime parameters
-    int nlasers = 0;
-    int nspecies = 1;   // physical particles only. nspecies+nlasers == allcontainers.size().
-    int ncollisions = 0;
-
-    void MFItInfoCheckTiling(const WarpXParticleContainer& pc_src) const noexcept
+    void MFItInfoCheckTiling(const WarpXParticleContainer& /*pc_src*/) const noexcept
     {
         return;
     }

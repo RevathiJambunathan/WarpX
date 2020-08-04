@@ -18,7 +18,7 @@ struct InjectorPositionRandom
 {
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
-    getPositionUnitBox (int i_part, int ref_fac=1) const noexcept
+    getPositionUnitBox (int /*i_part*/, int /*ref_fac=1*/) const noexcept
     {
         return amrex::XDim3{amrex::Random(), amrex::Random(), amrex::Random()};
     }
@@ -132,6 +132,16 @@ struct InjectorPosition
         return (x < xmax and x >= xmin and
                 y < ymax and y >= ymin and
                 z < zmax and z >= zmin);
+    }
+
+    // bool: whether the region defined by lo and hi overaps with the plasma region
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    bool
+    overlapsWith (const amrex::XDim3& lo, const amrex::XDim3& hi) const noexcept
+    {
+        return ! (   (xmin > hi.x) || (xmax < lo.x)
+                  || (ymin > hi.y) || (ymax < lo.y)
+                  || (zmin > hi.z) || (zmax < lo.z) );
     }
 
 private:
