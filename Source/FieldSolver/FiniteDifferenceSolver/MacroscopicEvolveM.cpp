@@ -91,19 +91,20 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               Real Hx_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Bx, M_xface);
               Real Hy_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), By, M_xface);
               Real Hz_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Bz, M_xface);
-              // H_bias
+
+	      // H_bias
               Real Hx_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Hx_bias);
               Real Hy_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), Hy_bias);
               Real Hz_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
-              Real Hx_eff = Hx_bias_xface;
-              Real Hy_eff = Hy_bias_xface;
-              Real Hz_eff = Hz_bias_xface;
+              // Real Hx_eff = Hx_bias_xface;
+              // Real Hy_eff = Hy_bias_xface;
+              // Real Hz_eff = Hz_bias_xface;
 
               // keep in mind to ADD H_Maxwell back to H_eff as shown below
-              // Real Hx_eff = Hx_xface + Hx_bias_xface;
-              // Real Hy_eff = Hy_xface + Hy_bias_xface;
-              // Real Hz_eff = Hz_xface + Hz_bias_xface;
+              Real Hx_eff = Hx_xface + Hx_bias_xface;
+              Real Hy_eff = Hy_xface + Hy_bias_xface;
+              Real Hz_eff = Hz_xface + Hz_bias_xface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation. The IntVect is (1,0,0) to interpolate values to the x-face.
@@ -134,10 +135,29 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               amrex::Real mag_normalized = std::sqrt( std::pow(M_xface(i, j, k, 0),2.0) + std::pow(M_xface(i, j, k, 1),2.0) +
                       std::pow(M_xface(i, j, k, 2),2.0) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr);
 
-              // check the normalized error
+ 
+              if( (i==0 && j==0 && k==0) || (i==1 && j==0 && k==0 ) ){
+              amrex::Print() << "i,j,k " << i << " " << j << " " << k << std::endl;
+	      amrex::Print() << "Hx_xface " << Hx_xface << std::endl;
+	      amrex::Print() << "Hx_bias_xface " << Hx_bias_xface << std::endl;
+	      amrex::Print() << "Hx_eff " << Hx_eff << std::endl;
+	      amrex::Print() << "Hy_xface " << Hy_xface << std::endl;
+	      amrex::Print() << "Hy_bias_xface " << Hy_bias_xface << std::endl;
+	      amrex::Print() << "Hy_eff " << Hy_eff << std::endl;
+	      amrex::Print() << "Hz_xface " << Hz_xface << std::endl;
+	      amrex::Print() << "Hz_bias_xface " << Hz_bias_xface << std::endl;
+	      amrex::Print() << "Hz_eff " << Hz_eff << std::endl;
+	      amrex::Print() << "M_xface0 " << M_xface(i,j,k,0) << std::endl;
+	      amrex::Print() << "M_xface1 " << M_xface(i,j,k,1) << std::endl;
+	      amrex::Print() << "M_xface2 " << M_xface(i,j,k,2) << std::endl;
+	      amrex::Print() << "magMsarr " << MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr) << std::endl;
+	      amrex::Print() << "mag_normalized " << mag_normalized << std::endl;
+              }
+
+	      // check the normalized error
               if ( amrex::Math::abs(1._rt-mag_normalized) > mag_normalized_error ){
                   printf("i = %d, j=%d, k=%d\n", i, j, k);
-                  printf("mag_normalized = %f, mag_normalized_error=%f", mag_normalized, mag_normalized_error);
+                  printf("mag_normalized = %f, mag_normalized_error=%f\n", mag_normalized, mag_normalized_error);
                   amrex::Abort("Exceed the normalized error of the M_xface field");
               }
               // normalize the M_xface field
@@ -160,12 +180,12 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               Real Hz_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
               // keep in mind to ADD H_Maxwell back to H_eff as shown below
-              // Real Hx_eff = Hx_yface + Hx_bias_yface;
-              // Real Hy_eff = Hy_yface + Hy_bias_yface;
-              // Real Hz_eff = Hz_yface + Hz_bias_yface;
-              Real Hx_eff = Hx_bias_yface;
-              Real Hy_eff = Hy_bias_yface;
-              Real Hz_eff = Hz_bias_yface;
+              Real Hx_eff = Hx_yface + Hx_bias_yface;
+              Real Hy_eff = Hy_yface + Hy_bias_yface;
+              Real Hz_eff = Hz_yface + Hz_bias_yface;
+              // Real Hx_eff = Hx_bias_yface;
+              // Real Hy_eff = Hy_bias_yface;
+              // Real Hz_eff = Hz_bias_yface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation. The IntVect is (0,1,0) to interpolate values to the y-face.
@@ -198,7 +218,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               // check the normalized error
               if ( amrex::Math::abs(1._rt-mag_normalized) > mag_normalized_error ){
                  printf("i = %d, j=%d, k=%d\n", i, j, k);
-                 printf("mag_normalized = %f, mag_normalized_error=%f",mag_normalized, mag_normalized_error);
+                 printf("mag_normalized = %f, mag_normalized_error=%f\n",mag_normalized, mag_normalized_error);
                  amrex::Abort("Exceed the normalized error of the M_yface field");
               }
               // normalize the M_yface field
@@ -221,12 +241,12 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               Real Hz_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
               // keep in mind to ADD H_Maxwell back to H_eff as shown below
-              // Real Hx_eff = Hx_zface + Hx_bias_zface;
-              // Real Hy_eff = Hy_zface + Hy_bias_zface;
-              // Real Hz_eff = Hz_zface + Hz_bias_zface;
-              Real Hx_eff = Hx_bias_zface;
-              Real Hy_eff = Hy_bias_zface;
-              Real Hz_eff = Hz_bias_zface;
+              Real Hx_eff = Hx_zface + Hx_bias_zface;
+              Real Hy_eff = Hy_zface + Hy_bias_zface;
+              Real Hz_eff = Hz_zface + Hz_bias_zface;
+              // Real Hx_eff = Hx_bias_zface;
+              // Real Hy_eff = Hy_bias_zface;
+              // Real Hz_eff = Hz_bias_zface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation. The IntVect is (0,0,1) to interpolate values to the z-face.
@@ -258,7 +278,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               // check the normalized error
               if ( amrex::Math::abs(1.-mag_normalized) > mag_normalized_error ){
                  printf("i = %d, j=%d, k=%d\n", i, j, k);
-                 printf("mag_normalized = %f, mag_normalized_error=%f", mag_normalized, mag_normalized_error);
+                 printf("mag_normalized = %f, mag_normalized_error=%f\n", mag_normalized, mag_normalized_error);
                  amrex::Abort("Exceed the normalized error of the M_zface field");
               }
               // normalize the M_zface field

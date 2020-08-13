@@ -118,23 +118,23 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
-              // Real Hx_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Bx_old, M_xface);
-              // Real Hy_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), By_old, M_xface);
-              // Real Hz_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Bz_old, M_xface);
+              Real Hx_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Bx_old, M_xface);
+              Real Hy_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), By_old, M_xface);
+              Real Hz_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Bz_old, M_xface);
 
               // H_bias
               Real Hx_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Hx_bias);
               Real Hy_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), Hy_bias);
               Real Hz_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
-              Real Hx_eff = Hx_bias_xface;
-              Real Hy_eff = Hy_bias_xface;
-              Real Hz_eff = Hz_bias_xface;
+              // Real Hx_eff = Hx_bias_xface;
+              // Real Hy_eff = Hy_bias_xface;
+              // Real Hz_eff = Hz_bias_xface;
 
               // Uncomment these lines when we couple LLG with Maxwell
-              // Real Hx_eff = Hx_xface + Hx_bias_xface;
-              // Real Hy_eff = Hy_xface + Hy_bias_xface;
-              // Real Hz_eff = Hz_xface + Hz_bias_xface;
+              Real Hx_eff = Hx_xface + Hx_bias_xface;
+              Real Hy_eff = Hy_xface + Hy_bias_xface;
+              Real Hz_eff = Hz_xface + Hz_bias_xface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
@@ -174,9 +174,9 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
-              // Real Hx_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Bx_old, M_yface);
-              // Real Hy_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), By_old, M_yface);
-              // Real Hz_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Bz_old, M_yface);
+              Real Hx_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Bx_old, M_yface);
+              Real Hy_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), By_old, M_yface);
+              Real Hz_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Bz_old, M_yface);
 
               // H_bias
               Real Hx_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Hx_bias);
@@ -184,14 +184,14 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               Real Hz_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
 
-              Real Hx_eff = Hx_bias_yface;
-              Real Hy_eff = Hy_bias_yface;
-              Real Hz_eff = Hz_bias_yface;
+              // Real Hx_eff = Hx_bias_yface;
+              // Real Hy_eff = Hy_bias_yface;
+              // Real Hz_eff = Hz_bias_yface;
 
               // Uncomment these lines when we couple LLG with Maxwell
-              // Real Hx_eff = Hx_yface + Hx_bias_yface;
-              // Real Hy_eff = Hy_yface + Hy_bias_yface;
-              // Real Hz_eff = Hz_yface + Hz_bias_yface;
+              Real Hx_eff = Hx_yface + Hx_bias_yface;
+              Real Hy_eff = Hy_yface + Hy_bias_yface;
+              Real Hz_eff = Hz_yface + Hz_bias_yface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
@@ -231,23 +231,23 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
-              // Real Hx_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Bx_old, M_zface);
-              // Real Hy_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), By_old, M_zface);
-              // Real Hz_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Bz_old, M_zface);
+              Real Hx_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Bx_old, M_zface);
+              Real Hy_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), By_old, M_zface);
+              Real Hz_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Bz_old, M_zface);
 
               // H_bias
               Real Hx_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Hx_bias);
               Real Hy_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), Hy_bias);
               Real Hz_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
-              Real Hx_eff = Hx_bias_zface;
-              Real Hy_eff = Hy_bias_zface;
-              Real Hz_eff = Hz_bias_zface;
+              // Real Hx_eff = Hx_bias_zface;
+              // Real Hy_eff = Hy_bias_zface;
+              // Real Hz_eff = Hz_bias_zface;
 
               // Uncomment these lines when we couple LLG with Maxwell
-              // Real Hx_eff = Hx_zface + Hx_bias_zface;
-              // Real Hy_eff = Hy_zface + Hy_bias_zface;
-              // Real Hz_eff = Hz_zface + Hz_bias_zface;
+              Real Hx_eff = Hx_zface + Hx_bias_zface;
+              Real Hy_eff = Hy_zface + Hy_bias_zface;
+              Real Hz_eff = Hz_zface + Hz_bias_zface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
@@ -361,23 +361,23 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
-              // Real Hx_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Bx, M_prev_xface);
-              // Real Hy_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), By, M_prev_xface);
-              // Real Hz_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Bz, M_prev_xface);
+              Real Hx_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Bx, M_prev_xface);
+              Real Hy_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), By, M_prev_xface);
+              Real Hz_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Bz, M_prev_xface);
 
               // H_bias
               Real Hx_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Hx_bias);
               Real Hy_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), Hy_bias);
               Real Hz_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
-              Real Hx_eff = Hx_bias_xface;
-              Real Hy_eff = Hy_bias_xface;
-              Real Hz_eff = Hz_bias_xface;
+              // Real Hx_eff = Hx_bias_xface;
+              // Real Hy_eff = Hy_bias_xface;
+              // Real Hz_eff = Hz_bias_xface;
 
               // Uncomment these lines when we couple LLG with Maxwell
-              // Real Hx_eff = Hx_xface + Hx_bias_xface;
-              // Real Hy_eff = Hy_xface + Hy_bias_xface;
-              // Real Hz_eff = Hz_xface + Hz_bias_xface;
+              Real Hx_eff = Hx_xface + Hx_bias_xface;
+              Real Hy_eff = Hy_xface + Hy_bias_xface;
+              Real Hz_eff = Hz_xface + Hz_bias_xface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
@@ -426,23 +426,23 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
-              // Real Hx_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Bx, M_prev_yface);
-              // Real Hy_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), By, M_prev_yface);
-              // Real Hz_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Bz, M_prev_yface);
+              Real Hx_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Bx, M_prev_yface);
+              Real Hy_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), By, M_prev_yface);
+              Real Hz_yface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Bz, M_prev_yface);
 
               // H_bias
               Real Hx_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,1,0), Hx_bias);
               Real Hy_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(0,1,0), Hy_bias);
               Real Hz_bias_yface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,1,0), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
-              Real Hx_eff = Hx_bias_yface;
-              Real Hy_eff = Hy_bias_yface;
-              Real Hz_eff = Hz_bias_yface;
+              // Real Hx_eff = Hx_bias_yface;
+              // Real Hy_eff = Hy_bias_yface;
+              // Real Hz_eff = Hz_bias_yface;
 
               // Uncomment these lines when we couple LLG with Maxwell
-              // Real Hx_eff = Hx_yface + Hx_bias_yface;
-              // Real Hy_eff = Hy_yface + Hy_bias_yface;
-              // Real Hz_eff = Hz_yface + Hz_bias_yface;
+              Real Hx_eff = Hx_yface + Hx_bias_yface;
+              Real Hy_eff = Hy_yface + Hy_bias_yface;
+              Real Hz_eff = Hz_yface + Hz_bias_yface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
@@ -490,23 +490,23 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
 
               // Uncomment these lines when we couple LLG with Maxwell
               // // H_maxwell
-              // Real Hx_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Bx, M_prev_zface);
-              // Real Hy_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), By, M_prev_zface);
-              // Real Hz_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Bz, M_prev_zface);
+              Real Hx_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Bx, M_prev_zface);
+              Real Hy_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), By, M_prev_zface);
+              Real Hz_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Bz, M_prev_zface);
 
               // H_bias
               Real Hx_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Hx_bias);
               Real Hy_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), Hy_bias);
               Real Hz_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
-              Real Hx_eff = Hx_bias_zface;
-              Real Hy_eff = Hy_bias_zface;
-              Real Hz_eff = Hz_bias_zface;
+              // Real Hx_eff = Hx_bias_zface;
+              // Real Hy_eff = Hy_bias_zface;
+              // Real Hz_eff = Hz_bias_zface;
 
               // Uncomment these lines when we couple LLG with Maxwell
-              // Real Hx_eff = Hx_zface + Hx_bias_zface;
-              // Real Hy_eff = Hy_zface + Hy_bias_zface;
-              // Real Hz_eff = Hz_zface + Hz_bias_zface;
+              Real Hx_eff = Hx_zface + Hx_bias_zface;
+              Real Hy_eff = Hy_zface + Hy_bias_zface;
+              Real Hz_eff = Hz_zface + Hz_bias_zface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation
