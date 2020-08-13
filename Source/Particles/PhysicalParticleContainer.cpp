@@ -727,7 +727,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
             amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
             if (inj_pos->insidePulsarBounds( rad,PulsarParm::R_star,
-                                                        PulsarParm::dR_star*1.2) ) 
+                                                        PulsarParm::dR_star*1.2) )
             {
                 auto index = overlap_box.index(iv);
                 int ii = Ex_lo.x + iv[0];
@@ -745,7 +745,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 //                                                    + (pos.z-zc)*(pos.z-zc) );
 //                    // check if particle is inside pulsar bounds
 //                    if (inj_pos->insidePulsarBounds( part_rad, PulsarParm::R_star,
-//                                                     PulsarParm::dR_star) ) 
+//                                                     PulsarParm::dR_star) )
 //                    {
 //                       precheck_PulsarAddPlasmaCondition( overlap_corner, i, j, k, dx, t,
 //                                                          ex_arr, ey_arr, ez_arr, rho_arr,
@@ -753,7 +753,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 //                    } else {
 //                        dummy_part.id() = -1; // particle not in spherical ring
 //                    }
-//                    if (dummy_part.id() > 0) ++part_counter; 
+//                    if (dummy_part.id() > 0) ++part_counter;
 //                }
 //                pcounts[index] = part_counter;
                 //  Below is another way to pre-determine particle injection
