@@ -21,7 +21,7 @@ struct AddPulsarPlasmaCondition
     /** This operator determines if a particle p, with charge q_pm, should be
      *  introduced in the cell that intersects with the surface of the pulsar.
      *  Particles are introduced by computing the jump in the E-field, Er_cell-Er_cor
-     *  and obtaining the corresponding surface charge density. 
+     *  and obtaining the corresponding surface charge density.
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void operator () ( const GpuArray<Real,AMREX_SPACEDIM> overlap_corner,
@@ -84,18 +84,18 @@ struct AddPulsarPlasmaCondition
         amrex::Real rho_GJ = 2. * PhysConst::ep0
                            * PulsarParm::B_star * omega
                            * (1. - 3.*c_theta * c_theta) * PulsarParm::rhoGJ_scale;
-       
+
         // Average the edge-centered E-field to cell-center
         amrex::Real ex_avg = 0.25*( ex_arr(icell  , jcell  , kcell  )
                                   + ex_arr(icell  , jcell+1, kcell  )
                                   + ex_arr(icell  , jcell  , kcell+1)
                                   + ex_arr(icell  , jcell+1, kcell+1) );
-        
+
         amrex::Real ey_avg = 0.25*( ey_arr(icell  , jcell  , kcell  )
                                   + ey_arr(icell+1, jcell  , kcell  )
                                   + ey_arr(icell  , jcell  , kcell+1)
                                   + ey_arr(icell+1, jcell  , kcell+1) );
-       
+
         amrex::Real ez_avg = 0.25*( ez_arr(icell  , jcell  , kcell  )
                                   + ez_arr(icell+1, jcell  , kcell  )
                                   + ez_arr(icell  , jcell+1, kcell  )
@@ -103,10 +103,10 @@ struct AddPulsarPlasmaCondition
         // convert cell-centered cartesian components of E-field to spherical co-ord.
         amrex::Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi
                                   + ez_avg*c_theta;
-        
+
         // The following steps determine the total number of particles to be
         // introduced on the surface based on the difference between the Er_cell
-        // and Er_corotating. 
+        // and Er_corotating.
         // 1. Surface_charge_density = (Er_cell-Er_cor)*epsilon
         // 2. Only a fraction of this surface charge density is actually introduced
         //    Surface_charge_density_intro = surface_inj_fraction*Surface_charge_density
@@ -129,17 +129,17 @@ struct AddPulsarPlasmaCondition
                 int part_freq = floor ( num_ppc / N_inj );
                 if ( i_part % part_freq !=0 ) {
                     if (include_part_sampling == 1 ) p.id() = -1;
-                } 
-            } 
+                }
+            }
         }
         else { // N_inj < 1 (no particles to be injected)
             p.id() = -1;
         } // end if N_inj >=1
-        
+
         // For an inactive vacuum pulsar, only electron or only ions are introduced
-        // if surface change density < 0, then do not introduce ions  
-        // Benoit Cerutti uses this approach - currently comment out.     
-//        if ( sigma_inj < 0 and q_pm > 0) { 
+        // if surface change density < 0, then do not introduce ions
+        // Benoit Cerutti uses this approach - currently comment out.
+//        if ( sigma_inj < 0 and q_pm > 0) {
 //            p.id() = -1;
 //            amrex::Print() << " ion not intro\n";
 //        }
