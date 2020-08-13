@@ -15,8 +15,8 @@
 #################################
 max_step = 50000
 amr.n_cell = 128 128 128
-amr.max_grid_size = 64
-amr.blocking_factor = 64
+amr.max_grid_size = 128
+amr.blocking_factor = 128
 amr.max_level = 0
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 0 0 0     # Is periodic?
@@ -26,7 +26,7 @@ geometry.prob_hi     = 180000 180000 180000
 #################################
 ############ NUMERICS ###########
 #################################
-algo.maxwell_fdtd_solver = yee
+#algo.maxwell_fdtd_solver = yee
 warpx.verbose = 1
 warpx.do_dive_cleaning = 0
 warpx.use_filter = 1
@@ -95,9 +95,8 @@ plasma_p.density_min = 1E0
 
 diagnostics.diags_names = plt
 plt.diag_type = Full
-plt.period = 200
+plt.period = 2
 plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
-
 
 #################################
 ######### PULSAR SETUP ##########
@@ -110,7 +109,8 @@ pulsar.ramp_omega_time = 0.0              # time over which to ramp up NS angula
 pulsar.center_star = 90000 90000 90000
 pulsar.R_star = 12032                  # radius of NS (m)
 pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
-pulsar.dR = 1075
+pulsar.dR = 1400                       # thickness on the surface of the pulsar
+                                       # consistency requires dR = my_constants.dR
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 0                  # [0/1]
