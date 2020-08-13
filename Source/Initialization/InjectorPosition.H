@@ -139,7 +139,6 @@ struct InjectorPosition
     bool
     insidePulsarBounds (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
     {
-        //return (r<=R_star and r>=(R_star-dR_star));
         return (r<=(R_star+dR_star) and r>=(R_star-dR_star));
     }
 #endif
