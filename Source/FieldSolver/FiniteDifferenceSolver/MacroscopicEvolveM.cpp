@@ -140,7 +140,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               amrex::Real mag_normalized = std::sqrt( std::pow(M_xface(i, j, k, 0),2.0) + std::pow(M_xface(i, j, k, 1),2.0) +
                       std::pow(M_xface(i, j, k, 2),2.0) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(1,0,0),mag_Ms_arr);
 
-	      // check the normalized error
+	        // check the normalized error
               if ( amrex::Math::abs(1._rt-mag_normalized) > mag_normalized_error ){
                   printf("i = %d, j=%d, k=%d\n", i, j, k);
                   printf("mag_normalized = %f, mag_normalized_error=%f\n", mag_normalized, mag_normalized_error);
