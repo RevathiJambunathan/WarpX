@@ -94,9 +94,6 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
     std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Jfield,
     amrex::Real const dt, std::unique_ptr<MacroscopicProperties> const& macroscopic_properties ) {
 
-	amrex::Print() << "macroscopic_evolvee " << std::endl;
-	      amrex::Print() << std::endl;
-	
     //const int &macroscopic_solver_algo = WarpX::macroscopic_solver_algo;
     //Real sigma = macroscopic_properties->sigma();
     //Real const mu = macroscopic_properties->mu();
@@ -195,32 +192,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
                 amrex::Real mu = T_MacroAlgo::macro_avg_to_edge(i, j, k, amrex::IntVect(1,2,1),
                                                     mu_arr);
 #ifdef WARPX_MAG_LLG
-
-              if( (i==0 && j==0 && k==0) || (i==1 && j==0 && k==0 ) ){
-              amrex::Print() << "i,j,k " << i << " " << j << " " << k << std::endl;
-	      amrex::Print() << "M_zface(i, j, k, 0) " << M_zface(i, j, k, 0) << std::endl;
-	      amrex::Print() << "M_zface(i, j, k, 2) " << M_zface(i, j, k, 2) << std::endl;
-	      amrex::Print() << "M_zface(i-1, j, k, 2) " << M_zface(i-1, j, k, 2) << std::endl;
-	      amrex::Print() << "M_zface(i+7, j, k, 2) " << M_zface(i+7, j, k, 2) << std::endl;
-	      amrex::Print() << std::endl;
-	      }
-
 		Ey(i, j, k) = alpha * Ey(i, j, k) + beta
                      * ((- T_Algo::DownwardDx(Bz, coefs_x, n_coefs_x, i, j, k, 0)
                          + T_Algo::DownwardDz(Bx, coefs_z, n_coefs_z, i, j, k, 0))/PhysConst::mu0
                          + T_Algo::DownwardDx(M_zface, coefs_x, n_coefs_x, i, j, k, 2)
                          - T_Algo::DownwardDz(M_xface, coefs_z, n_coefs_z, i, j, k, 0));
-
-              if( (i==0 && j==0 && k==0) || (i==1 && j==0 && k==0 ) ){
-              amrex::Print() << "i,j,k " << i << " " << j << " " << k << std::endl;
-//              amrex::Print() << "T_Algo::DownwardDx(Bz, coefs_x, n_coefs_x, i, j, k, 0) " << T_Algo::DownwardDx(Bz, coefs_x, n_coefs_x, i, j, k, 0) << std::endl;
-//              amrex::Print() << "T_Algo::DownwardDz(Bx, coefs_z, n_coefs_z, i, j, k, 0) " << T_Algo::DownwardDz(Bx, coefs_z, n_coefs_z, i, j, k, 0) << std::endl;
-              amrex::Print() << "T_Algo::DownwardDx(M_zface, coefs_x, n_coefs_x, i, j, k, 2) " << T_Algo::DownwardDx(M_zface, coefs_x, n_coefs_x, i, j, k, 2) << std::endl;
-//              amrex::Print() << "T_Algo::DownwardDz(M_xface, coefs_z, n_coefs_z, i, j, k, 0) " << T_Algo::DownwardDz(M_xface, coefs_z, n_coefs_z, i, j, k, 0) << std::endl;
-	      amrex::Print() << "Ey(i, j, k) " << Ey(i, j, k) << std::endl;
-	      amrex::Print() << std::endl;
-	      }
- 
 #else
                 Ey(i, j, k) = alpha * Ey(i, j, k) + (beta/mu)
                      * ( - T_Algo::DownwardDx(Bz, coefs_x, n_coefs_x, i, j, k)

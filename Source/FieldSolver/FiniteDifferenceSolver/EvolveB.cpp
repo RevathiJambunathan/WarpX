@@ -62,8 +62,6 @@ void FiniteDifferenceSolver::EvolveBCartesian (
     std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Efield,
     amrex::Real const dt ) {
 
-	amrex::Print() << "evolveb " << std::endl;
-	amrex::Print() << std::endl;
     // Loop through the grids, and over the tiles within each grid
 #ifdef _OPENMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -107,16 +105,6 @@ void FiniteDifferenceSolver::EvolveBCartesian (
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
                 Bz(i, j, k) += dt * T_Algo::UpwardDy(Ex, coefs_y, n_coefs_y, i, j, k)
                              - dt * T_Algo::UpwardDx(Ey, coefs_x, n_coefs_x, i, j, k);
-              if( (i==0 && j==0 && k==0) || (i==1 && j==0 && k==0 ) ){
-              amrex::Print() << "i,j,k " << i << " " << j << " " << k << std::endl;
-              amrex::Print() << "Bx(i,j,k) " << Bx(i,j,k) << std::endl;
-              amrex::Print() << "By(i,j,k) " << By(i,j,k) << std::endl;
-              amrex::Print() << "Bz(i,j,k) " << Bz(i,j,k) << std::endl;
-              amrex::Print() << "Ex(i,j,k) " << Ex(i,j,k) << std::endl;
-              amrex::Print() << "Ey(i,j,k) " << Ey(i,j,k) << std::endl;
-              amrex::Print() << "Ez(i,j,k) " << Ez(i,j,k) << std::endl;
-	      amrex::Print() << std::endl;
-	      }
             }
         );
 

@@ -223,26 +223,9 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               // when working on M_zface(i,j,k,0:2) we have direct access to M_zface(i,j,k,0:2) and Hz(i,j,k)
               // Hy and Hz can be acquired by interpolation
               // H_maxwell
-	      if( (i==0 && j==0 && k==0) || (i==1 && j==0 && k==0 ) ){
-       	      amrex::Print() << "i,j,k " << i << " " << j << " " << k << std::endl;
-	      amrex::Print() << "Bx(i,j,k) " << Bx(i,j,k) << std::endl;
- 	      amrex::Print() << "By(i,j,k) " << By(i,j,k) << std::endl;
- 	      amrex::Print() << "Bz(i,j,k) " << Bz(i,j,k) << std::endl;
- 	      amrex::Print() << std::endl;
-	      }
-
 	      Real Hx_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Bx, M_zface);
               Real Hy_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(0,0,1), By, M_zface);
               Real Hz_zface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(0,0,1), Bz, M_zface);
-
-	      if( (i==0 && j==0 && k==0) || (i==1 && j==0 && k==0 ) ){
-              amrex::Print() << "i,j,k " << i << " " << j << " " << k << std::endl;
-	      amrex::Print() << "Hx_zface " << Hx_zface << std::endl;
-	      amrex::Print() << "Hy_zface " << Hy_zface << std::endl;
-	      amrex::Print() << "Hz_zface " << Hz_zface << std::endl;
- 	      amrex::Print() << std::endl;
-              }
-
 
 	      // H_bias
               Real Hx_bias_zface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(0,0,1), Hx_bias);
@@ -283,26 +266,6 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               // re-investigate the way we do Ms interp, in case we encounter the case where Ms changes across two adjacent cells that you are doing interp
               amrex::Real mag_normalized = std::sqrt( std::pow(M_zface(i, j, k, 0),2.0_rt) + std::pow(M_zface(i, j, k, 1),2.0_rt) +
                       std::pow(M_zface(i, j, k, 2),2.0_rt) ) / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_Ms_arr);
-
-	      if( (i==0 && j==0 && k==0) || (i==1 && j==0 && k==0 )){
-              amrex::Print() << "i,j,k " << i << " " << j << " " << k << std::endl;
-//	      amrex::Print() << "Hx_zface " << Hx_zface << std::endl;
-//	      amrex::Print() << "Hx_bias_zface " << Hx_bias_zface << std::endl;
-//	      amrex::Print() << "Hx_eff " << Hx_eff << std::endl;
-//	      amrex::Print() << "Hy_zface " << Hy_zface << std::endl;
-//	      amrex::Print() << "Hy_bias_zface " << Hy_bias_zface << std::endl;
-//	      amrex::Print() << "Hy_eff " << Hy_eff << std::endl;
-//	      amrex::Print() << "Hz_zface " << Hz_zface << std::endl;
-//	      amrex::Print() << "Hz_bias_zface " << Hz_bias_zface << std::endl;
-//	      amrex::Print() << "Hz_eff " << Hz_eff << std::endl;
-	      amrex::Print() << "M_zface0 " << M_zface(i,j,k,0) << std::endl;
-	      amrex::Print() << "M_zface1 " << M_zface(i,j,k,1) << std::endl;
-	      amrex::Print() << "M_zface2 " << M_zface(i,j,k,2) << std::endl;
-//	      amrex::Print() << "magMsarr " << MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_Ms_arr) << std::endl;
-//	      amrex::Print() << "mag_normalized " << mag_normalized << std::endl;
- 	      amrex::Print() << std::endl;
-              }
-
 
               // check the normalized error
               if ( amrex::Math::abs(1.-mag_normalized) > mag_normalized_error ){
