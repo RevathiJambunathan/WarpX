@@ -62,6 +62,8 @@ void FiniteDifferenceSolver::EvolveBCartesian (
     std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Efield,
     amrex::Real const dt ) {
 
+	amrex::Print() << "evolveb " << std::endl;
+	amrex::Print() << std::endl;
     // Loop through the grids, and over the tiles within each grid
 #ifdef _OPENMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -113,6 +115,7 @@ void FiniteDifferenceSolver::EvolveBCartesian (
               amrex::Print() << "Ex(i,j,k) " << Ex(i,j,k) << std::endl;
               amrex::Print() << "Ey(i,j,k) " << Ey(i,j,k) << std::endl;
               amrex::Print() << "Ez(i,j,k) " << Ez(i,j,k) << std::endl;
+	      amrex::Print() << std::endl;
 	      }
             }
         );
