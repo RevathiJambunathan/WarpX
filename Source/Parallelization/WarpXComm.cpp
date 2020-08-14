@@ -538,7 +538,7 @@ WarpX::FillBoundaryM (int lev, PatchType patch_type, IntVect ng)
             Mfield_fp[lev][0]->FillBoundary(ng, period);
             Mfield_fp[lev][1]->FillBoundary(ng, period);
             Mfield_fp[lev][2]->FillBoundary(ng, period); //Mfield_fp is an amrex object
-	}
+        }
     }
     else if (patch_type == PatchType::coarse)
     {

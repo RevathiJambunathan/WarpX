@@ -106,7 +106,8 @@ void FiniteDifferenceSolver::EvolveBCartesian (
                 Bz(i, j, k) += dt * T_Algo::UpwardDy(Ex, coefs_y, n_coefs_y, i, j, k)
                              - dt * T_Algo::UpwardDx(Ey, coefs_x, n_coefs_x, i, j, k);
             }
-        );
+
+	);
 
     }
 

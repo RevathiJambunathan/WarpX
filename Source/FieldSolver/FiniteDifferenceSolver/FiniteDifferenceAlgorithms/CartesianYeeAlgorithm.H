@@ -74,7 +74,7 @@ struct CartesianYeeAlgorithm {
         int const i, int const j, int const k, int const ncomp=0 ) {
 
         amrex::Real const inv_dx = coefs_x[0];
-	return inv_dx*( F(i,j,k,ncomp) - F(i-1,j,k,ncomp) );
+        return inv_dx*( F(i,j,k,ncomp) - F(i-1,j,k,ncomp) );
     }
 
     /**
