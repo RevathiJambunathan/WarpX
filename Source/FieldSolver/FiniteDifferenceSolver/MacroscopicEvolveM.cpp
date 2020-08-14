@@ -107,11 +107,6 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               Real Hy_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), Hy_bias);
               Real Hz_bias_xface = MacroscopicProperties::face_avg_to_face(i, j, k, 0, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Hz_bias);
               // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy ... (only the first two terms are considered here)
-              // Real Hx_eff = Hx_bias_xface;
-              // Real Hy_eff = Hy_bias_xface;
-              // Real Hz_eff = Hz_bias_xface;
-
-              // keep in mind to ADD H_Maxwell back to H_eff as shown below
               Real Hx_eff = Hx_xface + Hx_bias_xface;
               Real Hy_eff = Hy_xface + Hy_bias_xface;
               Real Hz_eff = Hz_xface + Hz_bias_xface;
