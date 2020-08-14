@@ -347,7 +347,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM_2nd (
               // Hy and Hz can be acquired by interpolation
 
               // Uncomment these lines when we couple LLG with Maxwell
-              // // H_maxwell
+              // H_maxwell
               Real Hx_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 0, amrex::IntVect(1,0,0), amrex::IntVect(1,0,0), Bx, M_prev_xface);
               Real Hy_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 1, amrex::IntVect(0,1,0), amrex::IntVect(1,0,0), By, M_prev_xface);
               Real Hz_xface = MacroscopicProperties::getH_Maxwell(i, j, k, 2, amrex::IntVect(0,0,1), amrex::IntVect(1,0,0), Bz, M_prev_xface);
