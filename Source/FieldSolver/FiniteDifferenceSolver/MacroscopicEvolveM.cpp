@@ -44,7 +44,14 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
         std::unique_ptr<MacroscopicProperties> const& macroscopic_properties )
     {
 
-        // obtain the maximum relative amount we let M deviate from Ms before aborting
+        // build temporary vector<multifab,3> Mfield_prev
+        std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_prev; // Mfield data in previous step
+        for (int i = 0; i < 3; i++){
+        Mfield_prev[i].reset( new MultiFab(Mfield[i]->boxArray(),Mfield[i]->DistributionMap(),3,Mfield[i]->nGrow()));
+        MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
+        }
+ 
+	// obtain the maximum relative amount we let M deviate from Ms before aborting
         amrex::Real mag_normalized_error = macroscopic_properties->getmag_normalized_error();
 
         for (MFIter mfi(*Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) /* remember to FIX */
@@ -61,6 +68,9 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
             Array4<Real> const& M_xface = Mfield[0]->array(mfi); // note M_xface include x,y,z components at |_x faces
             Array4<Real> const& M_yface = Mfield[1]->array(mfi); // note M_yface include x,y,z components at |_y faces
             Array4<Real> const& M_zface = Mfield[2]->array(mfi); // note M_zface include x,y,z components at |_z faces
+            Array4<Real> const& M_xface_prev = Mfield_prev[0]->array(mfi); // note M_xface_prev include x,y,z components at |_x faces
+            Array4<Real> const& M_yface_prev = Mfield_prev[1]->array(mfi); // note M_yface_prev include x,y,z components at |_y faces
+            Array4<Real> const& M_zface_prev = Mfield_prev[2]->array(mfi); // note M_zface_prev include x,y,z components at |_z faces
             Array4<Real> const& Hx_bias = H_biasfield[0]->array(mfi); // Hx_bias is the x component at |_x faces
             Array4<Real> const& Hy_bias = H_biasfield[1]->array(mfi); // Hy_bias is the y component at |_y faces
             Array4<Real> const& Hz_bias = H_biasfield[2]->array(mfi); // Hz_bias is the z component at |_z faces
@@ -115,19 +125,19 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
 
               // now you have access to use M_xface(i,j,k,0) M_xface(i,j,k,1), M_xface(i,j,k,2), Hx(i,j,k), Hy, Hz on the RHS of these update lines below
               // x component on x-faces of grid
-              M_xface(i, j, k, 0) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_xface(i, j, k, 1) * Hz_eff - M_xface(i, j, k, 2) * Hy_eff)
-                + dt * Gil_damp * ( M_xface(i, j, k, 1) * (M_xface(i, j, k, 0) * Hy_eff - M_xface(i, j, k, 1) * Hx_eff)
-                - M_xface(i, j, k, 2) * ( M_xface(i, j, k, 2) * Hx_eff - M_xface(i, j, k, 0) * Hz_eff));
+              M_xface(i, j, k, 0) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_xface_prev(i, j, k, 1) * Hz_eff - M_xface_prev(i, j, k, 2) * Hy_eff)
+                + dt * Gil_damp * ( M_xface_prev(i, j, k, 1) * (M_xface_prev(i, j, k, 0) * Hy_eff - M_xface_prev(i, j, k, 1) * Hx_eff)
+                - M_xface_prev(i, j, k, 2) * ( M_xface_prev(i, j, k, 2) * Hx_eff - M_xface_prev(i, j, k, 0) * Hz_eff));
 
               // y component on x-faces of grid
-              M_xface(i, j, k, 1) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_xface(i, j, k, 2) * Hx_eff - M_xface(i, j, k, 0) * Hz_eff)
-                + dt * Gil_damp * ( M_xface(i, j, k, 2) * (M_xface(i, j, k, 1) * Hz_eff - M_xface(i, j, k, 2) * Hy_eff)
-                - M_xface(i, j, k, 0) * ( M_xface(i, j, k, 0) * Hy_eff - M_xface(i, j, k, 1) * Hx_eff));
+              M_xface(i, j, k, 1) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_xface_prev(i, j, k, 2) * Hx_eff - M_xface_prev(i, j, k, 0) * Hz_eff)
+                + dt * Gil_damp * ( M_xface_prev(i, j, k, 2) * (M_xface_prev(i, j, k, 1) * Hz_eff - M_xface_prev(i, j, k, 2) * Hy_eff)
+                - M_xface_prev(i, j, k, 0) * ( M_xface_prev(i, j, k, 0) * Hy_eff - M_xface_prev(i, j, k, 1) * Hx_eff));
 
               // z component on x-faces of grid
-              M_xface(i, j, k, 2) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_xface(i, j, k, 0) * Hy_eff - M_xface(i, j, k, 1) * Hx_eff)
-                + dt * Gil_damp * ( M_xface(i, j, k, 0) * ( M_xface(i, j, k, 2) * Hx_eff - M_xface(i, j, k, 0) * Hz_eff)
-                - M_xface(i, j, k, 1) * ( M_xface(i, j, k, 1) * Hz_eff - M_xface(i, j, k, 2) * Hy_eff));
+              M_xface(i, j, k, 2) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_xface_prev(i, j, k, 0) * Hy_eff - M_xface_prev(i, j, k, 1) * Hx_eff)
+                + dt * Gil_damp * ( M_xface_prev(i, j, k, 0) * (M_xface_prev(i, j, k, 2) * Hx_eff - M_xface_prev(i, j, k, 0) * Hz_eff)
+                - M_xface_prev(i, j, k, 1) * ( M_xface_prev(i, j, k, 1) * Hz_eff - M_xface_prev(i, j, k, 2) * Hy_eff));
 
 
               // temporary normalized magnitude of M_xface field at the fixed point
@@ -176,19 +186,19 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,1,0),mag_Ms_arr);
 
               // x component on y-faces of grid
-              M_yface(i, j, k, 0) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_yface(i, j, k, 1) * Hz_eff - M_yface(i, j, k, 2) * Hy_eff)
-                + dt * Gil_damp * ( M_yface(i, j, k, 1) * (M_yface(i, j, k, 0) * Hy_eff - M_yface(i, j, k, 1) * Hx_eff)
-                - M_yface(i, j, k, 2) * ( M_yface(i, j, k, 2) * Hx_eff - M_yface(i, j, k, 0) * Hz_eff));
+              M_yface(i, j, k, 0) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_yface_prev(i, j, k, 1) * Hz_eff - M_yface_prev(i, j, k, 2) * Hy_eff)
+                + dt * Gil_damp * ( M_yface_prev(i, j, k, 1) * (M_yface_prev(i, j, k, 0) * Hy_eff - M_yface_prev(i, j, k, 1) * Hx_eff)
+                - M_yface_prev(i, j, k, 2) * ( M_yface_prev(i, j, k, 2) * Hx_eff - M_yface_prev(i, j, k, 0) * Hz_eff));
 
               // y component on y-faces of grid
-              M_yface(i, j, k, 1) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_yface(i, j, k, 2) * Hx_eff - M_yface(i, j, k, 0) * Hz_eff)
-                + dt * Gil_damp * ( M_yface(i, j, k, 2) * (M_yface(i, j, k, 1) * Hz_eff - M_yface(i, j, k, 2) * Hy_eff)
-                - M_yface(i, j, k, 0) * ( M_yface(i, j, k, 0) * Hy_eff - M_yface(i, j, k, 1) * Hx_eff));
+              M_yface(i, j, k, 1) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_yface_prev(i, j, k, 2) * Hx_eff - M_yface_prev(i, j, k, 0) * Hz_eff)
+                + dt * Gil_damp * ( M_yface_prev(i, j, k, 2) * (M_yface_prev(i, j, k, 1) * Hz_eff - M_yface_prev(i, j, k, 2) * Hy_eff)
+                - M_yface_prev(i, j, k, 0) * ( M_yface_prev(i, j, k, 0) * Hy_eff - M_yface_prev(i, j, k, 1) * Hx_eff));
 
               // z component on y-faces of grid
-              M_yface(i, j, k, 2) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_yface(i, j, k, 0) * Hy_eff - M_yface(i, j, k, 1) * Hx_eff)
-                + dt * Gil_damp * ( M_yface(i, j, k, 0) * ( M_yface(i, j, k, 2) * Hx_eff - M_yface(i, j, k, 0) * Hz_eff)
-                - M_yface(i, j, k, 1) * ( M_yface(i, j, k, 1) * Hz_eff - M_yface(i, j, k, 2) * Hy_eff));
+              M_yface(i, j, k, 2) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_yface_prev(i, j, k, 0) * Hy_eff - M_yface_prev(i, j, k, 1) * Hx_eff)
+                + dt * Gil_damp * ( M_yface_prev(i, j, k, 0) * (M_yface_prev(i, j, k, 2) * Hx_eff - M_yface_prev(i, j, k, 0) * Hz_eff)
+                - M_yface_prev(i, j, k, 1) * ( M_yface_prev(i, j, k, 1) * Hz_eff - M_yface_prev(i, j, k, 2) * Hy_eff));
 
 
               // temporary normalized magnitude of M_yface field at the fixed point
@@ -255,19 +265,19 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
                               / MacroscopicProperties::macro_avg_to_face(i,j,k,amrex::IntVect(0,0,1),mag_Ms_arr);
 
               // x component on z-faces of grid
-              M_zface(i, j, k, 0) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_zface(i, j, k, 1) * Hz_eff - M_zface(i, j, k, 2) * Hy_eff)
-                + dt * Gil_damp * ( M_zface(i, j, k, 1) * (M_zface(i, j, k, 0) * Hy_eff - M_zface(i, j, k, 1) * Hx_eff)
-                - M_zface(i, j, k, 2) * ( M_zface(i, j, k, 2) * Hx_eff - M_zface(i, j, k, 0) * Hz_eff));
+              M_zface(i, j, k, 0) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_zface_prev(i, j, k, 1) * Hz_eff - M_zface_prev(i, j, k, 2) * Hy_eff)
+                + dt * Gil_damp * ( M_zface_prev(i, j, k, 1) * (M_zface_prev(i, j, k, 0) * Hy_eff - M_zface_prev(i, j, k, 1) * Hx_eff)
+                - M_zface_prev(i, j, k, 2) * ( M_zface_prev(i, j, k, 2) * Hx_eff - M_zface_prev(i, j, k, 0) * Hz_eff));
 
               // y component on z-faces of grid
-              M_zface(i, j, k, 1) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_zface(i, j, k, 2) * Hx_eff - M_zface(i, j, k, 0) * Hz_eff)
-                + dt * Gil_damp * ( M_zface(i, j, k, 2) * (M_zface(i, j, k, 1) * Hz_eff - M_zface(i, j, k, 2) * Hy_eff)
-                - M_zface(i, j, k, 0) * ( M_zface(i, j, k, 0) * Hy_eff - M_zface(i, j, k, 1) * Hx_eff));
+              M_zface(i, j, k, 1) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_zface_prev(i, j, k, 2) * Hx_eff - M_zface_prev(i, j, k, 0) * Hz_eff)
+                + dt * Gil_damp * ( M_zface_prev(i, j, k, 2) * (M_zface_prev(i, j, k, 1) * Hz_eff - M_zface_prev(i, j, k, 2) * Hy_eff)
+                - M_zface_prev(i, j, k, 0) * ( M_zface_prev(i, j, k, 0) * Hy_eff - M_zface_prev(i, j, k, 1) * Hx_eff));
 
               // z component on z-faces of grid
-              M_zface(i, j, k, 2) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_zface(i, j, k, 0) * Hy_eff - M_zface(i, j, k, 1) * Hx_eff)
-                + dt * Gil_damp * ( M_zface(i, j, k, 0) * ( M_zface(i, j, k, 2) * Hx_eff - M_zface(i, j, k, 0) * Hz_eff)
-                - M_zface(i, j, k, 1) * ( M_zface(i, j, k, 1) * Hz_eff - M_yface(i, j, k, 2) * Hy_eff));
+              M_zface(i, j, k, 2) += dt * (PhysConst::mu0 * mag_gamma_interp) * ( M_zface_prev(i, j, k, 0) * Hy_eff - M_zface_prev(i, j, k, 1) * Hx_eff)
+                + dt * Gil_damp * ( M_zface_prev(i, j, k, 0) * (M_zface_prev(i, j, k, 2) * Hx_eff - M_zface_prev(i, j, k, 0) * Hz_eff)
+                - M_zface_prev(i, j, k, 1) * ( M_zface_prev(i, j, k, 1) * Hz_eff - M_yface_prev(i, j, k, 2) * Hy_eff));
 
               // temporary normalized magnitude of M_zface field at the fixed point
               // re-investigate the way we do Ms interp, in case we encounter the case where Ms changes across two adjacent cells that you are doing interp
