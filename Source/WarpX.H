@@ -497,15 +497,6 @@ public:
     void SyncCurrent ();
     void SyncRho ();
 
-#ifdef WARPX_MAG_LLG
-        void MacroscopicfieldOutput (
-            std::array< std::unique_ptr<amrex::MultiFab>, 3 > & Mfield,
-            std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Efield,
-            std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Bfield,
-            amrex::Real const time);
-#endif
-
-
     amrex::Vector<int> getnsubsteps () const {return nsubsteps;}
     int getnsubsteps (int lev) const {return nsubsteps[lev];}
     amrex::Vector<int> getistep () const {return istep;}
