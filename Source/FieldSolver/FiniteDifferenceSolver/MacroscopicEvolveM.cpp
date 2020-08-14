@@ -47,8 +47,8 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
         // build temporary vector<multifab,3> Mfield_prev
         std::array< std::unique_ptr<amrex::MultiFab>, 3 > Mfield_prev; // Mfield data in previous step
         for (int i = 0; i < 3; i++){
-        Mfield_prev[i].reset( new MultiFab(Mfield[i]->boxArray(),Mfield[i]->DistributionMap(),3,Mfield[i]->nGrow()));
-        MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
+            Mfield_prev[i].reset( new MultiFab(Mfield[i]->boxArray(),Mfield[i]->DistributionMap(),3,Mfield[i]->nGrow()));
+            MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
         }
  
 	// obtain the maximum relative amount we let M deviate from Ms before aborting
