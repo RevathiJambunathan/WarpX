@@ -168,9 +168,6 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
               Real Hx_eff = Hx_yface + Hx_bias_yface;
               Real Hy_eff = Hy_yface + Hy_bias_yface;
               Real Hz_eff = Hz_yface + Hz_bias_yface;
-              // Real Hx_eff = Hx_bias_yface;
-              // Real Hy_eff = Hy_bias_yface;
-              // Real Hz_eff = Hz_bias_yface;
 
               // magnetic material properties mag_alpha and mag_Ms are defined at cell nodes
               // keep the interpolation. The IntVect is (0,1,0) to interpolate values to the y-face.
