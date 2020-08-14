@@ -43,8 +43,6 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
         amrex::Real const dt,
         std::unique_ptr<MacroscopicProperties> const& macroscopic_properties )
     {
-	      amrex::Print() << "macroscopic_evolvem " << std::endl;
-              amrex::Print() << std::endl;
 
         // obtain the maximum relative amount we let M deviate from Ms before aborting
         amrex::Real mag_normalized_error = macroscopic_properties->getmag_normalized_error();
