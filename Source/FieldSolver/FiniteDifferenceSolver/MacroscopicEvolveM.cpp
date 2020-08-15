@@ -50,7 +50,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveM (
             Mfield_prev[i].reset( new MultiFab(Mfield[i]->boxArray(),Mfield[i]->DistributionMap(),3,Mfield[i]->nGrow()));
             MultiFab::Copy(*Mfield_prev[i],*Mfield[i],0,0,3,Mfield[i]->nGrow());
         }
- 
+
     // obtain the maximum relative amount we let M deviate from Ms before aborting
         amrex::Real mag_normalized_error = macroscopic_properties->getmag_normalized_error();
 
