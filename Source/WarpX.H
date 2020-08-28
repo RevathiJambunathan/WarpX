@@ -172,6 +172,8 @@ public:
 #ifdef WARPX_MAG_LLG
     // second-order magnetization normalization strategy
     int mag_secondorder_normalization = 1;
+    // turn on LLG + Maxwell coupling
+    int mag_LLG_coupling = 1;
 #endif
 
 #ifdef WARPX_USE_PSATD
