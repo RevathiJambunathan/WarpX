@@ -18,7 +18,7 @@ amr.max_level = 0
 #################################
 warpx.verbose = 0
 warpx.use_filter = 0
-warpx.cfl = 4000
+warpx.cfl = 0.9
 warpx.do_pml = 0
 warpx.mag_time_scheme_order = 2 # default 1
 warpx.mag_secondorder_normalization = 1
