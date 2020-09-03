@@ -84,6 +84,9 @@ struct AddPulsarPlasmaCondition
         amrex::Real rho_GJ = 2. * PhysConst::ep0
                            * PulsarParm::B_star * omega
                            * (1. - 3.*c_theta * c_theta) * PulsarParm::rhoGJ_scale;
+        
+        amrex::Real sigma_GJ = PhysConst::ep0 * omega * cc_rad * PulsarParm::B_star*
+                               (3.0 - 5.*c_theta*c_theta);
 
         // Average the edge-centered E-field to cell-center
         amrex::Real ex_avg = 0.25*( ex_arr(icell  , jcell  , kcell  )
@@ -104,6 +107,10 @@ struct AddPulsarPlasmaCondition
         amrex::Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi
                                   + ez_avg*c_theta;
 
+        //amrex::Real Er_ext = PulsarParm::B_star * omega * PulsarParm::R_star
+        //                    * R_ratio*r3*(1.0-3.0*c_theta*c_theta);
+        //Er_ext += (2./3.)*omega*PulsarParm::B_star*PulsarParm::R_star*R_ratio*R_ratio;
+
         // The following steps determine the total number of particles to be
         // introduced on the surface based on the difference between the Er_cell
         // and Er_corotating.
@@ -113,14 +120,17 @@ struct AddPulsarPlasmaCondition
         // 3. Number_of_particles = surface_charge_density_intro * area
         //                        / ( charge * particle_wt=scale_fac)
         amrex::Real sigma_inj = Er_cell - Er_cor;
+        amrex::Real sigma_diff = sigma_GJ/PhysConst::ep0;
         amrex::Real max_dens = PulsarParm::max_ndens;
         // Only a fraction of the surface charge density is introduced per timestep.
         // This value is defined by the user.
         amrex::Real surface_inj_fraction = PulsarParm::Ninj_fraction;
         // Total number of particles injected (float)
-        amrex::Real N_inj = surface_inj_fraction * amrex::Math::abs(sigma_inj)
-                                * PhysConst::ep0 * dx[0]*dx[0]
-                                / (PhysConst::q_e * max_dens * scale_fac);
+        //amrex::Real N_inj = surface_inj_fraction * amrex::Math::abs(sigma_inj)
+        //amrex::Real N_inj = surface_inj_fraction * amrex::Math::abs(sigma_inj)
+        //                        * PhysConst::ep0 * dx[0]*dx[0]
+        //                        / (PhysConst::q_e * max_dens * scale_fac);
+        amrex::Real N_inj = 0.0;
         // Apply conditions to check if particles needs to be introduced.
         if ( N_inj > 1) {
             if ( N_inj < (num_ppc) ) {
@@ -128,7 +138,7 @@ struct AddPulsarPlasmaCondition
                 // then to ensure spatial regularity, introduce every num_ppc/N_inj particle
                 int part_freq = floor ( num_ppc / N_inj );
                 if ( i_part % part_freq !=0 ) {
-                    if (include_part_sampling == 1 ) p.id() = -1;
+            //        if (include_part_sampling == 1 ) p.id() = -1;
                 }
             }
         }
@@ -152,12 +162,15 @@ struct AddPulsarPlasmaCondition
         if (std::abs(rho_GJ) < 1.E-20) {
             p.id() = -1;
         } else {
-            amrex::Real rel_rho_err = ( rho_arr(icell, jcell, kcell) - rho_GJ)
+            amrex::Real rel_rho_err = ( amrex::Math::abs(rho_arr(icell, jcell, kcell))
+                                        - amrex::Math::abs(rho_GJ))
                                       / ( amrex::Math::abs(rho_GJ) );
             // if current rho is close to the rho_GJ, then particles are not introduced.
             // This is the stopping condition for particle supply.
             // But the difference could be high if for some reason rho has overshot rho_GJ.
             // So first the amplitude of rho_cell and rho_GJ is compared.
+//            if ( rho_arr(icell,jcell,kcell) >0 and rho_GJ <0) p.id() = -1;
+//            if ( rho_arr(icell,jcell,kcell) <0 and rho_GJ >0) p.id() = -1;
             if ( amrex::Math::abs(rho_arr(icell,jcell,kcell)) / amrex::Math::abs(rho_GJ) < 0.8) {
                 if (amrex::Math::abs(rel_rho_err) < 0.05) {
                     p.id() = -1;
