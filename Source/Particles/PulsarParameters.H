@@ -94,14 +94,14 @@ namespace PulsarParm
         // Michel and Li -- eq 14 and 15 from michel and li
         // dipole B field
         if ( r < R_star ) {
-        Br     = 0.0;
-        Btheta = 0.0;
-        Bphi   = 0.0;
+            Br     = 0.0;
+            Btheta = 0.0;
+            Bphi   = 0.0;
         }
         if ( r >= R_star ) {
-        Br     = 2.0*B_star*r3*c_theta;
-        Btheta = B_star*r3*s_theta;
-        Bphi   = 0.0;
+            Br     = 2.0*B_star*r3*c_theta;
+            Btheta = B_star*r3*s_theta;
+            Bphi   = 0.0;
         }
     }
 
