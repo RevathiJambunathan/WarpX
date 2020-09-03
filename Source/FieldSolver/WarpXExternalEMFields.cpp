@@ -35,7 +35,7 @@ WarpX::ApplyPulsarEBFieldsOnGrid ()
         amrex::IntVect bx_type = Bx->ixType().toIntVect();
         amrex::IntVect by_type = By->ixType().toIntVect();
         amrex::IntVect bz_type = Bz->ixType().toIntVect();
-        for (int idim = 0; idim < AMREX_SPACEDIM-1; ++idim) {
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
             Ex_stag[idim] = ex_type[idim];
             Ey_stag[idim] = ey_type[idim];
             Ez_stag[idim] = ez_type[idim];
