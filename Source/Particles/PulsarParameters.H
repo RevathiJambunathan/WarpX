@@ -61,10 +61,8 @@ namespace PulsarParm
         if ( r < R_star) {
             amrex::Real r2 = r_ratio * r_ratio;
             // Michel and Li -- eq 14 , 15
-//            Er     =  B_star * omega * r2 * r * s_theta * s_theta;
-//            Etheta = -B_star * omega * r2 * r * 2.0 * s_theta * c_theta;
-            Er = 0.0;
-            Etheta = 0.0;
+            Er     =  B_star * omega * r2 * r * s_theta * s_theta;
+            Etheta = -B_star * omega * r2 * r * 2.0 * s_theta * c_theta;
             Ephi = 0.0; // aligned magnetic and rotation axis
         }
         
@@ -92,17 +90,10 @@ namespace PulsarParm
         amrex::Real r_ratio = R_star/r;
         amrex::Real r3 = r_ratio*r_ratio*r_ratio;
         // Michel and Li -- eq 14 and 15 from michel and li
-        // dipole B field
-        if ( r < R_star ) {
-            Br     = 0.0;
-            Btheta = 0.0;
-            Bphi   = 0.0;
-        }
-        if ( r >= R_star ) {
-            Br     = 2.0*B_star*r3*c_theta;
-            Btheta = B_star*r3*s_theta;
-            Bphi   = 0.0;
-        }
+        // dipole B field inside and outside the pulsar
+        Br     = 2.0*B_star*r3*c_theta;
+        Btheta = B_star*r3*s_theta;
+        Bphi   = 0.0;
     }
 
 
@@ -370,7 +361,7 @@ namespace PulsarParm
     {
         const amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
 
-        if (r < R_star - dR_star) {
+        if (r < R_star) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
             // for damping_scale >= 10 or so:
             // Fd(0) ~ 0
