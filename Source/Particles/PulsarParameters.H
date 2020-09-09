@@ -332,7 +332,7 @@ namespace PulsarParm
              amrex::Real const r, amrex::Real const theta,
              amrex::Real const phi, amrex::Real & F_x)
     {
-        F_x += F_r     * std::sin(theta) * std::cos(phi)
+        F_x = F_r     * std::sin(theta) * std::cos(phi)
             + F_theta * std::cos(theta) * std::cos(phi);
     }
 
@@ -342,7 +342,7 @@ namespace PulsarParm
              amrex::Real const r, amrex::Real const theta,
              amrex::Real const phi, amrex::Real & F_y)
     {
-        F_y += F_r     * std::sin(theta) * std::sin(phi)
+        F_y = F_r     * std::sin(theta) * std::sin(phi)
             + F_theta * std::cos(theta) * std::sin(phi);
     }
 
@@ -352,7 +352,7 @@ namespace PulsarParm
              amrex::Real const r, amrex::Real const theta,
              amrex::Real const phi, amrex::Real & F_z)
     {
-        F_z += F_r * std::cos(theta) - F_theta * std::sin(theta);
+        F_z = F_r * std::cos(theta) - F_theta * std::sin(theta);
     }
 
 

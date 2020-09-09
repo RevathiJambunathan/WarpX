@@ -1665,6 +1665,12 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 
     const std::array<amrex::Real,3>& dx = WarpX::CellSize(std::max(lev,0));
 
+#ifdef PULSAR
+    const auto problo = WarpX::GetInstance().Geom(lev).ProbLoArray();
+    const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
+    amrex::Real cur_time = WarpX::GetInstance().gett_new(lev);
+#endif
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1746,7 +1752,11 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                    ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                    ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                                    dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                                   nox, galerkin_interpolation);
+                                   nox, galerkin_interpolation
+#ifdef PULSAR
+                                   , problo, probhi, cur_time
+#endif
+                                   );
                 }
                 // Externally applied E-field in Cartesian co-ordinates
                 getExternalE(ip, Exp, Eyp, Ezp);
@@ -2060,6 +2070,10 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     const std::array<Real, 3>& xyzmin = WarpX::LowerCorner(box, galilean_shift, gather_lev);
 
     const Dim3 lo = lbound(box);
+#ifdef PULSAR
+    const auto problo = WarpX::GetInstance().Geom(lev).ProbLoArray();
+    const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
+#endif
 
     bool galerkin_interpolation = WarpX::galerkin_interpolation;
     int nox = WarpX::nox;
@@ -2133,7 +2147,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                            ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                            ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                            dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                           nox, galerkin_interpolation);
+                           nox, galerkin_interpolation
+#ifdef PULSAR
+                           , problo, probhi, cur_time
+#endif
+                           );
         }
         // Externally applied E-field in Cartesian co-ordinates
         getExternalE(ip, Exp, Eyp, Ezp);
@@ -2356,7 +2374,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                       Real r = std::sqrt((x-xc)*(x-xc)
                                        + (y-yc)*(y-yc)
                                        + (z-zc)*(z-zc));
-                      if (r < (PulsarParm::R_star - 1.0*PulsarParm::dR_star)) {
+                      if (r < (PulsarParm::R_star )) {
                           pp[i].id() = -1;
                       }
             });

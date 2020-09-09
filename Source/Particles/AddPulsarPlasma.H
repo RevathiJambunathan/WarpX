@@ -130,7 +130,7 @@ struct AddPulsarPlasmaCondition
         //amrex::Real N_inj = surface_inj_fraction * amrex::Math::abs(sigma_inj)
         //                        * PhysConst::ep0 * dx[0]*dx[0]
         //                        / (PhysConst::q_e * max_dens * scale_fac);
-        amrex::Real N_inj = 0.0;
+        amrex::Real N_inj = num_ppc ;
         // Apply conditions to check if particles needs to be introduced.
         if ( N_inj > 1) {
             if ( N_inj < (num_ppc) ) {

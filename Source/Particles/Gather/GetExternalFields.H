@@ -12,9 +12,9 @@
 #include <limits>
 
 enum ExternalFieldInitType { Constant, Parser
-#ifdef PULSAR
-     , Pulsar_Efield, Pulsar_Bfield
-#endif
+//#ifdef PULSAR
+//     , Pulsar_Efield, Pulsar_Bfield
+//#endif
  };
 
 /** \brief Base class for functors that assign external

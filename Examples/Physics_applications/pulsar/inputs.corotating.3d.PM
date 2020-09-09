@@ -66,7 +66,7 @@ plasma_e.charge = -q_e
 plasma_e.mass = m_e
 plasma_e.injection_style = "NUniformPerCell"
 plasma_e.profile = parse_density_function
-plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star+dR)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
+plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star+dR)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star)) )*dens"
 plasma_e.num_particles_per_cell_each_dim = 3 3 3
 plasma_e.momentum_distribution_type = parse_momentum_function
 
@@ -82,7 +82,7 @@ plasma_p.charge = q_e
 plasma_p.mass = m_e
 plasma_p.injection_style = "NUniformPerCell"
 plasma_p.profile = parse_density_function
-plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star+dR)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
+plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star+dR)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star)) )*dens"
 plasma_p.num_particles_per_cell_each_dim = 3 3 3
 plasma_p.momentum_distribution_type = parse_momentum_function
 
@@ -116,7 +116,7 @@ pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging 
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 0                  # [0/1]
 pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing density
-pulsar.Ninj_fraction = 0.2            # fraction of sigma injected
+pulsar.Ninj_fraction = 0.1            # fraction of sigma injected
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
-pulsar.damp_EB_internal = 0             # Damp internal electric field
+pulsar.damp_EB_internal = 1             # Damp internal electric field
 pulsar.damping_scale = 10.0            # Damping scale factor for internal electric field
