@@ -68,7 +68,7 @@ WarpX::ApplyPulsarEBFieldsOnGrid ()
                                                     dx, x, y, z);
                 PulsarParm::ConvertCartesianToSphericalCoord( x, y, z, problo, probhi,
                                                      r, theta, phi );
-                PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time, 
+                PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time,
                                                      Er, Etheta, Ephi );
                 PulsarParm::ConvertSphericalToCartesianXComponent( Er, Etheta,
                                                      Ephi, r, theta, phi, Exfab(i,j,k) );

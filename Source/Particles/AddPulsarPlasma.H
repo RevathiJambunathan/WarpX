@@ -84,7 +84,7 @@ struct AddPulsarPlasmaCondition
         amrex::Real rho_GJ = 2. * PhysConst::ep0
                            * PulsarParm::B_star * omega
                            * (1. - 3.*c_theta * c_theta) * PulsarParm::rhoGJ_scale;
-        
+
         amrex::Real sigma_GJ = PhysConst::ep0 * omega * cc_rad * PulsarParm::B_star*
                                (3.0 - 5.*c_theta*c_theta);
 

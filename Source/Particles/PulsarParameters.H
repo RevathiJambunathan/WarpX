@@ -65,7 +65,7 @@ namespace PulsarParm
             Etheta = -B_star * omega * r2 * r * 2.0 * s_theta * c_theta;
             Ephi = 0.0; // aligned magnetic and rotation axis
         }
-        
+
         // outside pulsar
         if ( r >= R_star ) {
             amrex::Real r4 = r_ratio*r_ratio*r_ratio*r_ratio;
@@ -296,12 +296,12 @@ namespace PulsarParm
 
     /** Compute Cartesian components corresponding to i, j, k based on the staggering,
         ixType, and the domain_lo and cell size, dx.
-     */ 
+     */
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     void ComputeCellCoordinates ( int i, int j, int k,
              amrex::GpuArray<int, 3> const mf_type,
              amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_lo,
-             amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dx, 
+             amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dx,
              amrex::Real &x, amrex::Real &y, amrex::Real &z)
     {
         x = domain_lo[0] + i*dx[0] + (1.0_rt - mf_type[0]) * dx[0]*0.5;
@@ -319,7 +319,7 @@ namespace PulsarParm
         amrex::Real xc = (domain_lo[0] + domain_hi[0])/2.0;
         amrex::Real yc = (domain_lo[1] + domain_hi[1])/2.0;
         amrex::Real zc = (domain_lo[2] + domain_hi[2])/2.0;
-        
+
         r = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc) );
         theta = 0.0;
         if (r > 0) theta = std::acos( (z-zc) / r );
