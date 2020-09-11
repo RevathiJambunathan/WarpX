@@ -173,10 +173,10 @@ struct AddPulsarPlasmaCondition
 //            if ( rho_arr(icell,jcell,kcell) <0 and rho_GJ >0) p.id() = -1;
             if ( amrex::Math::abs(rho_arr(icell,jcell,kcell)) / amrex::Math::abs(rho_GJ) < 0.8) {
                 if (amrex::Math::abs(rel_rho_err) < 0.05) {
-                    p.id() = -1;
+//                    p.id() = -1;
                 }
             } else {
-                p.id() = -1; // The absolute value of rho > rho_GJ
+//                p.id() = -1; // The absolute value of rho > rho_GJ
             }
         }
     } // end of operator function.
