@@ -104,7 +104,7 @@ plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
 #################################
 pulsar.pulsarType = "dead"             # [dead/active]: sets particle injection type
 pulsar.omega_star = 6245.676               # angular velocity of NS (rad/s)
-pulsar.ramp_omega_time = 0.0              # time over which to ramp up NS angular velocity (s)
+pulsar.ramp_omega_time = 0.0             # time over which to ramp up NS angular velocity (s)
                                            # if ramp_omega_time < 0, omega = omega_star for any t
                                            # consistency requires ramp_omega_time = my_constants.to
 pulsar.center_star = 90000 90000 90000
@@ -116,7 +116,7 @@ pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging 
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 0                  # [0/1]
 pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing density
-pulsar.Ninj_fraction = 0.1            # fraction of sigma injected
+pulsar.Ninj_fraction = 1.0            # fraction of sigma injected
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
 pulsar.damp_EB_internal = 1             # Damp internal electric field
-pulsar.damping_scale = 10.0            # Damping scale factor for internal electric field
+pulsar.damping_scale = 100.0            # Damping scale factor for internal electric field

@@ -130,7 +130,7 @@ struct AddPulsarPlasmaCondition
         //amrex::Real N_inj = surface_inj_fraction * amrex::Math::abs(sigma_inj)
         //                        * PhysConst::ep0 * dx[0]*dx[0]
         //                        / (PhysConst::q_e * max_dens * scale_fac);
-        amrex::Real N_inj = num_ppc ;
+        amrex::Real N_inj = num_ppc * PulsarParm::Ninj_fraction;
         // Apply conditions to check if particles needs to be introduced.
         if ( N_inj > 1) {
             if ( N_inj < (num_ppc) ) {
@@ -138,7 +138,7 @@ struct AddPulsarPlasmaCondition
                 // then to ensure spatial regularity, introduce every num_ppc/N_inj particle
                 int part_freq = floor ( num_ppc / N_inj );
                 if ( i_part % part_freq !=0 ) {
-            //        if (include_part_sampling == 1 ) p.id() = -1;
+                    if (include_part_sampling == 1 ) p.id() = -1;
                 }
             }
         }

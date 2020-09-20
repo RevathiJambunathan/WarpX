@@ -58,7 +58,7 @@ namespace PulsarParm
         amrex::Real s_phi   = std::sin(phi);
         amrex::Real r_ratio = R_star/r;
         // inside pulsar
-        if ( r < R_star - dR_star) {
+        if ( r < R_star -dR_star ) {
             amrex::Real r2 = r_ratio * r_ratio;
             // Michel and Li -- eq 14 , 15
             Er     =  B_star * omega * r2 * r * s_theta * s_theta;
@@ -361,7 +361,7 @@ namespace PulsarParm
     {
         const amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
 
-        if (r < R_star - dR_star) {
+        if (r < R_star) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
             // for damping_scale >= 10 or so:
             // Fd(0) ~ 0
