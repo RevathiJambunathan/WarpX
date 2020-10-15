@@ -724,7 +724,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             amrex::Real x, y, z;
                 x = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
                 y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
-                z = overlap_corner[2] + k*dx[2] - 0.5*dx[2];
+                z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
             //if (x > xc ) {
             //} else {
             //    x = overlap_corner[0] + i*dx[0] - 0.5*dx[0];
