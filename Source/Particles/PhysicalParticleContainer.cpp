@@ -775,7 +775,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 //                                  overlap_corner, i, j, k, dx, t,
                 //                                  ex_arr, ey_arr, ez_arr, rho_arr,
                 //                                  ii, jj, kk, q_pm, num_ppc );
-                pcounts[index] = num_ppc * PulsarParm::Ninj_fraction;
+                pcounts[index] = num_ppc;
             }
 #else
             if (inj_pos->overlapsWith(lo, hi)) {
