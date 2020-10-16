@@ -67,7 +67,7 @@ plasma_e.mass = m_e
 plasma_e.injection_style = "NUniformPerCell"
 plasma_e.profile = parse_density_function
 plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
-plasma_e.num_particles_per_cell_each_dim = 3 3 3
+plasma_e.num_particles_per_cell_each_dim = 4 4 4
 plasma_e.momentum_distribution_type = parse_momentum_function
 
 ## Inject stationary pairs
@@ -83,7 +83,7 @@ plasma_p.mass = m_e
 plasma_p.injection_style = "NUniformPerCell"
 plasma_p.profile = parse_density_function
 plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
-plasma_p.num_particles_per_cell_each_dim = 3 3 3
+plasma_p.num_particles_per_cell_each_dim = 4 4 4
 plasma_p.momentum_distribution_type = parse_momentum_function
 
 ## Inject stationary pairs
@@ -94,10 +94,14 @@ plasma_p.momentum_function_uz(x,y,z) = "0.0"
 plasma_p.do_continuous_injection = 0
 plasma_p.density_min = 1E0
 
-diagnostics.diags_names = plt
+diagnostics.diags_names = plt chk
 plt.diag_type = Full
 plt.period = 20
 plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
+
+chk.format = checkpoint
+chk.diag_type = Full
+chk.period = 1000
 
 #################################
 ######### PULSAR SETUP ##########
@@ -116,7 +120,7 @@ pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging 
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 0                  # [0/1]
 pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing density
-pulsar.Ninj_fraction = 1.0            # fraction of sigma injected
+pulsar.Ninj_fraction = 0.2            # fraction of sigma injected
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
 pulsar.damp_EB_internal = 1             # Damp internal electric field
-pulsar.damping_scale = 100.0            # Damping scale factor for internal electric field
+pulsar.damping_scale = 1000.0            # Damping scale factor for internal electric field
