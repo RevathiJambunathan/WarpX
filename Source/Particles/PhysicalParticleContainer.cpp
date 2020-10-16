@@ -721,61 +721,22 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             amrex::Real xc = PulsarParm::center_star[0];
             amrex::Real yc = PulsarParm::center_star[1];
             amrex::Real zc = PulsarParm::center_star[2];
+            // Find cell-center
             amrex::Real x, y, z;
-                x = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
-                y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
-                z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
-            //if (x > xc ) {
-            //} else {
-            //    x = overlap_corner[0] + i*dx[0] - 0.5*dx[0];
-            //}
-            //if (y > yc) {
-            //} else {
-            //    y = overlap_corner[1] + j*dx[1] - 0.5*dx[1];
-            //}
-            //if (z > yc) {
-            //    z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
-            //} else {
-            //}
+            x = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
+            y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
+            z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
+            // radius of the cell-center
             amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
+            // is cell-center inside the pulsar ring
             if (inj_pos->insidePulsarBounds( rad,PulsarParm::R_star,
                                                         PulsarParm::dR_star*1.5) )
             {
                 auto index = overlap_box.index(iv);
-                int ii = Ex_lo.x + iv[0];
-                int jj = Ex_lo.y + iv[1];
-                int kk = Ex_lo.z + iv[2];
-            //    int part_counter = 0;
-            //    int include_part_statistics = 0;
-            //    for (int i_part = 0; i_part < num_ppc; ++i_part) {
-            //        ParticleType dummy_part;
-            //        dummy_part.id() = 1;
-            //        const XDim3 r = inj_pos->getPositionUnitBox(i_part);
-            //        auto pos = getCellCoords(overlap_corner, dx, r, iv);
-            //        amrex::Real part_rad = std::sqrt( (pos.x-xc)*(pos.x-xc)
-            //                                        + (pos.y-yc)*(pos.y-yc)
-            //                                        + (pos.z-zc)*(pos.z-zc) );
-            //        // check if particle is inside pulsar bounds
-            //        if (inj_pos->insidePulsarBounds( part_rad, PulsarParm::R_star,
-            //                                         PulsarParm::dR_star) )
-            //        {
-            //           precheck_PulsarAddPlasmaCondition( overlap_corner, i, j, k, dx, t,
-            //                                              ex_arr, ey_arr, ez_arr, rho_arr,
-            //                                              ii, jj, kk, dummy_part, q_pm, i_part,
-            //                                              num_ppc,1);
-            //        } else {
-            //            dummy_part.id() = -1; // particle not in spherical ring
-            //        }
-            //        if (dummy_part.id() > 0) ++part_counter;
-            //    }
-            //    pcounts[index] = part_counter;
-                //  Below is another way to pre-determine particle injection
-                //  where particle check inside Pulsar Bounds is not done
-                //pcounts[index] = precheck_PulsarAddPlasmaCondition(
-                //                                  overlap_corner, i, j, k, dx, t,
-                //                                  ex_arr, ey_arr, ez_arr, rho_arr,
-                //                                  ii, jj, kk, q_pm, num_ppc );
-                pcounts[index] = num_ppc;
+                const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
+                pcounts[index] = int(ppc_per_dim.x*std::cbrt(PulsarParm::Ninj_fraction))
+                               * int(ppc_per_dim.y*std::cbrt(PulsarParm::Ninj_fraction))
+                               * int(ppc_per_dim.z*std::cbrt(PulsarParm::Ninj_fraction));
             }
 #else
             if (inj_pos->overlapsWith(lo, hi)) {
