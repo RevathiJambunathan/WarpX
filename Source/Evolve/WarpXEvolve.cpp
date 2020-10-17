@@ -434,10 +434,6 @@ WarpX::OneStep_nosub (Real cur_time)
     if (do_pml && pml_has_particles) CopyJPML();
     if (do_pml && do_pml_j_damping) DampJPML();
 
-//#ifdef PULSAR
-//    ApplyPulsarEBFieldsOnGrid();
-//#endif
-
     if( do_electrostatic == ElectrostaticSolverAlgo::None ) {
         // Electromagnetic solver:
         // Push E and B from {n} to {n+1}
