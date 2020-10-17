@@ -557,9 +557,6 @@ public:
     void ComputeCostsHeuristic (amrex::Vector<std::unique_ptr<amrex::LayoutData<amrex::Real> > >& costs);
 
     void ApplyFilterandSumBoundaryRho (int lev, int glev, amrex::MultiFab& rho, int icomp, int ncomp);
-#ifdef PULSAR
-    void ApplyPulsarEBFieldsOnGrid ();
-#endif
 
 protected:
 
