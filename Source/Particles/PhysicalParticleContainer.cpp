@@ -754,7 +754,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             }
 #if (AMREX_SPACEDIM != 3)
             amrex::ignore_unused(k);
-#endif
+#endif // end if amrex space dim 
+#endif // End pulsar ifdef
         });
 
         // Max number of new particles. All of them are created,
