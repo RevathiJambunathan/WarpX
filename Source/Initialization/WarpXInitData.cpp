@@ -366,12 +366,6 @@ WarpX::InitLevelData (int lev, Real /*time*/)
         makeParser(str_By_excitation_flag_function,{"x","y","z"})));
     Bzfield_flag_parser.reset(new ParserWrapper<3>(
         makeParser(str_Bz_excitation_flag_function,{"x","y","z"})));
-    amrex::Print() << " Ex flag : " << str_Ex_excitation_flag_function << "\n";
-    amrex::Print() << " Ey flag : " << str_Ey_excitation_flag_function << "\n";
-    amrex::Print() << " Ez flag : " << str_Ez_excitation_flag_function << "\n";
-    amrex::Print() << " Bx flag : " << str_Bx_excitation_flag_function << "\n";
-    amrex::Print() << " By flag : " << str_By_excitation_flag_function << "\n";
-    amrex::Print() << " Bz flag : " << str_Bz_excitation_flag_function << "\n";
     // * Functions with the string "arr" in their names get an Array of
     //   values from the given entry in the table.  The array argument is
     //   resized (if necessary) to hold all the values requested.
