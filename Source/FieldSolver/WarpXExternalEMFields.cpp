@@ -19,6 +19,9 @@ WarpX::ApplyExternalFieldExcitationOnGrid ()
                                                getParser(Exfield_xt_grid_parser),
                                                getParser(Eyfield_xt_grid_parser),
                                                getParser(Ezfield_xt_grid_parser),
+                                               getParser(Exfield_flag_parser),
+                                               getParser(Eyfield_flag_parser),
+                                               getParser(Ezfield_flag_parser),
                                                lev );
         }
         if (B_excitation_grid_s == "parse_b_excitation_grid_function")
@@ -29,6 +32,9 @@ WarpX::ApplyExternalFieldExcitationOnGrid ()
                                                getParser(Bxfield_xt_grid_parser),
                                                getParser(Byfield_xt_grid_parser),
                                                getParser(Bzfield_xt_grid_parser),
+                                               getParser(Bxfield_flag_parser),
+                                               getParser(Byfield_flag_parser),
+                                               getParser(Bzfield_flag_parser),
                                                lev );
         }
 
@@ -52,7 +58,10 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
        amrex::MultiFab *mfx, amrex::MultiFab *mfy, amrex::MultiFab *mfz,
        HostDeviceParser<4> const& xfield_parser,
        HostDeviceParser<4> const& yfield_parser,
-       HostDeviceParser<4> const& zfield_parser, const int lev )
+       HostDeviceParser<4> const& zfield_parser,
+       HostDeviceParser<3> const& xflag_parser,
+       HostDeviceParser<3> const& yflag_parser,
+       HostDeviceParser<3> const& zflag_parser, const int lev )
 {
 
     // Gpu vector to store Ex-Bz staggering
@@ -85,19 +94,34 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                 amrex::Real x, y, z;
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfx_stag,
                                                   problo, dx, x, y, z);
-                Fx(i, j, k) += xfield_parser(x, y, z, t);
+                if ( xflag_parser(x,y,z) == 0 ) {
+                    Fx(i, j, k) += xfield_parser(x, y, z, t);
+                }
+                if ( xflag_parser(x,y,z) == 1 ) {
+                    Fx(i, j, k) = xfield_parser(x, y, z, t);
+                }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 amrex::Real x, y, z;
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfy_stag,
                                                   problo, dx, x, y, z);
-                Fy(i, j, k) += yfield_parser(x, y, z, t);
+                if ( yflag_parser(x,y,z) == 0 ) {
+                    Fy(i, j, k) += yfield_parser(x, y, z, t);
+                }
+                if ( yflag_parser(x,y,z) == 1 ) {
+                    Fy(i, j, k) = yfield_parser(x, y, z, t);
+                }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 amrex::Real x, y, z;
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfz_stag,
                                                   problo, dx, x, y, z);
-                Fz(i, j, k) += zfield_parser(x, y, z, t);
+                if ( zflag_parser(x,y,z) == 0 ) {
+                    Fz(i, j, k) += zfield_parser(x, y, z, t);
+                }
+                if ( zflag_parser(x,y,z) == 1 ) {
+                    Fz(i, j, k) = zfield_parser(x, y, z, t);
+                }
             }
         );
     }
