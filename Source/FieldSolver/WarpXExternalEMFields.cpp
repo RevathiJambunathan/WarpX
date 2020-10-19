@@ -94,33 +94,36 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                 amrex::Real x, y, z;
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfx_stag,
                                                   problo, dx, x, y, z);
-                if ( xflag_parser(x,y,z) == 0 ) {
-                    Fx(i, j, k) += xfield_parser(x, y, z, t);
-                }
-                if ( xflag_parser(x,y,z) == 1 ) {
-                    Fx(i, j, k) = xfield_parser(x, y, z, t);
+                auto tmp_field_value = xfield_parser(x,y,z,t);
+                auto flag_type = xflag_parser(x,y,z);
+                if ( flag_type == 0 ) {
+                    Fx(i, j, k) += tmp_field_value;
+                } else if ( flag_type == 1 ) {
+                    Fx(i, j, k) = tmp_field_value;
                 }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 amrex::Real x, y, z;
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfy_stag,
                                                   problo, dx, x, y, z);
-                if ( yflag_parser(x,y,z) == 0 ) {
-                    Fy(i, j, k) += yfield_parser(x, y, z, t);
-                }
-                if ( yflag_parser(x,y,z) == 1 ) {
-                    Fy(i, j, k) = yfield_parser(x, y, z, t);
+                auto tmp_field_value = yfield_parser(x,y,z,t);
+                auto flag_type = yflag_parser(x,y,z);
+                if ( flag_type == 0 ) {
+                    Fy(i, j, k) += tmp_field_value;
+                } else if ( flag_type == 1 ) {
+                    Fy(i, j, k) = tmp_field_value;
                 }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 amrex::Real x, y, z;
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfz_stag,
                                                   problo, dx, x, y, z);
-                if ( zflag_parser(x,y,z) == 0 ) {
-                    Fz(i, j, k) += zfield_parser(x, y, z, t);
-                }
-                if ( zflag_parser(x,y,z) == 1 ) {
-                    Fz(i, j, k) = zfield_parser(x, y, z, t);
+                auto tmp_field_value = zfield_parser(x,y,z,t);
+                auto flag_type = zflag_parser(x,y,z);
+                if ( flag_type == 0 ) {
+                    Fz(i, j, k) += tmp_field_value;
+                } else if ( flag_type == 1 ) {
+                    Fz(i, j, k) = tmp_field_value;
                 }
             }
         );
