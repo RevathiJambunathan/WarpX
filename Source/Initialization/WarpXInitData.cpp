@@ -329,7 +329,49 @@ WarpX::InitLevelData (int lev, Real /*time*/)
                    H_excitation_grid_s.begin(),
                    ::tolower);
 #endif
-
+    std::vector<std::string> f;
+    if (pp.queryarr("Ex_excitation_flag_function(x,y,z)",f) ) {
+        Store_parserString(pp, "Ex_excitation_flag_function(x,y,z)",
+                                str_Ex_excitation_flag_function);
+    }
+    if (pp.queryarr("Ey_excitation_flag_function(x,y,z)",f) ) {
+        Store_parserString(pp, "Ey_excitation_flag_function(x,y,z)",
+                                str_Ey_excitation_flag_function);
+    }
+    if (pp.queryarr("Ez_excitation_flag_function(x,y,z)",f) ) {
+        Store_parserString(pp, "Ez_excitation_flag_function(x,y,z)",
+                                str_Ez_excitation_flag_function);
+    }
+    if (pp.queryarr("Bx_excitation_flag_function(x,y,z)",f) ) {
+        Store_parserString(pp, "Bx_excitation_flag_function(x,y,z)",
+                                str_Bx_excitation_flag_function);
+    }
+    if (pp.queryarr("By_excitation_flag_function(x,y,z)",f) ) {
+        Store_parserString(pp, "By_excitation_flag_function(x,y,z)",
+                                str_By_excitation_flag_function);
+    }
+    if (pp.queryarr("Bz_excitation_flag_function(x,y,z)",f) ) {
+        Store_parserString(pp, "Bz_excitation_flag_function(x,y,z)",
+                                str_Bz_excitation_flag_function);
+    }
+    Exfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_Ex_excitation_flag_function,{"x","y","z"})));
+    Eyfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_Ey_excitation_flag_function,{"x","y","z"})));
+    Ezfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_Ez_excitation_flag_function,{"x","y","z"})));
+    Bxfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_Bx_excitation_flag_function,{"x","y","z"})));
+    Byfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_By_excitation_flag_function,{"x","y","z"})));
+    Bzfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_Bz_excitation_flag_function,{"x","y","z"})));
+    amrex::Print() << " Ex flag : " << str_Ex_excitation_flag_function << "\n";
+    amrex::Print() << " Ey flag : " << str_Ey_excitation_flag_function << "\n";
+    amrex::Print() << " Ez flag : " << str_Ez_excitation_flag_function << "\n";
+    amrex::Print() << " Bx flag : " << str_Bx_excitation_flag_function << "\n";
+    amrex::Print() << " By flag : " << str_By_excitation_flag_function << "\n";
+    amrex::Print() << " Bz flag : " << str_Bz_excitation_flag_function << "\n";
     // * Functions with the string "arr" in their names get an Array of
     //   values from the given entry in the table.  The array argument is
     //   resized (if necessary) to hold all the values requested.
