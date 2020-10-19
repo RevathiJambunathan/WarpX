@@ -86,6 +86,13 @@ std::string WarpX::str_Hx_excitation_grid_function;
 std::string WarpX::str_Hy_excitation_grid_function;
 std::string WarpX::str_Hz_excitation_grid_function;
 #endif
+// Flag for type of excitation (hard/soft)
+std::string WarpX::str_Ex_excitation_flag_function = "0";
+std::string WarpX::str_Ey_excitation_flag_function = "0";
+std::string WarpX::str_Ez_excitation_flag_function = "0";
+std::string WarpX::str_Bx_excitation_flag_function = "0";
+std::string WarpX::str_By_excitation_flag_function = "0";
+std::string WarpX::str_Bz_excitation_flag_function = "0";
 
 #ifdef WARPX_MAG_LLG
 // Parser for M_external on the grid

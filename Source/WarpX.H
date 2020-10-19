@@ -151,6 +151,13 @@ public:
     static std::string str_Hy_excitation_grid_function;
     static std::string str_Hz_excitation_grid_function;
 #endif
+    // Flag for type of excitation (hard/soft)
+    static std::string str_Ex_excitation_flag_function;
+    static std::string str_Ey_excitation_flag_function;
+    static std::string str_Ez_excitation_flag_function;
+    static std::string str_Bx_excitation_flag_function;
+    static std::string str_By_excitation_flag_function;
+    static std::string str_Bz_excitation_flag_function;
 
 #ifdef WARPX_MAG_LLG
     // Parser for H_external on the grid
@@ -191,6 +198,12 @@ public:
     std::unique_ptr<ParserWrapper<4> > Hyfield_xt_grid_parser;
     std::unique_ptr<ParserWrapper<4> > Hzfield_xt_grid_parser;
 #endif
+    std::unique_ptr<ParserWrapper<3> > Exfield_flag_parser;
+    std::unique_ptr<ParserWrapper<3> > Eyfield_flag_parser;
+    std::unique_ptr<ParserWrapper<3> > Ezfield_flag_parser;
+    std::unique_ptr<ParserWrapper<3> > Bxfield_flag_parser;
+    std::unique_ptr<ParserWrapper<3> > Byfield_flag_parser;
+    std::unique_ptr<ParserWrapper<3> > Bzfield_flag_parser;
 
 #ifdef WARPX_MAG_LLG
     // ParserWrapper for H_external on the grid
@@ -720,7 +733,10 @@ public:
          amrex::MultiFab *mfy, amrex::MultiFab *mfz,
          HostDeviceParser<4> const& xfield_parser,
          HostDeviceParser<4> const& yfield_parser,
-         HostDeviceParser<4> const& zfield_parser, const int lev );
+         HostDeviceParser<4> const& zfield_parser,
+         HostDeviceParser<3> const& xflag_parser,
+         HostDeviceParser<3> const& yflag_parser,
+         HostDeviceParser<3> const& zflag_parser, const int lev );
 
 protected:
 
