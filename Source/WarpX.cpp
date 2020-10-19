@@ -86,7 +86,7 @@ std::string WarpX::str_Hx_excitation_grid_function;
 std::string WarpX::str_Hy_excitation_grid_function;
 std::string WarpX::str_Hz_excitation_grid_function;
 #endif
-// Flag for type of excitation (hard/soft)
+// Flag for type of excitation -1=none, 0=soft, 1=hard
 std::string WarpX::str_Ex_excitation_flag_function = "0";
 std::string WarpX::str_Ey_excitation_flag_function = "0";
 std::string WarpX::str_Ez_excitation_flag_function = "0";
