@@ -96,10 +96,8 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                                                   problo, dx, x, y, z);
                 auto tmp_field_value = xfield_parser(x,y,z,t);
                 auto flag_type = xflag_parser(x,y,z);
-                if ( flag_type == 0 ) {
-                    Fx(i, j, k) += tmp_field_value;
-                } else if ( flag_type == 1 ) {
-                    Fx(i, j, k) = tmp_field_value;
+                if ( flag_type >= 0 ) {
+                    Fx(i, j, k) = Fx(i,j,k)*flag_type + tmp_field_value;
                 }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -108,10 +106,8 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                                                   problo, dx, x, y, z);
                 auto tmp_field_value = yfield_parser(x,y,z,t);
                 auto flag_type = yflag_parser(x,y,z);
-                if ( flag_type == 0 ) {
-                    Fy(i, j, k) += tmp_field_value;
-                } else if ( flag_type == 1 ) {
-                    Fy(i, j, k) = tmp_field_value;
+                if ( flag_type >= 0 ) {
+                    Fy(i, j, k) = Fy(i,j,k)*flag_type + tmp_field_value;
                 }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -120,10 +116,8 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                                                   problo, dx, x, y, z);
                 auto tmp_field_value = zfield_parser(x,y,z,t);
                 auto flag_type = zflag_parser(x,y,z);
-                if ( flag_type == 0 ) {
-                    Fz(i, j, k) += tmp_field_value;
-                } else if ( flag_type == 1 ) {
-                    Fz(i, j, k) = tmp_field_value;
+                if ( flag_type >= 0 ) {
+                    Fz(i, j, k) = Fz(i,j,k)*flag_type + tmp_field_value;
                 }
             }
         );
