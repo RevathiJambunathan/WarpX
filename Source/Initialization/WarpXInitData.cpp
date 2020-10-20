@@ -378,13 +378,13 @@ WarpX::InitLevelData (int lev, Real /*time*/)
                                 str_Hy_excitation_flag_function);
         Store_parserString(pp, "Hz_excitation_flag_function(x,y,z)",
                                 str_Hz_excitation_flag_function);
-        Hxfield_flag_parser.reset(new ParserWrapper<3>(
-            makeParser(str_Hx_excitation_flag_function,{"x","y","z"})));
-        Hyfield_flag_parser.reset(new ParserWrapper<3>(
-            makeParser(str_Hy_excitation_flag_function,{"x","y","z"})));
-        Hzfield_flag_parser.reset(new ParserWrapper<3>(
-            makeParser(str_Hz_excitation_flag_function,{"x","y","z"})));
     }
+    Hxfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_Hx_excitation_flag_function,{"x","y","z"})));
+    Hyfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_Hy_excitation_flag_function,{"x","y","z"})));
+    Hzfield_flag_parser.reset(new ParserWrapper<3>(
+        makeParser(str_Hz_excitation_flag_function,{"x","y","z"})));
 #endif
     // * Functions with the string "arr" in their names get an Array of
     //   values from the given entry in the table.  The array argument is
