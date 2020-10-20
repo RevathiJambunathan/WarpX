@@ -9,7 +9,6 @@ using namespace amrex;
 void
 WarpX::ApplyExternalFieldExcitationOnGrid ()
 {
-    amrex::Print() << " in apply external excitation\n";
     for (int lev = 0; lev <= finest_level; ++lev) {
         if (E_excitation_grid_s == "parse_e_excitation_grid_function")
         {
@@ -47,6 +46,9 @@ WarpX::ApplyExternalFieldExcitationOnGrid ()
                                                getParser(Hxfield_xt_grid_parser),
                                                getParser(Hyfield_xt_grid_parser),
                                                getParser(Hzfield_xt_grid_parser),
+                                               getParser(Hxfield_flag_parser),
+                                               getParser(Hyfield_flag_parser),
+                                               getParser(Hzfield_flag_parser),
                                                lev );
         }
 #endif
@@ -63,8 +65,13 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
        HostDeviceParser<3> const& yflag_parser,
        HostDeviceParser<3> const& zflag_parser, const int lev )
 {
+    // This function adds the contribution from an external excitation to the fields.
+    // A flag is used to determine the type of excitation.
+    // If flag == 0, it is a hard source and the field = excitation
+    // If flag == 1, if is a soft source and the field += excitation
+    // If flag == -1, the excitation parser is not computed and the field is unchanged. 
 
-    // Gpu vector to store Ex-Bz staggering
+    // Gpu vector to store Ex-Bz staggering (Hx-Hz for LLG)
     GpuArray<int,3> mfx_stag, mfy_stag, mfz_stag;
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         mfx_stag[idim] = mfx->ixType()[idim];
@@ -94,20 +101,18 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                 amrex::Real x, y, z;
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfx_stag,
                                                   problo, dx, x, y, z);
-                auto tmp_field_value = xfield_parser(x,y,z,t);
                 auto flag_type = xflag_parser(x,y,z);
                 if ( flag_type >= 0 ) {
-                    Fx(i, j, k) = Fx(i,j,k)*flag_type + tmp_field_value;
+                    Fx(i, j, k) = Fx(i,j,k)*flag_type + xfield_parser(x,y,z,t);
                 }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 amrex::Real x, y, z;
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfy_stag,
                                                   problo, dx, x, y, z);
-                auto tmp_field_value = yfield_parser(x,y,z,t);
                 auto flag_type = yflag_parser(x,y,z);
                 if ( flag_type >= 0 ) {
-                    Fy(i, j, k) = Fy(i,j,k)*flag_type + tmp_field_value;
+                    Fy(i, j, k) = Fy(i,j,k)*flag_type + yfield_parser(x,y,z,t);
                 }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -117,7 +122,7 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                 auto tmp_field_value = zfield_parser(x,y,z,t);
                 auto flag_type = zflag_parser(x,y,z);
                 if ( flag_type >= 0 ) {
-                    Fz(i, j, k) = Fz(i,j,k)*flag_type + tmp_field_value;
+                    Fz(i, j, k) = Fz(i,j,k)*flag_type + zfield_parser(x,y,z,t);
                 }
             }
         );
