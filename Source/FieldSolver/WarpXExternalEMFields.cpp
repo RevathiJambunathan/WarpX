@@ -67,9 +67,10 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
 {
     // This function adds the contribution from an external excitation to the fields.
     // A flag is used to determine the type of excitation.
-    // If flag == 0, it is a hard source and the field = excitation
-    // If flag == 1, if is a soft source and the field += excitation
-    // If flag == -1, the excitation parser is not computed and the field is unchanged. 
+    // If flag == 1, it is a hard source and the field = excitation
+    // If flag == 2, if is a soft source and the field += excitation
+    // If flag == 0, the excitation parser is not computed and the field is unchanged. 
+    // If flag is not 0, or 1, or 2, the code will Abort!
 
     // Gpu vector to store Ex-Bz staggering (Hx-Hz for LLG)
     GpuArray<int,3> mfx_stag, mfy_stag, mfz_stag;
@@ -102,8 +103,10 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfx_stag,
                                                   problo, dx, x, y, z);
                 auto flag_type = xflag_parser(x,y,z);
-                if ( flag_type >= 0._rt ) {
-                    Fx(i, j, k) = Fx(i,j,k)*flag_type + xfield_parser(x,y,z,t);
+                if (flag_type != 0._rt || flag_type != 1._rt || flag_type != 2._rt) {
+                    amrex::Abort("flag type for excitation must be 0, or 1, or 2!");
+                } else if ( flag_type > 0._rt ) {
+                    Fx(i, j, k) = Fx(i,j,k)*(flag_type-1.0_rt) + xfield_parser(x,y,z,t);
                 }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -111,8 +114,10 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfy_stag,
                                                   problo, dx, x, y, z);
                 auto flag_type = yflag_parser(x,y,z);
-                if ( flag_type >= 0._rt ) {
-                    Fy(i, j, k) = Fy(i,j,k)*flag_type + yfield_parser(x,y,z,t);
+                if (flag_type != 0._rt || flag_type != 1._rt || flag_type != 2._rt) {
+                    amrex::Abort("flag type for excitation must be 0, or 1, or 2!");
+                } else if ( flag_type > 0._rt ) {
+                    Fy(i, j, k) = Fy(i,j,k)*(flag_type-1.0_rt) + yfield_parser(x,y,z,t);
                 }
             },
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -121,8 +126,10 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                                                   problo, dx, x, y, z);
                 auto tmp_field_value = zfield_parser(x,y,z,t);
                 auto flag_type = zflag_parser(x,y,z);
-                if ( flag_type >= 0._rt ) {
-                    Fz(i, j, k) = Fz(i,j,k)*flag_type + zfield_parser(x,y,z,t);
+                if (flag_type != 0._rt || flag_type != 1._rt || flag_type != 2._rt) {
+                    amrex::Abort("flag type for excitation must be 0, or 1, or 2!");
+                } else if ( flag_type > 0._rt ) {
+                    Fz(i, j, k) = Fz(i,j,k)*(flag_type-1.0_rt) + zfield_parser(x,y,z,t);
                 }
             }
         );

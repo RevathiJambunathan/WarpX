@@ -745,11 +745,11 @@ public:
      *   To ensure that the excitation is appropriately accounted for, a flag parser for
      *   each component of the field must be specified.
      *   The flag can have three values :
-     *       If flag_type == -1, field is not updated with external excitation
-     *       If flag_type ==  0, field is set equal to the
-     *                           external excitation (aka hard source)
-     *       If flag_type ==  1, field is updated to add the contribution from
-     *                           external excitation (aka soft source)
+     *       If flag_type == 0, field is not updated with external excitation
+     *       If flag_type == 1, field is set equal to the
+     *                          external excitation (aka hard source)
+     *       If flag_type == 2, field is updated to add the contribution from
+     *                          external excitation (aka soft source)
      *
      *   \param[in] mfx, mfy, mfz : The field component Multifabs to be updated with
      *                              the external excitation.
