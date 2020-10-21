@@ -87,16 +87,16 @@ std::string WarpX::str_Hy_excitation_grid_function;
 std::string WarpX::str_Hz_excitation_grid_function;
 #endif
 // Flag for type of excitation -1=none, 0=hard, 1=soft
-std::string WarpX::str_Ex_excitation_flag_function = "-1";
-std::string WarpX::str_Ey_excitation_flag_function = "-1";
-std::string WarpX::str_Ez_excitation_flag_function = "-1";
-std::string WarpX::str_Bx_excitation_flag_function = "-1";
-std::string WarpX::str_By_excitation_flag_function = "-1";
-std::string WarpX::str_Bz_excitation_flag_function = "-1";
+std::string WarpX::str_Ex_excitation_flag_function = "-1.";
+std::string WarpX::str_Ey_excitation_flag_function = "-1.";
+std::string WarpX::str_Ez_excitation_flag_function = "-1.";
+std::string WarpX::str_Bx_excitation_flag_function = "-1.";
+std::string WarpX::str_By_excitation_flag_function = "-1.";
+std::string WarpX::str_Bz_excitation_flag_function = "-1.";
 #ifdef WARPX_MAG_LLG
-std::string WarpX::str_Hx_excitation_flag_function = "-1";
-std::string WarpX::str_Hy_excitation_flag_function = "-1";
-std::string WarpX::str_Hz_excitation_flag_function = "-1";
+std::string WarpX::str_Hx_excitation_flag_function = "-1.";
+std::string WarpX::str_Hy_excitation_flag_function = "-1.";
+std::string WarpX::str_Hz_excitation_flag_function = "-1.";
 #endif
 
 #ifdef WARPX_MAG_LLG
