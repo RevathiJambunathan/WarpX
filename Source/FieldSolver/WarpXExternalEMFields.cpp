@@ -102,7 +102,7 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfx_stag,
                                                   problo, dx, x, y, z);
                 auto flag_type = xflag_parser(x,y,z);
-                if ( flag_type >= 0 ) {
+                if ( flag_type >= 0._rt ) {
                     Fx(i, j, k) = Fx(i,j,k)*flag_type + xfield_parser(x,y,z,t);
                 }
             },
@@ -111,7 +111,7 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                 WarpXUtilAlgo::getCellCoordinates(i, j, k, mfy_stag,
                                                   problo, dx, x, y, z);
                 auto flag_type = yflag_parser(x,y,z);
-                if ( flag_type >= 0 ) {
+                if ( flag_type >= 0._rt ) {
                     Fy(i, j, k) = Fy(i,j,k)*flag_type + yfield_parser(x,y,z,t);
                 }
             },
@@ -121,7 +121,7 @@ WarpX::ApplyExternalFieldExcitationOnGrid (
                                                   problo, dx, x, y, z);
                 auto tmp_field_value = zfield_parser(x,y,z,t);
                 auto flag_type = zflag_parser(x,y,z);
-                if ( flag_type >= 0 ) {
+                if ( flag_type >= 0._rt ) {
                     Fz(i, j, k) = Fz(i,j,k)*flag_type + zfield_parser(x,y,z,t);
                 }
             }
