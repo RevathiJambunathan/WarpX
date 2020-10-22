@@ -24,7 +24,6 @@
 #include "Utils/WarpXAlgorithmSelection.H"
 #ifdef PULSAR
     #include "Particles/PulsarParameters.H"
-    #include "Particles/AddPulsarPlasma.H"
 #endif
 
 #include <AMReX_Print.H>
@@ -616,8 +615,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& rho_mf = WarpX::GetInstance().getrho_fp(lev);
     const Real dt = WarpX::GetInstance().getdt(0);
     amrex::Real omega_check = PulsarParm::Omega(t);
-    amrex::Print() << " omega_check : " << omega_check << "\n";
-    const auto precheck_PulsarAddPlasmaCondition = AddPulsarPlasmaCondition();
 #endif
 
 #ifdef WARPX_DIM_RZ
@@ -907,15 +904,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     if (!inj_pos->insidePulsarBounds(rad,PulsarParm::R_star,PulsarParm::dR_star)) {
                         //convert x, y, z to r, theta, phi;
                          p.id() = -1;
-//                       continue;
+                       continue;
                     }
-                   /// accessign efield
-                   int ii = Ex_lo.x + iv[0];
-                   int jj = Ex_lo.y + iv[1];
-                   int kk = Ex_lo.z + iv[2];
-                   precheck_PulsarAddPlasmaCondition( overlap_corner, i, j, k, dx, t,
-                                                  ex_arr, ey_arr, ez_arr, rho_arr,
-                                                  ii, jj, kk, p, q_pm, i_part, num_ppc,1);
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
