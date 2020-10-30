@@ -232,6 +232,8 @@ WarpX::Evolve (int numsteps)
                 }
             }
         }
+        FillBoundaryE(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
+        FillBoundaryB(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
 #endif
 
         if (warpx_py_beforeEsolve) warpx_py_beforeEsolve();
