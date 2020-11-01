@@ -99,7 +99,7 @@ namespace PulsarParm
     namespace Spherical
     {
         AMREX_GPU_HOST_DEVICE AMREX_INLINE
-        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom, int const* const AMREX_RESTRICT mf_ixType)
+        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom, amrex::GpuArray<int, 3> const mf_ixType)
         {
             const auto domain_box = geom.Domain();
             const auto domain_ilo = amrex::lbound(domain_box);
@@ -184,16 +184,14 @@ namespace PulsarParm
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    void DampEField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, int const* const AMREX_RESTRICT mf_ixtype)
+    void DampField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, amrex::GpuArray<int, 3> const mf_ixtype)
     {
-        const amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
-
+        amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
         if (r < R_star) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
             // for damping_scale >= 10 or so:
             // Fd(0) ~ 0
             // Fd(R_star) ~ 1
-
             const amrex::Real Fd = std::tanh(damping_scale * (r / R_star - 1.0)) + 1.0;
             Efield(i, j, k) = Efield(i, j, k) * Fd;
         }
