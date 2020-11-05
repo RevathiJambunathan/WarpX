@@ -49,11 +49,6 @@ struct IonizationFilterFunc
     int m_n_rz_azimuthal_modes;
 
     amrex::Dim3 m_lo;
-#ifdef PULSAR
-    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> m_problo;
-    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> m_probhi;
-    amrex::Real m_cur_time;
-#endif
 
     IonizationFilterFunc (const WarpXParIter& a_pti, int lev, int ngE,
                           amrex::FArrayBox const& exfab,
@@ -97,11 +92,7 @@ struct IonizationFilterFunc
                            m_ex_arr, m_ey_arr, m_ez_arr, m_bx_arr, m_by_arr, m_bz_arr,
                            m_ex_type, m_ey_type, m_ez_type, m_bx_type, m_by_type, m_bz_type,
                            m_dx_arr, m_xyzmin_arr, m_lo, m_n_rz_azimuthal_modes,
-                           m_nox, m_galerkin_interpolation
-#ifdef PULSAR
-                           , m_problo, m_probhi, m_cur_time
-#endif
-                           );
+                           m_nox, m_galerkin_interpolation);
 
             // Compute electric field amplitude in the particle's frame of
             // reference (particularly important when in boosted frame).

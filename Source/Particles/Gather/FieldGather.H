@@ -64,9 +64,9 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const long n_rz_azimuthal_modes
 #ifdef PULSAR
                      ,
-                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo,
-                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi,
-                     amrex::Real cur_time )
+                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dom_lo = {0., 0., 0.},
+                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dom_hi = {0., 0., 0.},
+                     amrex::Real cur_time = 0._rt )
 #else
                      )
 #endif
@@ -591,9 +591,9 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
                     const long n_rz_azimuthal_modes
 #ifdef PULSAR
                     ,
-                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo,
-                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi,
-                    amrex::Real cur_time )
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dom_lo = {0.,0.,0.},
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dom_hi = {0.,0.,0.},
+                    amrex::Real cur_time = 0._rt )
 #else
                     )
 #endif
@@ -689,9 +689,9 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const bool galerkin_interpolation
 #ifdef PULSAR
                     ,
-                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo,
-                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi,
-                    amrex::Real cur_time )
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dom_lo = {0.,0.,0.},
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dom_hi = {0.,0.,0.},
+                    amrex::Real cur_time = 0._rt )
 #else
                     )
 #endif

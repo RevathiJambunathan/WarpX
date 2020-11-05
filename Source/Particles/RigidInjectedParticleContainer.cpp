@@ -389,11 +389,6 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
     if (do_not_push) return;
 
     const std::array<Real,3>& dx = WarpX::CellSize(std::max(lev,0));
-#ifdef PULSAR
-    const auto problo = WarpX::GetInstance().Geom(lev).ProbLoArray();
-    const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
-    amrex::Real cur_time = WarpX::GetInstance().gett_new(lev);
-#endif
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -486,12 +481,8 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                               nox, galerkin_interpolation
-#ifdef PULSAR
-                               , problo, probhi, cur_time);
-#else
-                               );
-#endif
+                               nox, galerkin_interpolation);
+
                 getExternalE(ip, Exp, Eyp, Ezp);
                 getExternalB(ip, Bxp, Byp, Bzp);
 
