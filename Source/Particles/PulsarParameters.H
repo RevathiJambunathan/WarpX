@@ -86,7 +86,7 @@ namespace PulsarParm
                    3._rt * s_chi * c_theta * s_theta * c_psi
                  );
             if (E_external_monopole == 1) {
-                 Er += (2._rt/3._rt) * omega * B_star * R_star * r_ratio * r_ratio;
+                 Er += (2._rt/3._rt) * omega * B_star * R_star * r_ratio * r_ratio * c_chi;
             }
             Etheta = B_star * omega * R_star *
                      ( r2 * s_chi * (r2 * std::cos(2._rt*theta) - 1._rt) * c_psi -
