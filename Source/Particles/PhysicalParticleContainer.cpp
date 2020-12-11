@@ -217,8 +217,11 @@ void PhysicalParticleContainer::InitData ()
     // Init ionization module here instead of in the PhysicalParticleContainer
     // constructor because dt is required
     if (do_field_ionization) {InitIonizationModule();}
+#ifdef PULSAR
+#else
     AddParticles(0); // Note - add on level 0
     Redistribute();  // We then redistribute
+#endif
 }
 
 void PhysicalParticleContainer::MapParticletoBoostedFrame (
@@ -583,9 +586,9 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& Ex_mf = WarpX::GetInstance().getEfield(lev,0);
     const MultiFab& Ey_mf = WarpX::GetInstance().getEfield(lev,1);
     const MultiFab& Ez_mf = WarpX::GetInstance().getEfield(lev,2);
-    //const MultiFab& rho_mf = WarpX::GetInstance().getRho(lev);
     const MultiFab& rho_mf = WarpX::GetInstance().getrho_fp(lev);
     const Real dt = WarpX::GetInstance().getdt(0);
+    amrex::Real omega_check = PulsarParm::Omega(t);
 #endif
 
 #ifdef WARPX_DIM_RZ
@@ -593,6 +596,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     bool radially_weighted = plasma_injector->radially_weighted;
 #endif
 
+    int Nmax_particles = 0;
+    int valid_particles_beforeAdd = TotalNumberOfParticles();
 
     MFItInfo info;
     if (do_tiling && Gpu::notInLaunchRegion()) {
@@ -602,7 +607,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     info.SetDynamic(true);
 #pragma omp parallel if (not WarpX::serialize_ics)
 #endif
-
 
     for (MFIter mfi = MakeMFIter(lev, info); mfi.isValid(); ++mfi)
     {
@@ -654,7 +658,20 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             {AMREX_D_DECL(overlap_realbox.lo(0),
                           overlap_realbox.lo(1),
                           overlap_realbox.lo(2))};
-
+#ifdef PULSAR
+    const FArrayBox& Ex_fab = Ex_mf[mfi];
+    const FArrayBox& Ey_fab = Ey_mf[mfi];
+    const FArrayBox& Ez_fab = Ez_mf[mfi];
+    const FArrayBox& rho_fab = rho_mf[mfi];
+    const Dim3 Ex_lo = lbound(mfi.tilebox());
+    const Dim3 Ey_lo = lbound(mfi.tilebox());
+    const Dim3 Ez_lo = lbound(mfi.tilebox());
+    amrex::Array4<const amrex::Real> const& ex_arr = Ex_fab.array();
+    amrex::Array4<const amrex::Real> const& ey_arr = Ey_fab.array();
+    amrex::Array4<const amrex::Real> const& ez_arr = Ez_fab.array();
+    amrex::Array4<const amrex::Real> const& rho_arr = rho_fab.array();
+    const Real q_pm = this->charge;
+#endif
         // count the number of particles that each cell in overlap_box could add
         Gpu::DeviceVector<int> counts(overlap_box.numPts(), 0);
         Gpu::DeviceVector<int> offset(overlap_box.numPts());
@@ -674,19 +691,25 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             amrex::Real xc = PulsarParm::center_star[0];
             amrex::Real yc = PulsarParm::center_star[1];
             amrex::Real zc = PulsarParm::center_star[2];
+            // Find cell-center
             amrex::Real x, y, z;
-            if (lo.x <= xc) x = lo.x;
-            if (lo.y <= yc) y = lo.y;
-            if (lo.z <= zc) z = lo.z;
-            if (hi.x >= xc) x = hi.x;
-            if (hi.y >= yc) y = hi.y;
-            if (hi.z >= zc) z = hi.z;
+            x = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
+            y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
+            z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
+            // radius of the cell-center
             amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
-            amrex::Real rstar = PulsarParm::R_star ;
-            if (inj_pos->insidePulsarBounds(rad,rstar,PulsarParm::dR_star*1.2)) {
+            // is cell-center inside the pulsar ring
+            if (inj_pos->insidePulsarBounds( rad,PulsarParm::R_star,
+                                                        PulsarParm::dR_star*1.5) )
+            {
+                auto index = overlap_box.index(iv);
+                const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
+                pcounts[index] = int(ppc_per_dim.x*std::cbrt(PulsarParm::Ninj_fraction))
+                               * int(ppc_per_dim.y*std::cbrt(PulsarParm::Ninj_fraction))
+                               * int(ppc_per_dim.z*std::cbrt(PulsarParm::Ninj_fraction));
+            }
 #else
             if (inj_pos->overlapsWith(lo, hi)) {
-#endif
                 auto index = overlap_box.index(iv);
                 if (lrefine_injection) {
                     Box fine_overlap_box = overlap_box & amrex::shift(lfine_box, shifted);
@@ -701,13 +724,14 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             }
 #if (AMREX_SPACEDIM != 3)
             amrex::ignore_unused(k);
-#endif
+#endif // end if amrex space dim 
+#endif // End pulsar ifdef
         });
 
         // Max number of new particles. All of them are created,
         // and invalid ones are then discarded
         int max_new_particles = Scan::ExclusiveSum(counts.size(), counts.data(), offset.data());
-
+        Nmax_particles += max_new_particles;
         // Update NextID to include particles created in this function
         Long pid;
 #ifdef _OPENMP
@@ -775,24 +799,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 
         bool loc_do_field_ionization = do_field_ionization;
         int loc_ionization_initial_level = ionization_initial_level;
-#ifdef PULSAR
-        // Fab
-        const int Ex_nghost = Ex_mf.nGrow();
-        const int Ey_nghost = Ey_mf.nGrow();
-        const int Ez_nghost = Ez_mf.nGrow();
-        const FArrayBox& Ex_fab = Ex_mf[mfi];
-        const FArrayBox& Ey_fab = Ey_mf[mfi];
-        const FArrayBox& Ez_fab = Ez_mf[mfi];
-        const FArrayBox& rho_fab = rho_mf[mfi];
-        const Dim3 Ex_lo = lbound(mfi.tilebox());
-        const Dim3 Ey_lo = lbound(mfi.tilebox());
-        const Dim3 Ez_lo = lbound(mfi.tilebox());
-        amrex::Array4<const amrex::Real> const& ex_arr = Ex_fab.array();
-        amrex::Array4<const amrex::Real> const& ey_arr = Ey_fab.array();
-        amrex::Array4<const amrex::Real> const& ez_arr = Ez_fab.array();
-        amrex::Array4<const amrex::Real> const& rho_arr = rho_fab.array();
-        const Real q_pm = this->charge;
-#endif
 
         // Loop over all new particles and inject them (creates too many
         // particles, in particular does not consider xmin, xmax etc.).
@@ -857,112 +863,27 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     // the next generated particle.
 
                     // include ballistic correction for plasma species with bulk motion
-                    const Real z0 = applyBallisticCorrection(pos, inj_mom, gamma_boost,
+                    amrex::Real z0 = applyBallisticCorrection(pos, inj_mom, gamma_boost,
                                                              beta_boost, t);
                     if (!inj_pos->insideBounds(xb, yb, z0)) {
                         p.id() = -1;
                         continue;
                     }
 #ifdef PULSAR
+                    //amrex::Print() << " old xyz  : " << xb << " " << yb << " " << z0 << "\n";
                     amrex::Real xc = PulsarParm::center_star[0];
                     amrex::Real yc = PulsarParm::center_star[1];
                     amrex::Real zc = PulsarParm::center_star[2];
                     amrex::Real rad = std::sqrt( (xb-xc)*(xb-xc) + (yb-yc)*(yb-yc) + (z0-zc)*(z0-zc));
                     if (!inj_pos->insidePulsarBounds(rad,PulsarParm::R_star,PulsarParm::dR_star)) {
-                       p.id() = -1;
+                        //convert x, y, z to r, theta, phi;
+                         p.id() = -1;
                        continue;
                     }
-                    // get cell center
-                    amrex::Real cc_x = overlap_corner[0] + iv[0]*dx[0] + 0.5*dx[0] ;
-                    amrex::Real cc_y = overlap_corner[1] + iv[1]*dx[1] + 0.5*dx[1] ;
-                    amrex::Real cc_z = overlap_corner[2] + iv[2]*dx[2] + 0.5*dx[2] ;
-                    // get spherical r, theta, phi
-                    amrex::Real cc_rad = std::sqrt(  (cc_x-xc)*(cc_x-xc)
-                                                   + (cc_y-yc)*(cc_y-yc)
-                                                   + (cc_z-zc)*(cc_z-zc));
-                    amrex::Real r_cl = std::sqrt(  (cc_x-xc)*(cc_x-xc)
-                                                   + (cc_y-yc)*(cc_y-yc));
-                    amrex::Real cc_theta = 0;
-                    if (cc_rad > 0 ) {
-                        cc_theta = std::acos((cc_z-zc)/cc_rad);
-                    }
-                    amrex::Real cc_phi = std::atan2((cc_y-yc),(cc_x-xc));
-                    const amrex::Real c_theta = (cc_z-zc)/cc_rad;
-                    const amrex::Real s_theta = r_cl/cc_rad;
-                    amrex::Real c_phi = 0;
-                    amrex::Real s_phi = 0;
-                    if (r_cl > 0) {
-                        c_phi = (cc_x-xc)/r_cl;
-                        s_phi = (cc_y-yc)/r_cl;
-                    }
-
-                    amrex::Real omega = PulsarParm::Omega(t);
-                    amrex::Real ratio = PulsarParm::R_star/cc_rad;
-                    amrex::Real r3 = ratio*ratio*ratio;
-                    amrex::Real Er_cor =  PulsarParm::B_star
-                                             *omega
-                                             *cc_rad*s_theta*s_theta;
-                    //// Er_external is known
-                    //Real Er_ext = omega*PulsarParm::B_star*cc_rad*(1.0-3.0*c_theta*c_theta);
-                    //Er_ext += (2.0/3.0)*omega*PulsarParm::B_star*cc_rad;
-                    //// rho_GJ is known
-                    amrex::Real rho_GJ = 2*PhysConst::ep0*PulsarParm::B_star*omega*
-                                        (1.0-3.0*c_theta*c_theta)*PulsarParm::rhoGJ_scale;
-                    /// accessign efield
-                    int ii = Ex_lo.x + iv[0];
-                    int jj = Ex_lo.y + iv[1];
-                    int kk = Ex_lo.z + iv[2];
-                    Real ex_avg = 0.25*(ex_arr(ii,jj,kk) + ex_arr(ii,jj+1,kk)+ex_arr(ii,jj,kk+1) + ex_arr(ii,jj+1,kk+1));
-                    Real ey_avg = 0.25*(ey_arr(ii,jj,kk) + ey_arr(ii+1,jj,kk)+ey_arr(ii,jj,kk+1) + ey_arr(ii+1,jj,kk+1));
-                    Real ez_avg = 0.25*(ez_arr(ii,jj,kk) + ez_arr(ii,jj+1,kk)+ez_arr(ii+1,jj,kk) + ez_arr(ii+1,jj+1,kk));
-                    Real Er_cell = ex_avg*s_theta*c_phi + ey_avg*s_theta*s_phi + ez_avg*c_theta;
-
-                    // analytical surface charge density
-                    //Real sigma_inj = (( Er_ext - Er_cor));
-                    Real sigma_inj = (( Er_cell - Er_cor));
-                    Real max_dens = PulsarParm::max_ndens;
-                    amrex::Real fraction = PulsarParm::Ninj_fraction;
-                    // number of particle pairs injected
-                    Real N_inj = fraction*amrex::Math::abs(sigma_inj) *PhysConst::ep0* dx[0]*dx[0]/(PhysConst::q_e*max_dens*scale_fac);
-                    if (t > 0) {
-                       if (N_inj >= 1) {
-                          if (N_inj < num_ppc) {
-                             int part_freq = floor(num_ppc / N_inj);
-                             if (i_part%part_freq!=0) {
-                                p.id() = -1;
-                                continue;
-                             }
-                          }
-                       }
-                       else
-                       {
-                          p.id() = -1;
-                          continue;
-                       }
-                       //if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
-                       //if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
-                       if (sigma_inj < 0 and q_pm >0) {p.id()=-1; continue;}
-                       if (sigma_inj > 0 and q_pm <0) {p.id()=-1; continue;}
-                       // if rho is too smal -- we dont inject particles
-                       if (std::abs(rho_GJ) < 1.0E-20) {
-                          p.id() = -1;
-                          continue;
-                       }
-                       else {
-                          Real rel_rho_err = ((rho_arr(ii,jj,kk) - rho_GJ)/rho_GJ);
-                          // If current rho is much higher than rho_GJ, particles are not introduced.
-                          if ( amrex::Math::abs(rel_rho_err) > 0.05) {
-                             p.id() = -1;
-                             continue;
-                          }
-                       }
-                    }
-
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
                     dens = inj_rho->getDensity(pos.x, pos.y, z0);
-
                     // Remove particle if density below threshold
                     if ( dens < density_min ){
                         p.id() = -1;
@@ -1008,7 +929,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 
 #ifdef WARPX_QED
                 if(loc_has_quantum_sync){
-                    p_optical_depth_QSR[ip] = quantum_sync_get_opt();
+                    p_optical_depth_QSR[ip] = quantum_sync_get_opt(engine);
                 }
 
                 if(loc_has_breit_wheeler){
@@ -1059,7 +980,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             amrex::HostDevice::Atomic::Add( &(*cost)[mfi.index()], wt);
         }
     }
-
+    amrex::Print() << " newly added particles : " << TotalNumberOfParticles()-valid_particles_beforeAdd << " total max particles " << Nmax_particles<< "\n";
     // The function that calls this is responsible for redistributing particles.
 }
 
@@ -1707,6 +1628,12 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 
     const std::array<amrex::Real,3>& dx = WarpX::CellSize(std::max(lev,0));
 
+#ifdef PULSAR
+    const auto problo = WarpX::GetInstance().Geom(lev).ProbLoArray();
+    const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
+    amrex::Real cur_time = WarpX::GetInstance().gett_new(lev);
+#endif
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -1788,7 +1715,11 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                    ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                    ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                                    dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                                   nox, galerkin_interpolation);
+                                   nox, galerkin_interpolation
+#ifdef PULSAR
+                                   , problo, probhi, cur_time
+#endif
+                                   );
                 }
                 // Externally applied E-field in Cartesian co-ordinates
                 getExternalE(ip, Exp, Eyp, Ezp);
@@ -2096,6 +2027,10 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     const std::array<Real, 3>& xyzmin = WarpX::LowerCorner(box, galilean_shift, gather_lev);
 
     const Dim3 lo = lbound(box);
+#ifdef PULSAR
+    const auto problo = WarpX::GetInstance().Geom(lev).ProbLoArray();
+    const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
+#endif
 
     bool galerkin_interpolation = WarpX::galerkin_interpolation;
     int nox = WarpX::nox;
@@ -2169,7 +2104,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                            ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                            ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                            dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                           nox, galerkin_interpolation);
+                           nox, galerkin_interpolation
+#ifdef PULSAR
+                           , problo, probhi, cur_time
+#endif
+                           );
         }
         // Externally applied E-field in Cartesian co-ordinates
         getExternalE(ip, Exp, Eyp, Ezp);
@@ -2392,8 +2331,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                       Real r = std::sqrt((x-xc)*(x-xc)
                                        + (y-yc)*(y-yc)
                                        + (z-zc)*(z-zc));
-                      //if (r<=(PulsarParm::R_star-PulsarParm::dR_star)) {
-                      if (r<=(PulsarParm::R_star)) {
+                      if (r < (PulsarParm::R_star )) {
                           pp[i].id() = -1;
                       }
             });

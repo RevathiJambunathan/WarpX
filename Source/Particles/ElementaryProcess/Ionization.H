@@ -13,7 +13,6 @@
 #include "Particles/Gather/GetExternalFields.H"
 #include "Particles/Gather/FieldGather.H"
 #include "Particles/Pusher/GetAndSetPosition.H"
-
 struct IonizationFilterFunc
 {
     const amrex::Real* AMREX_RESTRICT m_ionization_energies;
@@ -50,6 +49,11 @@ struct IonizationFilterFunc
     int m_n_rz_azimuthal_modes;
 
     amrex::Dim3 m_lo;
+#ifdef PULSAR
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> m_problo;
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> m_probhi;
+    amrex::Real m_cur_time;
+#endif
 
     IonizationFilterFunc (const WarpXParIter& a_pti, int lev, int ngE,
                           amrex::FArrayBox const& exfab,
@@ -93,7 +97,11 @@ struct IonizationFilterFunc
                            m_ex_arr, m_ey_arr, m_ez_arr, m_bx_arr, m_by_arr, m_bz_arr,
                            m_ex_type, m_ey_type, m_ez_type, m_bx_type, m_by_type, m_bz_type,
                            m_dx_arr, m_xyzmin_arr, m_lo, m_n_rz_azimuthal_modes,
-                           m_nox, m_galerkin_interpolation);
+                           m_nox, m_galerkin_interpolation
+#ifdef PULSAR
+                           , m_problo, m_probhi, m_cur_time
+#endif
+                           );
 
             // Compute electric field amplitude in the particle's frame of
             // reference (particularly important when in boosted frame).
@@ -129,7 +137,9 @@ struct IonizationTransformFunc
 {
     template <typename DstData, typename SrcData>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    void operator() (DstData& /*dst*/, SrcData& src, int i_src, int /*i_dst*/) const noexcept
+    void operator() (DstData& /*dst*/, SrcData& src,
+        int i_src, int /*i_dst*/,
+        amrex::RandomEngine const& /*engine*/) const noexcept
     {
         src.m_runtime_idata[0][i_src] += 1;
     }

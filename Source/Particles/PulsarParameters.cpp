@@ -25,6 +25,7 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
     AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
     AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real Chi; // Obliquity of the pulsar
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -48,6 +49,9 @@ namespace PulsarParm
         pp.get("max_ndens", max_ndens);
         pp.get("Ninj_fraction",Ninj_fraction);
         pp.get("rhoGJ_scale",rhoGJ_scale);
+        pp.get("Chi", Chi);
+        Chi = Chi * MathConst::pi / 180._rt;
+        amrex::Print() << " Oblique angle between B-axis and Omega-axis " << Chi << "\n";
         amrex::Print() << " pulsar max ndens " << max_ndens << "\n";
         amrex::Print() << " pulsar ninj fraction " << Ninj_fraction << "\n";
         amrex::Print() << " pulsar rhoGJ scaling " << rhoGJ_scale << "\n";

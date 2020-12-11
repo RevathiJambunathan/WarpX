@@ -12,7 +12,9 @@
 #include "Particles/Gather/GetExternalFields.H"
 #include "Particles/ShapeFactors.H"
 #include "Utils/WarpX_Complex.H"
-
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
 #include <AMReX.H>
 
 /**
@@ -59,7 +61,15 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::GpuArray<amrex::Real, 3>& dx,
                      const amrex::GpuArray<amrex::Real, 3>& xyzmin,
                      const amrex::Dim3& lo,
-                     const long n_rz_azimuthal_modes)
+                     const long n_rz_azimuthal_modes
+#ifdef PULSAR
+                     ,
+                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo = {},
+                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi = {},
+                     amrex::Real cur_time = 0._rt )
+#else
+                     )
+#endif
 {
     using namespace amrex;
 
@@ -103,8 +113,9 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     // arrays will be needed.
     amrex::Real sx_node[depos_order + 1];
     amrex::Real sx_cell[depos_order + 1];
-    amrex::Real sx_node_galerkin[depos_order + 1 - galerkin_interpolation];
-    amrex::Real sx_cell_galerkin[depos_order + 1 - galerkin_interpolation];
+    amrex::Real sx_node_galerkin[depos_order + 1 - galerkin_interpolation] = {0._rt};
+    amrex::Real sx_cell_galerkin[depos_order + 1 - galerkin_interpolation] = {0._rt};
+
     int j_node = 0;
     int j_cell = 0;
     int j_node_v = 0;
@@ -135,6 +146,20 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     int const j_bx = ((bx_type[0] == NODE) ? j_node   : j_cell  );
     int const j_by = ((by_type[0] == NODE) ? j_node_v : j_cell_v);
     int const j_bz = ((bz_type[0] == NODE) ? j_node_v : j_cell_v);
+
+#ifdef PULSAR
+    // store staggering of ex-bz in GpuArray
+    amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag, Bx_stag, By_stag, Bz_stag;
+    for (int idim = 0; idim < 3; ++idim)
+    {
+        Ex_stag[idim] = ex_type[idim];
+        Ey_stag[idim] = ey_type[idim];
+        Ez_stag[idim] = ez_type[idim];
+        Bx_stag[idim] = bx_type[idim];
+        By_stag[idim] = by_type[idim];
+        Bz_stag[idim] = bz_type[idim];
+    }
+#endif
 
 #if (AMREX_SPACEDIM == 3)
     // y direction
@@ -324,6 +349,32 @@ void doGatherShapeN (const amrex::ParticleReal xp,
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
                 Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*
                     ex_arr(lo.x+j_ex+ix, lo.y+k_ex+iy, lo.z+l_ex+iz);
+#ifdef PULSAR
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_ex + ix;
+                int jj = lo.y + k_ex + iy;
+                int kk = lo.z + l_ex + iz;
+                amrex::Real xcell, ycell, zcell;
+                amrex::Real r, theta, phi;
+                amrex::Real Er, Etheta, Ephi;
+                amrex::Real ex_ext;
+                // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
+                // based on the staggered Ex location on the yee-grid
+                PulsarParm::ComputeCellCoordinates( ii, jj, kk, Ex_stag, dom_lo,
+                                                    dx, xcell, ycell, zcell );
+                // Convert (x,y,z) to (r,theta,phi)
+                PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
+                                                              dom_lo, dom_hi,
+                                                              r, theta, phi);
+                // Compute External vacuum fields of the pulsar (Er, Etheta, Ephi)
+                PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time,
+                                                     Er, Etheta, Ephi);
+                // Convert (Er, Etheta, Ephi) to ex_ext
+                PulsarParm::ConvertSphericalToCartesianXComponent( Er, Etheta, Ephi,
+                                                                   r, theta, phi, ex_ext);
+                // add contribution of ex_ext to
+                Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*ex_ext;
+#endif
             }
         }
     }
@@ -333,6 +384,32 @@ void doGatherShapeN (const amrex::ParticleReal xp,
             for (int ix=0; ix<=depos_order; ix++){
                 Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*
                     ey_arr(lo.x+j_ey+ix, lo.y+k_ey+iy, lo.z+l_ey+iz);
+#ifdef PULSAR
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_ey + ix;
+                int jj = lo.y + k_ey + iy;
+                int kk = lo.z + l_ey + iz;
+                amrex::Real xcell, ycell, zcell;
+                amrex::Real r, theta, phi;
+                amrex::Real Er, Etheta, Ephi;
+                amrex::Real ey_ext;
+                // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
+                // based on the staggered Ey location on the yee-grid
+                PulsarParm::ComputeCellCoordinates( ii, jj, kk, Ey_stag, dom_lo,
+                                                    dx, xcell, ycell, zcell );
+                // Convert (x,y,z) to (r,theta,phi)
+                PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
+                                                              dom_lo, dom_hi,
+                                                              r, theta, phi);
+                // Compute External vacuum fields of the pulsar (Er, Etheta, Ephi)
+                PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time,
+                                                     Er, Etheta, Ephi);
+                // Convert (Er, Etheta, Ephi) to ey_ext
+                PulsarParm::ConvertSphericalToCartesianYComponent( Er, Etheta, Ephi,
+                                                                   r, theta, phi, ey_ext);
+                // add contribution of ex_ext to
+                Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*ey_ext;
+#endif
             }
         }
     }
@@ -342,6 +419,32 @@ void doGatherShapeN (const amrex::ParticleReal xp,
             for (int ix=0; ix<=depos_order; ix++){
                 Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*
                     ez_arr(lo.x+j_ez+ix, lo.y+k_ez+iy, lo.z+l_ez+iz);
+#ifdef PULSAR
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_ez + ix;
+                int jj = lo.y + k_ez + iy;
+                int kk = lo.z + l_ez + iz;
+                amrex::Real xcell, ycell, zcell;
+                amrex::Real r, theta, phi;
+                amrex::Real Er, Etheta, Ephi;
+                amrex::Real ez_ext;
+                // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
+                // based on the staggered Ez location on the yee-grid
+                PulsarParm::ComputeCellCoordinates( ii, jj, kk, Ez_stag, dom_lo,
+                                                    dx, xcell, ycell, zcell );
+                // Convert (x,y,z) to (r,theta,phi)
+                PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
+                                                              dom_lo, dom_hi,
+                                                              r, theta, phi);
+                // Compute External vacuum fields of the pulsar (Er, Etheta, Ephi)
+                PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time,
+                                                     Er, Etheta, Ephi);
+                // Convert (Er, Etheta, Ephi) to ez_ext
+                PulsarParm::ConvertSphericalToCartesianZComponent( Er, Etheta, Ephi,
+                                                                   r, theta, phi, ez_ext);
+                // add contribution of ex_ext to
+                Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*ez_ext;
+#endif
             }
         }
     }
@@ -351,6 +454,32 @@ void doGatherShapeN (const amrex::ParticleReal xp,
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
                 Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*
                     bz_arr(lo.x+j_bz+ix, lo.y+k_bz+iy, lo.z+l_bz+iz);
+#ifdef PULSAR
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_bz + ix;
+                int jj = lo.y + k_bz + iy;
+                int kk = lo.z + l_bz + iz;
+                amrex::Real xcell, ycell, zcell;
+                amrex::Real r, theta, phi;
+                amrex::Real Br, Btheta, Bphi;
+                amrex::Real bz_ext;
+                // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
+                // based on the staggered Bz location on the yee-grid
+                PulsarParm::ComputeCellCoordinates( ii, jj, kk, Bz_stag, dom_lo,
+                                                    dx, xcell, ycell, zcell );
+                // Convert (x,y,z) to (r,theta,phi)
+                PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
+                                                              dom_lo, dom_hi,
+                                                              r, theta, phi);
+                // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
+                PulsarParm::ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                     Br, Btheta, Bphi);
+                // Convert (Br, Btheta, Bphi) to bz_ext
+                PulsarParm::ConvertSphericalToCartesianZComponent( Br, Btheta, Bphi,
+                                                                   r, theta, phi, bz_ext);
+                // add contribution of ex_ext to
+                Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*bz_ext;
+#endif
             }
         }
     }
@@ -360,6 +489,32 @@ void doGatherShapeN (const amrex::ParticleReal xp,
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
                 Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*
                     by_arr(lo.x+j_by+ix, lo.y+k_by+iy, lo.z+l_by+iz);
+#ifdef PULSAR
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_by + ix;
+                int jj = lo.y + k_by + iy;
+                int kk = lo.z + l_by + iz;
+                amrex::Real xcell, ycell, zcell;
+                amrex::Real r, theta, phi;
+                amrex::Real Br, Btheta, Bphi;
+                amrex::Real by_ext;
+                // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
+                // based on the staggered By location on the yee-grid
+                PulsarParm::ComputeCellCoordinates( ii, jj, kk, By_stag, dom_lo,
+                                                    dx, xcell, ycell, zcell );
+                // Convert (x,y,z) to (r,theta,phi)
+                PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
+                                                              dom_lo, dom_hi,
+                                                              r, theta, phi);
+                // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
+                PulsarParm::ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                     Br, Btheta, Bphi);
+                // Convert (Br, Btheta, Bphi) to by_ext
+                PulsarParm::ConvertSphericalToCartesianYComponent( Br, Btheta, Bphi,
+                                                                   r, theta, phi, by_ext);
+                // add contribution of by_ext to
+                Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*by_ext;
+#endif
             }
         }
     }
@@ -369,6 +524,32 @@ void doGatherShapeN (const amrex::ParticleReal xp,
             for (int ix=0; ix<=depos_order; ix++){
                 Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*
                     bx_arr(lo.x+j_bx+ix, lo.y+k_bx+iy, lo.z+l_bx+iz);
+#ifdef PULSAR
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_bx + ix;
+                int jj = lo.y + k_bx + iy;
+                int kk = lo.z + l_bx + iz;
+                amrex::Real xcell, ycell, zcell;
+                amrex::Real r, theta, phi;
+                amrex::Real Br, Btheta, Bphi;
+                amrex::Real bx_ext;
+                // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
+                // based on the staggered Bx location on the yee-grid
+                PulsarParm::ComputeCellCoordinates( ii, jj, kk, Bx_stag, dom_lo,
+                                                    dx, xcell, ycell, zcell );
+                // Convert (x,y,z) to (r,theta,phi)
+                PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
+                                                              dom_lo, dom_hi,
+                                                              r, theta, phi);
+                // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
+                PulsarParm::ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                     Br, Btheta, Bphi);
+                // Convert (Br, Btheta, Bphi) to bx_ext
+                PulsarParm::ConvertSphericalToCartesianXComponent( Br, Btheta, Bphi,
+                                                                   r, theta, phi, bx_ext);
+                // add contribution of by_ext to
+                Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*bx_ext;
+#endif
             }
         }
     }
@@ -405,9 +586,17 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
                     amrex::FArrayBox const * const bzfab,
                     const long np_to_gather,
                     const std::array<amrex::Real, 3>& dx,
-                    const std::array<amrex::Real, 3> xyzmin,
+                    const std::array<amrex::Real, 3>& xyzmin,
                     const amrex::Dim3 lo,
-                    const long n_rz_azimuthal_modes)
+                    const long n_rz_azimuthal_modes
+#ifdef PULSAR
+                    ,
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo = {},
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi = {},
+                    amrex::Real cur_time = 0._rt )
+#else
+                    )
+#endif
 {
 
     amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
@@ -442,7 +631,13 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
                 xp, yp, zp, Exp[ip], Eyp[ip], Ezp[ip], Bxp[ip], Byp[ip], Bzp[ip],
                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes
+#ifdef PULSAR
+                ,
+                dom_lo, dom_hi, cur_time);
+#else
+                );
+#endif
         }
         );
 }
@@ -491,41 +686,73 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::Dim3& lo,
                      const long n_rz_azimuthal_modes,
                      const int nox,
-                     const bool galerkin_interpolation)
+                     const bool galerkin_interpolation
+#ifdef PULSAR
+                    ,
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo = {},
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi = {},
+                    amrex::Real cur_time = 0._rt )
+#else
+                    )
+#endif
 {
     if (galerkin_interpolation) {
         if (nox == 1) {
             doGatherShapeN<1,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes
+#ifdef PULSAR
+                                , dom_lo, dom_hi, cur_time
+#endif
+                                );
         } else if (nox == 2) {
             doGatherShapeN<2,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes
+#ifdef PULSAR
+                                , dom_lo, dom_hi, cur_time
+#endif
+                                );
         } else if (nox == 3) {
             doGatherShapeN<3,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes
+#ifdef PULSAR
+                                , dom_lo, dom_hi, cur_time
+#endif
+                                );
         }
     } else {
         if (nox == 1) {
             doGatherShapeN<1,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes
+#ifdef PULSAR
+                                , dom_lo, dom_hi, cur_time
+#endif
+                                );
         } else if (nox == 2) {
             doGatherShapeN<2,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes
+#ifdef PULSAR
+                                , dom_lo, dom_hi, cur_time
+#endif
+                                );
         } else if (nox == 3) {
             doGatherShapeN<3,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes
+#ifdef PULSAR
+                                , dom_lo, dom_hi, cur_time
+#endif
+                                );
         }
     }
 }

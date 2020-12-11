@@ -6,6 +6,9 @@
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_Array4.H>
+#include <AMReX_Array.H>
+
+using namespace amrex;
 
 namespace PulsarParm
 {
@@ -25,6 +28,7 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
     extern AMREX_GPU_DEVICE_MANAGED int damp_EB_internal;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real Chi;
 
     extern AMREX_GPU_DEVICE_MANAGED int verbose;
 
@@ -42,185 +46,86 @@ namespace PulsarParm
          return omega;
     }
 
-    AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    void PulsarEField(const amrex::ParticleReal xp, const amrex::ParticleReal yp,
-                      const amrex::ParticleReal zp,
-                      amrex::ParticleReal &Exp, amrex::ParticleReal &Eyp,
-                      amrex::ParticleReal &Ezp,
-                      amrex::Real time)
-    {
-         // spherical r, theta, phi
-         const amrex::Real xc = center_star[0];
-         const amrex::Real yc = center_star[1];
-         const amrex::Real zc = center_star[2];
-         const amrex::Real r = std::sqrt( (xp-xc)*(xp-xc) + (yp-yc)*(yp-yc) + (zp-zc)*(zp-zc) );
-         const amrex::Real phi = std::atan2((yp-yc),(xp-xc));
-         amrex::Real theta = 0.0;
-         if (r > 0) {
-            theta = std::acos((zp-zc)/r);
-         }
-         const amrex::Real c_theta = std::cos(theta);
-         const amrex::Real s_theta = std::sin(theta);
-         const amrex::Real c_phi = std::cos(phi);
-         const amrex::Real s_phi = std::sin(phi);
-         amrex::Real omega = omega_star;
-         // ramping up omega
-         if (time < ramp_omega_time) {
-            omega = omega_star*time/ramp_omega_time;
-         }
-
-         if (r<R_star) {
-            amrex::Real r_ratio = R_star/r;
-            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-            // Michel and Li -- eq 14 and 15 from michel and li
-            amrex::Real Er = B_star*omega*r_ratio*r_ratio*r*s_theta*s_theta;
-            amrex::Real Etheta = -B_star*omega*r_ratio*r_ratio*r*2.0*s_theta*c_theta;
-            Exp = Er*s_theta*c_phi + Etheta*c_theta*c_phi;
-            Eyp = Er*s_theta*s_phi + Etheta*c_theta*s_phi;
-            Ezp = Er*c_theta - Etheta*s_theta;
-         }
-
-         // On and outside star surface -- dipole B and E with monopole
-         if (r >= R_star ) {
-            amrex::Real r_ratio = R_star/r;
-            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-            // Taking derivative of phi given in eq 30 of Michel and Li
-            amrex::Real Er = B_star*omega*R_star*r_ratio*r3*(1.0-3.0*c_theta*c_theta);
-            if (E_external_monopole == 1) {
-                 Er += (2.0/3.0)*omega*B_star*R_star*r_ratio*r_ratio;
-            }
-            amrex::Real Etheta = (-1.0)*B_star*omega*R_star*r_ratio*r3*(2.0*s_theta*c_theta);
-
-            Exp = Er*s_theta*c_phi + Etheta*c_theta*c_phi;
-            Eyp = Er*s_theta*s_phi + Etheta*c_theta*s_phi;
-            Ezp = Er*c_theta - Etheta*s_theta;
-         }
-    }
-
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    void PulsarBField(const amrex::ParticleReal xp, const amrex::ParticleReal yp,
-                      const amrex::ParticleReal zp,
-                      amrex::ParticleReal &Bxp, amrex::ParticleReal &Byp,
-                      amrex::ParticleReal &Bzp,
-                      amrex::Real time)
+    void ExternalEFieldSpherical (amrex::Real const r, amrex::Real const theta,
+                                  amrex::Real const phi, amrex::Real const time,
+                                  amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
-        // spherical r, theta, phi
-        const amrex::Real xc = center_star[0];
-        const amrex::Real yc = center_star[1];
-        const amrex::Real zc = center_star[2];
-        const amrex::Real r = std::sqrt( (xp-xc)*(xp-xc) + (yp-yc)*(yp-yc) + (zp-zc)*(zp-zc) );
-        const amrex::Real phi = std::atan2((yp-yc),(xp-xc));
-        amrex::Real theta = 0.0;
-        if (r > 0) {
-            theta = std::acos((zp-zc)/r);
-        }
-        const amrex::Real c_theta = std::cos(theta);
-        const amrex::Real s_theta = std::sin(theta);
-        const amrex::Real c_phi = std::cos(phi);
-        const amrex::Real s_phi = std::sin(phi);
         amrex::Real omega = Omega(time);
-
-        if (r<R_star) {
-            amrex::Real r_ratio = R_star/r;
-            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-            // Michel and Li -- eq 14 and 15 from michel and li
-            // dipole B field
-            amrex::Real Br = 2.0*B_star*r3*c_theta;
-            amrex::Real Btheta = B_star*r3*s_theta;
-
-            Bxp = Br*s_theta*c_phi + Btheta*c_theta*c_phi;
-            Byp = Br*s_theta*s_phi + Btheta*c_theta*s_phi;
-            Bzp = Br*c_theta - Btheta*s_theta;
+        amrex::Real r_ratio = R_star/r;
+        amrex::Real c_theta = std::cos(theta); // polar angle
+        amrex::Real s_theta = std::sin(theta); // polar angle
+        amrex::Real c_chi = std::cos(Chi); // oblique angle
+        amrex::Real s_chi = std::sin(Chi); // oblique angle
+        // The instantaneous phase, psi = phi - Omega*t
+        amrex::Real psi = phi - omega*time;
+        amrex::Real c_psi = std::cos(psi);
+        amrex::Real s_psi = std::sin(psi);
+        // E-field inside pulsar that corresponds to a dipole magnetization
+        // Eq 2.9(a-c) Jeromi Petri 2016
+	// corotating external field in the thin spherical ring where
+	// particles are introduced.
+        if ( r < R_star) {
+            amrex::Real r2 = r_ratio * r_ratio;
+            Er     =  B_star * omega * r2 * R_star *
+                      ( c_chi * s_theta * s_theta -
+                        s_chi * c_theta * s_theta * c_psi
+                      );
+            Etheta = -B_star * omega * r2 * R_star *
+                     ( 2._rt * s_theta * c_theta * c_chi +
+                       2._rt * s_chi * s_theta * s_theta * c_psi
+                     );
+            Ephi = 0._rt; // no Ephi inside the pulsar for dipole magnetization for any Chi
         }
 
-        // On and outside star surface -- dipole B and E with monopole
-        if (r >= R_star ) {
-            amrex::Real r_ratio = R_star/r;
-            amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-            // Taking derivative of phi given in eq 30 of Michel and Li
-            amrex::Real Br = 2.0*B_star*r3*c_theta;
-            amrex::Real Btheta = B_star*r3*s_theta;
-
-            Bxp = Br*s_theta*c_phi + Btheta*c_theta*c_phi;
-            Byp = Br*s_theta*s_phi + Btheta*c_theta*s_phi;
-            Bzp = Br*c_theta - Btheta*s_theta;
+        // outside pulsar Eq 2.8(a)-2.8(c) of Jeromi Petri, 2016
+        if ( r >= (R_star) ) {
+            amrex::Real r4 = r_ratio*r_ratio*r_ratio*r_ratio;
+            amrex::Real r2 = r_ratio*r_ratio;
+            Er = B_star * omega * R_star * r4 *
+                 ( c_chi * (1._rt - 3._rt * c_theta * c_theta) -
+                   3._rt * s_chi * c_theta * s_theta * c_psi
+                 );
+            if (E_external_monopole == 1) {
+                 Er += (2._rt/3._rt) * omega * B_star * R_star * r_ratio * r_ratio * c_chi;
+            }
+            Etheta = B_star * omega * R_star *
+                     ( r2 * s_chi * (r2 * std::cos(2._rt*theta) - 1._rt) * c_psi -
+                       r4 * c_chi * std::sin(2._rt*theta)
+                     );
+            Ephi   = B_star * omega * R_star * r2 * (1._rt - r2) * s_chi * c_theta * s_psi;
         }
     }
 
-//   AMREX_GPU_HOST_DEVICE AMREX_INLINE
-//   void PulsarEBField(amrex::Real xp, amrex::Real yp, amrex::Real zp,
-//                      amrex::Real &Exp, amrex::Real &Eyp, amrex::Real &Ezp,
-//                      amrex::Real &Bxp, amrex::Real &Byp, amrex::Real &Bzp,
-//                      amrex::Real time)
-//   {
-//        // spherical r, theta, phi
-//        const amrex::Real xc = center_star[0];
-//        const amrex::Real yc = center_star[1];
-//        const amrex::Real zc = center_star[2];
-//        const amrex::Real r = std::sqrt( (xp-xc)*(xp-xc) + (yp-yc)*(yp-yc) + (zp-zc)*(zp-zc) );
-//        const amrex::Real phi = std::atan2((yp-yc),(xp-xc));
-//        amrex::Real theta = 0.0;
-//        if (r > 0) {
-//           theta = std::acos((zp-zc)/r);
-//        }
-//        const amrex::Real c_theta = std::cos(theta);
-//        const amrex::Real s_theta = std::sin(theta);
-//        const amrex::Real c_phi = std::cos(phi);
-//        const amrex::Real s_phi = std::sin(phi);
-//        amrex::Real omega = omega_star;
-//        // ramping up omega
-//        if (time < 2.0e-4) {
-//           omega = omega_star*time/2.0e-4;
-//        }
-//
-//        if (r<R_star) {
-//           amrex::Real r_ratio = R_star/r;
-//           amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-//           // Michel and Li -- eq 14 and 15 from michel and li
-//           amrex::Real Er = B_star*omega*r_ratio*r_ratio*r*s_theta*s_theta;
-//           amrex::Real Etheta = -B_star*omega*r_ratio*r_ratio*r*2.0*s_theta*c_theta;
-//           Exp = Er*s_theta*c_phi + Etheta*c_theta*c_phi;
-//           Eyp = Er*s_theta*s_phi + Etheta*c_theta*s_phi;
-//           Ezp = Er*c_theta - Etheta*s_theta;
-//
-//           // dipole B field
-//           amrex::Real Br = 2.0*B_star*r3*c_theta;
-//           amrex::Real Btheta = B_star*r3*s_theta;
-//
-//           Bxp = Br*s_theta*c_phi + Btheta*c_theta*c_phi;
-//           Byp = Br*s_theta*s_phi + Btheta*c_theta*s_phi;
-//           Bzp = Br*c_theta - Btheta*s_theta;
-//        }
-//
-//        // On and outside star surface -- dipole B and E with monopole
-//        if (r >= R_star ) {
-//           amrex::Real r_ratio = R_star/r;
-//           amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-//           // Taking derivative of phi given in eq 30 of Michel and Li
-//           amrex::Real Er = B_star*omega*R_star*r_ratio*r3*(1.0-3.0*c_theta*c_theta);
-//           if (E_external_monopole == 1) {
-//                Er += (2.0/3.0)*omega*B_star*R_star*r_ratio*r_ratio;
-//           }
-//           amrex::Real Etheta = (-1.0)*B_star*omega*R_star*r_ratio*r3*(2.0*s_theta*c_theta);
-//
-//           Exp = Er*s_theta*c_phi + Etheta*c_theta*c_phi;
-//           Eyp = Er*s_theta*s_phi + Etheta*c_theta*s_phi;
-//           Ezp = Er*c_theta - Etheta*s_theta;
-//
-//           amrex::Real Br = 2.0*B_star*r3*c_theta;
-//           amrex::Real Btheta = B_star*r3*s_theta;
-//
-//           Bxp = Br*s_theta*c_phi + Btheta*c_theta*c_phi;
-//           Byp = Br*s_theta*s_phi + Btheta*c_theta*s_phi;
-//           Bzp = Br*c_theta - Btheta*s_theta;
-//        }
-//   }
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ExternalBFieldSpherical (amrex::Real const r, amrex::Real const theta,
+                                  amrex::Real const phi, amrex::Real const time,
+                                  amrex::Real &Br, amrex::Real &Btheta, amrex::Real &Bphi)
+    {
+        amrex::Real omega = Omega(time);
+        amrex::Real r_ratio = R_star/r;
+        amrex::Real r3 = r_ratio*r_ratio*r_ratio;
+        amrex::Real c_theta = std::cos(theta);
+        amrex::Real s_theta = std::sin(theta);
+        amrex::Real c_chi = std::cos(Chi);
+        amrex::Real s_chi = std::sin(Chi);
+        // The instantaneous phase, psi = phi - Omega*t
+        amrex::Real psi = phi - omega*time;
+        amrex::Real c_psi = std::cos(psi);
+        amrex::Real s_psi = std::sin(psi);
+        // The full dipole magnetic field as a funciton of (theta, phi, omega, t, and Chi)
+        // Eq 2.7(a) - 2.7(c) of Jeromi Petri, 2016 article
+        Br     = 2.0_rt * B_star * r3 *
+                 ( c_chi * c_theta + s_chi * s_theta * c_psi );
+        Btheta = B_star * r3 * ( c_chi * s_theta - s_chi * c_theta * c_psi );
+        Bphi   = B_star * r3 * s_chi * s_psi;
+    }
 
     namespace Spherical
     {
         AMREX_GPU_HOST_DEVICE AMREX_INLINE
-        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom, int const* const AMREX_RESTRICT mf_ixType)
+        amrex::Real r(int i, int j, int k, amrex::GeometryData const& geom, amrex::GpuArray<int, 3> const mf_ixType)
         {
             const auto domain_box = geom.Domain();
             const auto domain_ilo = amrex::lbound(domain_box);
@@ -228,9 +133,6 @@ namespace PulsarParm
             const auto domain_xhi = geom.ProbHi();
             const auto domain_dx  = geom.CellSize();
 
-            //const amrex::Real x = domain_xlo[0] + (i - domain_ilo.x + 0.5) * domain_dx[0] + (1.0 - mf_ixType[0])*domain_dx[0]*0.5;
-            //const amrex::Real y = domain_xlo[1] + (j - domain_ilo.y + 0.5) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
-            //const amrex::Real z = domain_xlo[2] + (k - domain_ilo.z + 0.5) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
             const amrex::Real x = domain_xlo[0] + (i ) * domain_dx[0] + (1.0 - mf_ixType[0])*domain_dx[0]*0.5;
             const amrex::Real y = domain_xlo[1] + (j ) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
             const amrex::Real z = domain_xlo[2] + (k ) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
@@ -245,18 +147,77 @@ namespace PulsarParm
         }
     }
 
+    /** Compute Cartesian components corresponding to i, j, k based on the staggering,
+        ixType, and the domain_lo and cell size, dx.
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ComputeCellCoordinates ( int i, int j, int k,
+             amrex::GpuArray<int, 3> const mf_type,
+             amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_lo,
+             amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dx,
+             amrex::Real &x, amrex::Real &y, amrex::Real &z)
+    {
+        x = domain_lo[0] + i*dx[0] + (1.0_rt - mf_type[0]) * dx[0]*0.5;
+        y = domain_lo[1] + j*dx[1] + (1.0_rt - mf_type[1]) * dx[1]*0.5;
+        z = domain_lo[2] + k*dx[2] + (1.0_rt - mf_type[2]) * dx[2]*0.5;
+    }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    void DampField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, int const* const AMREX_RESTRICT mf_ixtype)
+    void ConvertCartesianToSphericalCoord ( amrex::Real const x, amrex::Real const y,
+             amrex::Real const z,
+             amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_lo,
+             amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_hi,
+             amrex::Real &r, amrex::Real &theta, amrex::Real &phi)
     {
-        const amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
+        amrex::Real xc = (domain_lo[0] + domain_hi[0])/2.0;
+        amrex::Real yc = (domain_lo[1] + domain_hi[1])/2.0;
+        amrex::Real zc = (domain_lo[2] + domain_hi[2])/2.0;
 
+        r = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc) );
+        theta = 0.0;
+        if (r > 0) theta = std::acos( (z-zc) / r );
+        phi = std::atan2( (y-yc), (x-xc) );
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertSphericalToCartesianXComponent (amrex::Real const F_r,
+             amrex::Real const F_theta, amrex::Real const F_phi,
+             amrex::Real const r, amrex::Real const theta,
+             amrex::Real const phi, amrex::Real & F_x)
+    {
+        F_x = F_r     * std::sin(theta) * std::cos(phi)
+            + F_theta * std::cos(theta) * std::cos(phi);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertSphericalToCartesianYComponent (amrex::Real const F_r,
+             amrex::Real const F_theta, amrex::Real const F_phi,
+             amrex::Real const r, amrex::Real const theta,
+             amrex::Real const phi, amrex::Real & F_y)
+    {
+        F_y = F_r     * std::sin(theta) * std::sin(phi)
+            + F_theta * std::cos(theta) * std::sin(phi);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertSphericalToCartesianZComponent (amrex::Real const F_r,
+             amrex::Real const F_theta, amrex::Real const F_phi,
+             amrex::Real const r, amrex::Real const theta,
+             amrex::Real const phi, amrex::Real & F_z)
+    {
+        F_z = F_r * std::cos(theta) - F_theta * std::sin(theta);
+    }
+
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void DampField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, amrex::GpuArray<int, 3> const mf_ixtype)
+    {
+        amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
         if (r < R_star) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
             // for damping_scale >= 10 or so:
             // Fd(0) ~ 0
             // Fd(R_star) ~ 1
-
             const amrex::Real Fd = std::tanh(damping_scale * (r / R_star - 1.0)) + 1.0;
             Efield(i, j, k) = Efield(i, j, k) * Fd;
         }

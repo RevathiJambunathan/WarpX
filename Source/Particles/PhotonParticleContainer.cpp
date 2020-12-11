@@ -132,6 +132,10 @@ PhotonParticleContainer::PushPX (WarpXParIter& pti,
     const std::array<Real, 3>& xyzmin = WarpX::LowerCorner(box, galilean_shift, gather_lev);
 
     const Dim3 lo = lbound(box);
+#ifdef PULSAR
+    const auto problo = WarpX::GetInstance().Geom(lev).ProbLoArray();
+    const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
+#endif
 
     bool galerkin_interpolation = WarpX::galerkin_interpolation;
     int nox = WarpX::nox;
@@ -172,7 +176,12 @@ PhotonParticleContainer::PushPX (WarpXParIter& pti,
                                ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                               nox, galerkin_interpolation);
+                               nox, galerkin_interpolation
+#ifdef PULSAR
+                               , problo, probhi, cur_time);
+#else
+                               );
+#endif
             }
             getExternalE(i, Exp, Eyp, Ezp);
             getExternalB(i, Bxp, Byp, Bzp);
