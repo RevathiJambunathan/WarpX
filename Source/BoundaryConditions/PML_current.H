@@ -57,8 +57,8 @@ void push_ey_pml_current (int j, int k, int l,
         alpha_yx = sigjx[j-xlo]/(sigjx[j-xlo]+sigjz[l-zlo]);
         alpha_yz = sigjz[l-zlo]/(sigjx[j-xlo]+sigjz[l-zlo]);
     }
-    Ey(j,k,l,0) = Ey(j,k,l,0) - mu_c2_dt  * alpha_yx * jy(j,k,l);
-    Ey(j,k,l,1) = Ey(j,k,l,1) - mu_c2_dt  * alpha_yz * jy(j,k,l);
+    Ey(j,k,l,0) = Ey(j,k,l,0) - mu_c2_dt  * alpha_yz * jy(j,k,l);
+    Ey(j,k,l,1) = Ey(j,k,l,1) - mu_c2_dt  * alpha_yx * jy(j,k,l);
 #else
     Ey(j,k,l,0) = Ey(j,k,l,0) - 0.5 * mu_c2_dt  * jy(j,k,l);
     Ey(j,k,l,1) = Ey(j,k,l,1) - 0.5 * mu_c2_dt  * jy(j,k,l);

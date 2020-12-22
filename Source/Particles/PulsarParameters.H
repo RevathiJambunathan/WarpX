@@ -66,7 +66,7 @@ namespace PulsarParm
         // Eq 2.9(a-c) Jeromi Petri 2016
 	// corotating external field in the thin spherical ring where
 	// particles are introduced.
-        if ( r < R_star) {
+        if ( r <= R_star + 0.0*dR_star) {
             amrex::Real r2 = r_ratio * r_ratio;
             Er     =  B_star * omega * r2 * R_star *
                       ( c_chi * s_theta * s_theta -
@@ -80,7 +80,7 @@ namespace PulsarParm
         }
 
         // outside pulsar Eq 2.8(a)-2.8(c) of Jeromi Petri, 2016
-        if ( r >= (R_star) ) {
+        if ( r > (R_star + 0.0*dR_star) ) {
             amrex::Real r4 = r_ratio*r_ratio*r_ratio*r_ratio;
             amrex::Real r2 = r_ratio*r_ratio;
             Er = B_star * omega * R_star * r4 *

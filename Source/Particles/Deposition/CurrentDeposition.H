@@ -11,6 +11,9 @@
 #include "Particles/Pusher/GetAndSetPosition.H"
 #include "Particles/ShapeFactors.H"
 #include "Utils/WarpX_Complex.H"
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_Array4.H>
@@ -109,6 +112,17 @@ void doDepositionShapeN(const GetParticlePosition& GetPosition,
 
             amrex::ParticleReal xp, yp, zp;
             GetPosition(ip, xp, yp, zp);
+#ifdef PULSAR
+            amrex::Real xc = PulsarParm::center_star[0];
+            amrex::Real yc = PulsarParm::center_star[1];
+            amrex::Real zc = PulsarParm::center_star[2];
+            amrex::Real particle_rad = std::sqrt((xp-xc)*(xp-xc)
+                                                +(yp-yc)*(yp-yc)
+                                                +(zp-zc)*(zp-zc));
+            if (particle_rad<PulsarParm::R_star - 0.0*PulsarParm::dR_star) {
+                wq = 0.0;
+            }
+#endif
 
             const amrex::Real vx  = uxp[ip]*gaminv;
             const amrex::Real vy  = uyp[ip]*gaminv;
@@ -377,6 +391,17 @@ void doEsirkepovDepositionShapeN (const GetParticlePosition& GetPosition,
             ParticleReal xp, yp, zp;
             GetPosition(ip, xp, yp, zp);
 
+#ifdef PULSAR
+            amrex::Real xc = PulsarParm::center_star[0];
+            amrex::Real yc = PulsarParm::center_star[1];
+            amrex::Real zc = PulsarParm::center_star[2];
+            amrex::Real particle_rad = std::sqrt((xp-xc)*(xp-xc)
+                                                +(yp-yc)*(yp-yc)
+                                                +(zp-zc)*(zp-zc));
+            if (particle_rad<PulsarParm::R_star - 0.0*PulsarParm::dR_star) {
+                wq = 0.0;
+            }
+#endif
             Real const wqx = wq*invdtdx;
 #if (defined WARPX_DIM_3D)
             Real const wqy = wq*invdtdy;
@@ -695,6 +720,17 @@ void doVayDepositionShapeN (const GetParticlePosition& GetPosition,
         // Current particle positions (in physical units)
         amrex::ParticleReal xp, yp, zp;
         GetPosition(ip, xp, yp, zp);
+#ifdef PULSAR
+            amrex::Real xc = PulsarParm::center_star[0];
+            amrex::Real yc = PulsarParm::center_star[1];
+            amrex::Real zc = PulsarParm::center_star[2];
+            amrex::Real particle_rad = std::sqrt((xp-xc)*(xp-xc)
+                                                +(yp-yc)*(yp-yc)
+                                                +(zp-zc)*(zp-zc));
+            if (particle_rad<PulsarParm::R_star - 0.0*PulsarParm::dR_star) {
+                wq = 0.0;
+            }
+#endif
 
         // Particle velocities
         const amrex::Real vx = uxp[ip] * invgam;

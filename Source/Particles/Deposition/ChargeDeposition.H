@@ -10,6 +10,9 @@
 
 #include "Particles/Pusher/GetAndSetPosition.H"
 #include "Particles/ShapeFactors.H"
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 
@@ -79,6 +82,17 @@ void doChargeDepositionShapeN(const GetParticlePosition& GetPosition,
             amrex::ParticleReal xp, yp, zp;
             GetPosition(ip, xp, yp, zp);
 
+#ifdef PULSAR
+            amrex::Real xc = PulsarParm::center_star[0];
+            amrex::Real yc = PulsarParm::center_star[1];
+            amrex::Real zc = PulsarParm::center_star[2];
+            amrex::Real particle_rad = std::sqrt((xp-xc)*(xp-xc)
+                                                +(yp-yc)*(yp-yc)
+                                                +(zp-zc)*(zp-zc));
+            if (particle_rad<PulsarParm::R_star - 0.0*PulsarParm::dR_star) {
+                wq = 0.0;
+            }
+#endif
             // --- Compute shape factors
             // x direction
             // Get particle position in grid coordinates

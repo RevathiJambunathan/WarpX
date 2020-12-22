@@ -2331,7 +2331,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                       Real r = std::sqrt((x-xc)*(x-xc)
                                        + (y-yc)*(y-yc)
                                        + (z-zc)*(z-zc));
-                      if (r < (PulsarParm::R_star )) {
+                      if (r <= (PulsarParm::R_star + 0.0*PulsarParm::dR_star)) {
                           pp[i].id() = -1;
                       }
             });
