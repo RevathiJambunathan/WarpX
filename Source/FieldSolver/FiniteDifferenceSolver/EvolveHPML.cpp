@@ -48,7 +48,7 @@ void FiniteDifferenceSolver::EvolveHPML (
         EvolveHPMLCartesian <CartesianCKCAlgorithm> (Hfield, Efield, dt, dive_cleaning);
 
     } else {
-        amrex::Abort("EvolveBPML: Unknown algorithm");
+        amrex::Abort("EvolveHPML: Unknown algorithm");
     }
 #endif
 }
