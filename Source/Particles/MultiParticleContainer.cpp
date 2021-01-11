@@ -1444,4 +1444,3 @@ MultiParticleContainer::PulsarParticleRemoval()
 
 }
 #endif
-
