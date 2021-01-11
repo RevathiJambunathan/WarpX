@@ -144,9 +144,9 @@ namespace PulsarParm
              amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_hi,
              amrex::Real &r, amrex::Real &theta, amrex::Real &phi)
     {
-        amrex::Real xc = (domain_lo[0] + domain_hi[0])/2.0;
-        amrex::Real yc = (domain_lo[1] + domain_hi[1])/2.0;
-        amrex::Real zc = (domain_lo[2] + domain_hi[2])/2.0;
+        amrex::Real xc = PulsarParm::center_star[0];
+        amrex::Real yc = PulsarParm::center_star[1];
+        amrex::Real zc = PulsarParm::center_star[2];
 
         r = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc) );
         theta = 0.0;
