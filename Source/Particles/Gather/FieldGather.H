@@ -12,6 +12,7 @@
 #include "Particles/Gather/GetExternalFields.H"
 #include "Particles/ShapeFactors.H"
 #include "Utils/WarpX_Complex.H"
+
 #include <AMReX.H>
 
 /**
@@ -135,7 +136,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     int const j_bx = ((bx_type[0] == NODE) ? j_node   : j_cell  );
     int const j_by = ((by_type[0] == NODE) ? j_node_v : j_cell_v);
     int const j_bz = ((bz_type[0] == NODE) ? j_node_v : j_cell_v);
-
 
 #if (AMREX_SPACEDIM == 3)
     // y direction
@@ -444,7 +444,8 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                 dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
-        });
+        }
+        );
 }
 
 /**
