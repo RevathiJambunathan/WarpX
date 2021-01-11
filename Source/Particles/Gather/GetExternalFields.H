@@ -3,9 +3,6 @@
 
 #include "Particles/WarpXParticleContainer.H"
 #include "Particles/Pusher/GetAndSetPosition.H"
-#ifdef PULSAR
-    #include "Particles/PulsarParameters.H"
-#endif
 
 #include <AMReX_REAL.H>
 
