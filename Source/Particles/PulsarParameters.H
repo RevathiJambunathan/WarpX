@@ -26,6 +26,7 @@ namespace PulsarParm
            amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
+    extern AMREX_GPU_DEVICE_MANAGED int ModifyParticleWtAtInjection;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
     extern AMREX_GPU_DEVICE_MANAGED int damp_EB_internal;
 

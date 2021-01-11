@@ -23,6 +23,7 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED int verbose = 0;
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
     AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
+    AMREX_GPU_DEVICE_MANAGED int ModifyParticleWtAtInjection = 1;
     AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
 
     void ReadParameters() {
@@ -49,6 +50,7 @@ namespace PulsarParm
         pp.get("rhoGJ_scale",rhoGJ_scale);
         amrex::Print() << " pulsar max ndens " << max_ndens << "\n";
         amrex::Print() << " pulsar ninj fraction " << Ninj_fraction << "\n";
+        amrex::Print() << " pulsar modify particle wt " << ModifyParticleWtAtInjection << "\n";
         amrex::Print() << " pulsar rhoGJ scaling " << rhoGJ_scale << "\n";
         amrex::Print() << " EB_external : " << EB_external << "\n";
     }
