@@ -13,6 +13,7 @@
 #include "Particles/Gather/GetExternalFields.H"
 #include "Particles/Gather/FieldGather.H"
 #include "Particles/Pusher/GetAndSetPosition.H"
+
 struct IonizationFilterFunc
 {
     const amrex::Real* AMREX_RESTRICT m_ionization_energies;
