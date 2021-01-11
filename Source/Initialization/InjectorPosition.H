@@ -47,9 +47,16 @@ struct InjectorPositionRegular
         using namespace amrex;
 #ifdef PULSAR
 #if (defined WARPX_DIM_3D) || (defined WARPX_DIM_RZ)
-        int const nx = ref_fac*ppc.x*std::cbrt(PulsarParm::Ninj_fraction);
-        int const ny = ref_fac*ppc.y*std::cbrt(PulsarParm::Ninj_fraction);
-        int const nz = ref_fac*ppc.z*std::cbrt(PulsarParm::Ninj_fraction);
+        int nx, ny, nz;
+        if (PulsarParm::ModifyParticleWtAtInjection == 1) {
+            nx = ref_fac*ppc.x;
+            ny = ref_fac*ppc.y;
+            nz = ref_fac*ppc.z;
+        } else if (PulsarParm::ModifyParticleWtAtInjection == 0) {
+            nx = ref_fac*ppc.x*std::cbrt(PulsarParm::Ninj_fraction);
+            ny = ref_fac*ppc.y*std::cbrt(PulsarParm::Ninj_fraction);
+            nz = ref_fac*ppc.z*std::cbrt(PulsarParm::Ninj_fraction);
+        }
 #else
         amrex::Abort("pulsar sim does not support 2d yet");
 #endif // endif for 3D
@@ -176,8 +183,18 @@ struct InjectorPosition
                 z < zmax and z >= zmin);
     }
  
-    // bool: whether position specified is withing pulsar injection region
 #ifdef PULSAR
+    // bool: whether cell-center position specified is within pulsar injection region
+    // So that these cells can inject particles
+    AMREX_GPU_HOST_DEVICE
+    bool
+    insidePulsarBoundsCC (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
+    {
+        return (r<=(R_star + dR_star) and r>=(R_star - dR_star));
+    }
+
+    // bool: whether particle position specified is within pulsar injection region
+    // So that these cells can inject particles
     AMREX_GPU_HOST_DEVICE
     bool
     insidePulsarBounds (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
@@ -195,16 +212,6 @@ struct InjectorPosition
                   || (ymin > hi.y) || (ymax < lo.y)
                   || (zmin > hi.z) || (zmax < lo.z) );
     }
-
-#ifdef PULSAR
-    AMREX_GPU_HOST_DEVICE
-    bool
-    insidePulsarBounds (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
-    {
-    //    return (r>=R_star and r<=(R_star+dR_star));
-        return (r<=R_star and r>=(R_star-dR_star));
-    }
-#endif
 
 private:
     enum struct Type { random, regular };

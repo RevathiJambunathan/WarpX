@@ -538,27 +538,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::Print() << " in add plasma" << PulsarParm::R_star << "\n";
 #endif
 
-#ifdef PULSAR
-    amrex::Print() << " in add plasma" << PulsarParm::R_star << "\n";
-    // Steps to implement
-    // 1. inside PulsarBound p.id = -1 if not within R_star+dR_star -- done
-    // 2. find sigma of the cell the particle belongs to
-    //    2a. Cell Id of the particle
-    //    2b. Get x,y,z -> r,theta,phi of the cell. if r >R_star-dR and r<R_star+dR
-    //    2c. Compute Er_corotating of the cell
-    //    2d. Access Ex Ey Ez of the cell and convert to Er
-    //    2e. Compute epsilon*(Er_cell - Er_corotating) = sigma 
-    //    2f. sigma could be positive or negative. Introduce
-    //        particles if |sigma|>threshold.
-    //        Ninj = sigma*Area/wt
-    //    2g. We introduce Nc particles every timestep
-    //        Only Ninj are supposed to be injected.
-    //        inject every (ip%(Nc/Ninj)==0) particle
-    //        else p.id = -1
-     
-   
-#endif
-
     // If no part_realbox is provided, initialize particles in the whole domain
     const Geometry& geom = Geom(lev);
     if (!part_realbox.ok()) part_realbox = geom.ProbDomain();
@@ -574,9 +553,15 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     Real scale_fac;
 #if AMREX_SPACEDIM==3
     scale_fac = dx[0]*dx[1]*dx[2]/num_ppc;
-    amrex::Print() << " scale_fac " << scale_fac << "\n";
 #elif AMREX_SPACEDIM==2
     scale_fac = dx[0]*dx[1]/num_ppc;
+#endif
+#ifdef PULSAR
+    // modifying particle weight to achieve fractional injection
+    if (PulsarParm::ModifyParticleWtAtInjection == 1) {
+        scale_fac = scale_fac*PulsarParm::Ninj_fraction;
+        amrex::Print() << " scale_fac " << scale_fac << "\n";
+    }
 #endif
 
     defineAllParticleTiles();
@@ -725,15 +710,25 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
             // radius of the cell-center
             amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
+            // Adding buffer-factor to ensure all cells that intersect the ring
+            // inject particles
+            amrex::Real buffer_factor = 2.0;
             // is cell-center inside the pulsar ring
-            if (inj_pos->insidePulsarBounds( rad,PulsarParm::R_star,
-                                                        PulsarParm::dR_star*1.5) )
+            if (inj_pos->insidePulsarBoundsCC( rad, PulsarParm::R_star,
+                                               PulsarParm::dR_star*buffer_factor) )
             {
                 auto index = overlap_box.index(iv);
                 const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
-                pcounts[index] = int(ppc_per_dim.x*std::cbrt(PulsarParm::Ninj_fraction))
-                               * int(ppc_per_dim.y*std::cbrt(PulsarParm::Ninj_fraction))
-                               * int(ppc_per_dim.z*std::cbrt(PulsarParm::Ninj_fraction));
+                if (PulsarParm::ModifyParticleWtAtInjection == 1) {
+                    // instead of modiying number of particles, the weight is changed
+                    pcounts[index] = num_ppc;
+                } else if (PulsarParm::ModifyParticleWtAtInjection == 0) {
+                    // Modiying number of particles injected
+                    // (could lead to round-off errors)
+                    pcounts[index] = int(ppc_per_dim.x*std::cbrt(PulsarParm::Ninj_fraction))
+                                   * int(ppc_per_dim.y*std::cbrt(PulsarParm::Ninj_fraction))
+                                   * int(ppc_per_dim.z*std::cbrt(PulsarParm::Ninj_fraction));
+                }
             }
 #else
             if (inj_pos->overlapsWith(lo, hi)) {
@@ -998,26 +993,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             }
         });
 
-#ifdef PULSAR
-        if (PulsarParm::EB_external == 1) {
-           const auto GetPosition = GetParticlePosition(pti);
-           Real* const AMREX_RESTRICT Exp_data = Exp.dataPtr();
-           Real* const AMREX_RESTRICT Eyp_data = Eyp.dataPtr();
-           Real* const AMREX_RESTRICT Ezp_data = Ezp.dataPtr();
-           Real* const AMREX_RESTRICT Bxp_data = Bxp.dataPtr();
-           Real* const AMREX_RESTRICT Byp_data = Byp.dataPtr();
-           Real* const AMREX_RESTRICT Bzp_data = Bzp.dataPtr();
-           Real time = warpx.gett_new(lev);
-           amrex::ParallelFor(pti.numParticles(),
-                 [=] AMREX_GPU_DEVICE (long i) {
-                     ParticleReal x, y, z;
-                     GetPosition(i, x, y, z);
-                     PulsarParm::PulsarEBField(x, y, z,
-                                   Exp_data[i],Eyp_data[i],Ezp_data[i],
-                                   Bxp_data[i],Byp_data[i],Bzp_data[i],time);
-           });
-        }
-#endif
         amrex::Gpu::synchronize();
 
         if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
@@ -1029,100 +1004,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::Print() << " newly added particles : " << TotalNumberOfParticles()-valid_particles_beforeAdd << " total max particles " << Nmax_particles<< "\n";
     // The function that calls this is responsible for redistributing particles.
 }
-
-void
-PhysicalParticleContainer::AssignExternalFieldOnParticles(WarpXParIter& pti,
-                           RealVector& Exp, RealVector& Eyp, RealVector& Ezp,
-                           RealVector& Bxp, RealVector& Byp, RealVector& Bzp,
-                           Gpu::ManagedDeviceVector<ParticleReal> xp,
-                           Gpu::ManagedDeviceVector<ParticleReal> yp,
-                           Gpu::ManagedDeviceVector<ParticleReal> zp, int lev)
-{
-    const long np = pti.numParticles();
-     /// get WarpX class object
-     auto & warpx = WarpX::GetInstance();
-     /// get MultiParticleContainer class object
-     auto & mypc = warpx.GetPartContainer();
-    if (mypc.m_E_ext_particle_s=="constant" ||
-        mypc.m_E_ext_particle_s=="default") {
-        Exp.assign(np,mypc.m_E_external_particle[0]);
-        Eyp.assign(np,mypc.m_E_external_particle[1]);
-        Ezp.assign(np,mypc.m_E_external_particle[2]);
-    }
-    if (mypc.m_B_ext_particle_s=="constant" ||
-        mypc.m_B_ext_particle_s=="default") {
-        Bxp.assign(np,mypc.m_B_external_particle[0]);
-        Byp.assign(np,mypc.m_B_external_particle[1]);
-        Bzp.assign(np,mypc.m_B_external_particle[2]);
-    }
-    if (mypc.m_E_ext_particle_s=="parse_e_ext_particle_function") {
-       Real* const AMREX_RESTRICT xp_data = xp.dataPtr();
-       Real* const AMREX_RESTRICT yp_data = yp.dataPtr();
-       Real* const AMREX_RESTRICT zp_data = zp.dataPtr();
-       Real* const AMREX_RESTRICT Exp_data = Exp.dataPtr();
-       Real* const AMREX_RESTRICT Eyp_data = Eyp.dataPtr();
-       Real* const AMREX_RESTRICT Ezp_data = Ezp.dataPtr();
-       ParserWrapper *xfield_partparser = mypc.m_Ex_particle_parser.get();
-       ParserWrapper *yfield_partparser = mypc.m_Ey_particle_parser.get();
-       ParserWrapper *zfield_partparser = mypc.m_Ez_particle_parser.get();
-       Real time = warpx.gett_new(lev);
-       amrex::ParallelFor(pti.numParticles(),
-             [=] AMREX_GPU_DEVICE (long i) {
-             Exp_data[i] = xfield_partparser->getField(xp_data[i],yp_data[i],zp_data[i],time);
-             Eyp_data[i] = yfield_partparser->getField(xp_data[i],yp_data[i],zp_data[i],time);
-             Ezp_data[i] = zfield_partparser->getField(xp_data[i],yp_data[i],zp_data[i],time);
-       },
-       /* To allocate shared memory for the GPU threads. */
-       /* But, for now only 4 doubles (x,y,z,t) are allocated. */
-       amrex::Gpu::numThreadsPerBlockParallelFor() * sizeof(double) * 4
-       );
-    }
-    if (mypc.m_B_ext_particle_s=="parse_b_ext_particle_function") {
-       Real* const AMREX_RESTRICT xp_data = xp.dataPtr();
-       Real* const AMREX_RESTRICT yp_data = yp.dataPtr();
-       Real* const AMREX_RESTRICT zp_data = zp.dataPtr();
-       Real* const AMREX_RESTRICT Bxp_data = Bxp.dataPtr();
-       Real* const AMREX_RESTRICT Byp_data = Byp.dataPtr();
-       Real* const AMREX_RESTRICT Bzp_data = Bzp.dataPtr();
-       ParserWrapper *xfield_partparser = mypc.m_Bx_particle_parser.get();
-       ParserWrapper *yfield_partparser = mypc.m_By_particle_parser.get();
-       ParserWrapper *zfield_partparser = mypc.m_Bz_particle_parser.get();
-       Real time = warpx.gett_new(lev);
-       amrex::ParallelFor(pti.numParticles(),
-             [=] AMREX_GPU_DEVICE (long i) {
-             Bxp_data[i] = xfield_partparser->getField(xp_data[i],yp_data[i],zp_data[i],time);
-             Byp_data[i] = yfield_partparser->getField(xp_data[i],yp_data[i],zp_data[i],time);
-             Bzp_data[i] = zfield_partparser->getField(xp_data[i],yp_data[i],zp_data[i],time);
-       },
-       /* To allocate shared memory for the GPU threads. */
-       /* But, for now only 4 doubles (x,y,z,t) are allocated. */
-       amrex::Gpu::numThreadsPerBlockParallelFor() * sizeof(double) * 4
-       );
-    }
-
-#ifdef PULSAR
-    if (PulsarParm::EB_external == 1) {
-        const auto GetPosition = GetParticlePosition(pti);
-        Real* const AMREX_RESTRICT Exp_data = Exp.dataPtr();
-        Real* const AMREX_RESTRICT Eyp_data = Eyp.dataPtr();
-        Real* const AMREX_RESTRICT Ezp_data = Ezp.dataPtr();
-        Real* const AMREX_RESTRICT Bxp_data = Bxp.dataPtr();
-        Real* const AMREX_RESTRICT Byp_data = Byp.dataPtr();
-        Real* const AMREX_RESTRICT Bzp_data = Bzp.dataPtr();
-        Real time = warpx.gett_new(lev);
-        amrex::ParallelFor(pti.numParticles(),
-              [=] AMREX_GPU_DEVICE (long i) {
-                  ParticleReal x, y, z;
-                  GetPosition(i, x, y, z);
-                  PulsarParm::PulsarEBField(x, y, z,
-                                Exp_data[i],Eyp_data[i],Ezp_data[i],
-                                Bxp_data[i],Byp_data[i],Bzp_data[i],time);
-        });
-    }
-#endif
-
-}
-
 
 void
 PhysicalParticleContainer::Evolve (int lev,
