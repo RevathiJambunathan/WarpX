@@ -406,7 +406,7 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
                     amrex::FArrayBox const * const bzfab,
                     const long np_to_gather,
                     const std::array<amrex::Real, 3>& dx,
-                    const std::array<amrex::Real, 3>& xyzmin,
+                    const std::array<amrex::Real, 3> xyzmin,
                     const amrex::Dim3 lo,
                     const int n_rz_azimuthal_modes)
 {
