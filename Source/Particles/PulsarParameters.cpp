@@ -47,6 +47,7 @@ namespace PulsarParm
         amrex::Print() << " Pulsar B_star : " << B_star << "\n";
         pp.get("max_ndens", max_ndens);
         pp.get("Ninj_fraction",Ninj_fraction);
+        pp.query("ModifyParticleWeight", ModifyPArticleWtAtInjection);
         pp.get("rhoGJ_scale",rhoGJ_scale);
         amrex::Print() << " pulsar max ndens " << max_ndens << "\n";
         amrex::Print() << " pulsar ninj fraction " << Ninj_fraction << "\n";
