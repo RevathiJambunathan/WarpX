@@ -16,6 +16,67 @@
 #include "Particles/PulsarParameters.H"
 #include <AMReX.H>
 
+
+/**
+ * Returns the x/y/z component of the E/B applied field for pulsar set-up.
+ *
+ * \param ii, jj, kk : indices in x, y, z
+ * \param mf_type    : staggered location of the field
+ * \param domain_lo  : physical coordinates of the lower corner of the domain
+ * \param domain_hi  : physical coordinates of the upper corner of the domain
+ * \param dx         : cell size in x, y, z
+ * \param cur_time   : the current physical time of the simulation
+ * \param Field     : 0 for Bfield, 1 for Efield
+ * \param comp       : x(ncomp=0), y(ncomp=1), or z(ncomp=2) component
+*/
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real GetExternalFieldAtCellLocation(int ii, int jj, int kk,
+        amrex::GpuArray<int, 3> const f_type,
+        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_lo,
+        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_hi,
+        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dx,
+        amrex::Real cur_time, int Field, int comp)
+{
+    amrex::Real xcell, ycell, zcell;
+    amrex::Real r, theta, phi;
+    amrex::Real Fr, Ftheta, Fphi;
+    amrex::Real Fext_comp;
+    // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
+    // based on the staggered Bx location on the yee-grid
+    PulsarParm::ComputeCellCoordinates( ii, jj, kk, f_type, domain_lo,
+                                        dx, xcell, ycell, zcell );
+    // Convert (x,y,z) to (r,theta,phi)
+    PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
+                                                  domain_lo, domain_hi,
+                                                  r, theta, phi);
+    if (Field == 0) {
+        // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
+        PulsarParm::ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                             Fr, Ftheta, Fphi);
+    } else if (Field == 1) {
+        // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
+        PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time,
+                                             Fr, Ftheta, Fphi);
+    }
+    
+    if (comp == 0) {
+        // Convert (Fr, Ftheta, Fphi) to Xcomponent
+        PulsarParm::ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                           r, theta, phi, Fext_comp);
+    } else if (comp == 1) {
+        // Convert (Fr, Ftheta, Fphi) to YComponent
+        PulsarParm::ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                           r, theta, phi, Fext_comp);
+    } else if (comp == 2) {
+        // Convert (Fr, Ftheta, Fphi) to ZComponent
+        PulsarParm::ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                           r, theta, phi, Fext_comp);
+    }
+    
+    return Fext_comp;
+}
+
+
 /**
  * \brief Field gather for a single particle
  *
@@ -68,11 +129,11 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
     using namespace amrex;
 
 #if defined(WARPX_DIM_XZ)
-    amrex::Abort("pulsar does not work in 2D")
+    amrex::Abort("pulsar does not work in 2D");
 #endif
 
 #ifndef WARPX_DIM_RZ
-    amrex::Abort("pulsar does not work in RZ")
+    amrex::Abort("pulsar does not work in RZ");
 #endif
 
     const amrex::Real dxi = 1.0_rt/dx[0];
@@ -323,64 +384,9 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
     }
 }
 
-/**
- * Returns the x/y/z component of the E/B applied field for pulsar set-up.
- *
- * \param ii, jj, kk : indices in x, y, z
- * \param mf_type    : staggered location of the field
- * \param domain_lo  : physical coordinates of the lower corner of the domain
- * \param domain_hi  : physical coordinates of the upper corner of the domain
- * \param dx         : cell size in x, y, z
- * \param cur_time   : the current physical time of the simulation
- * \param Field     : 0 for Bfield, 1 for Efield
- * \param comp       : x(ncomp=0), y(ncomp=1), or z(ncomp=2) component
-*/
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-amrex::Real GetExternalFieldAtCellLocation(int ii, int jj, int kk,
-        amrex::GpuArray<int, 3> const f_type,
-        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_lo,
-        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_hi,
-        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dx,
-        amrex::Real cur_time, int Field, int comp)
-{
-    amrex::Real xcell, ycell, zcell;
-    amrex::Real r, theta, phi;
-    amrex::Real Fr, Ftheta, Fphi;
-    amrex::Real Fext_comp;
-    // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
-    // based on the staggered Bx location on the yee-grid
-    PulsarParm::ComputeCellCoordinates( ii, jj, kk, f_type, domain_lo,
-                                        dx, xcell, ycell, zcell );
-    // Convert (x,y,z) to (r,theta,phi)
-    PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
-                                                  dom_lo, dom_hi,
-                                                  r, theta, phi);
-    if (Field == 0) {
-        // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
-        PulsarParm::ExternalBFieldSpherical( r, theta, phi, cur_time,
-                                             Fr, Ftheta, Fphi);
-    } else if (Field == 1) {
-        // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
-        PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time,
-                                             Fr, Ftheta, Fphi);
-    }
-    
-    if (comp == 0) {
-        // Convert (Fr, Ftheta, Fphi) to Xcomponent
-        PulsarParm::ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
-                                                           r, theta, phi, Fext_comp);
-    } else if (comp == 1) {
-        // Convert (Fr, Ftheta, Fphi) to YComponent
-        PulsarParm::ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
-                                                           r, theta, phi, Fext_comp);
-    } else if (comp == 2) {
-        // Convert (Fr, Ftheta, Fphi) to ZComponent
-        PulsarParm::ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
-                                                           r, theta, phi, Fext_comp);
-    }
-    
-    return Fext_comp;
-}
+
+
+
 /**
  * \brief Field gather for particles
  *
