@@ -24,6 +24,7 @@
 #include "Utils/WarpXAlgorithmSelection.H"
 #ifdef PULSAR
     #include "Particles/PulsarParameters.H"
+    #include "Particles/Gather/GatherExternalPulsarFieldOnGrid.H"
 #endif
 
 #include <AMReX_Print.H>
@@ -1584,11 +1585,14 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                    ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                    ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                                    dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                                   nox, galerkin_interpolation
+                                   nox, galerkin_interpolation);
 #ifdef PULSAR
-                                   , problo, probhi, cur_time
+                    doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+                                   ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                                   ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
+                                   dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                                   nox, galerkin_interpolation, problo, probhi, cur_time);
 #endif
-                                   );
                 }
                 // Externally applied E-field in Cartesian co-ordinates
                 getExternalE(ip, Exp, Eyp, Ezp);
@@ -1973,11 +1977,14 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                            ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                            ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                            dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                           nox, galerkin_interpolation
+                           nox, galerkin_interpolation);
 #ifdef PULSAR
-                           , problo, probhi, cur_time
+            doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+                           ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                           ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
+                           dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                           nox, galerkin_interpolation, problo, probhi, cur_time);
 #endif
-                           );
         }
         // Externally applied E-field in Cartesian co-ordinates
         getExternalE(ip, Exp, Eyp, Ezp);
