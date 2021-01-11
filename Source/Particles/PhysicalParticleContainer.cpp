@@ -599,7 +599,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& Ez_mf = WarpX::GetInstance().getEfield(lev,2);
     const MultiFab& rho_mf = WarpX::GetInstance().getrho_fp(lev);
     const Real dt = WarpX::GetInstance().getdt(0);
-    amrex::Real omega_check = PulsarParm::Omega(t);
 #endif
 
 #ifdef WARPX_DIM_RZ
