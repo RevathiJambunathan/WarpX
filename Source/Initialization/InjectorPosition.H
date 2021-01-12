@@ -181,7 +181,7 @@ struct InjectorPosition
     bool
     insidePulsarBounds (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
     {
-        return (r<=(R_star + dR_star) and r>=(R_star - dR_star));
+        return (r<=(R_star + 3.5*dR_star) and r>=(R_star - dR_star));
     }
 #endif
     // bool: whether the region defined by lo and hi overaps with the plasma region

@@ -66,7 +66,7 @@ namespace PulsarParm
         // Eq 2.9(a-c) Jeromi Petri 2016
 	// corotating external field in the thin spherical ring where
 	// particles are introduced.
-        if ( r <= R_star + 0.0*dR_star) {
+        if ( r <= R_star + 3.0*dR_star ) {
             amrex::Real r2 = r_ratio * r_ratio;
             Er     =  B_star * omega * r2 * R_star *
                       ( c_chi * s_theta * s_theta -
@@ -80,7 +80,7 @@ namespace PulsarParm
         }
 
         // outside pulsar Eq 2.8(a)-2.8(c) of Jeromi Petri, 2016
-        if ( r > (R_star + 0.0*dR_star) ) {
+        if ( r > (R_star + 3.0*dR_star) ) {
             amrex::Real r4 = r_ratio*r_ratio*r_ratio*r_ratio;
             amrex::Real r2 = r_ratio*r_ratio;
             Er = B_star * omega * R_star * r4 *
@@ -137,9 +137,9 @@ namespace PulsarParm
             const amrex::Real y = domain_xlo[1] + (j ) * domain_dx[1] + (1.0 - mf_ixType[1])*domain_dx[1]*0.5;
             const amrex::Real z = domain_xlo[2] + (k ) * domain_dx[2] + (1.0 - mf_ixType[2])*domain_dx[2]*0.5;
 
-            const amrex::Real xc = 0.5 * (domain_xlo[0] + domain_xhi[0]);
-            const amrex::Real yc = 0.5 * (domain_xlo[1] + domain_xhi[1]);
-            const amrex::Real zc = 0.5 * (domain_xlo[2] + domain_xhi[2]);
+            const amrex::Real xc = PulsarParm::center_star[0];
+            const amrex::Real yc = PulsarParm::center_star[1];
+            const amrex::Real zc = PulsarParm::center_star[2];
 
             const amrex::Real r = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
 
@@ -169,9 +169,9 @@ namespace PulsarParm
              amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_hi,
              amrex::Real &r, amrex::Real &theta, amrex::Real &phi)
     {
-        amrex::Real xc = (domain_lo[0] + domain_hi[0])/2.0;
-        amrex::Real yc = (domain_lo[1] + domain_hi[1])/2.0;
-        amrex::Real zc = (domain_lo[2] + domain_hi[2])/2.0;
+        amrex::Real xc = center_star[0];
+        amrex::Real yc = center_star[1];
+        amrex::Real zc = center_star[2];
 
         r = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc) );
         theta = 0.0;
@@ -213,7 +213,7 @@ namespace PulsarParm
     void DampField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, amrex::GpuArray<int, 3> const mf_ixtype)
     {
         amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
-        if (r < R_star) {
+        if (r <= R_star - 0.0* dR_star) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
             // for damping_scale >= 10 or so:
             // Fd(0) ~ 0

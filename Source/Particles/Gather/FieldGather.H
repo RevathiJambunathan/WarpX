@@ -61,7 +61,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::GpuArray<amrex::Real, 3>& dx,
                      const amrex::GpuArray<amrex::Real, 3>& xyzmin,
                      const amrex::Dim3& lo,
-                     const long n_rz_azimuthal_modes
+                     const int n_rz_azimuthal_modes
 #ifdef PULSAR
                      ,
                      amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo = {},
@@ -81,10 +81,10 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     amrex::ignore_unused(n_rz_azimuthal_modes);
 #endif
 
-    const amrex::Real dxi = 1.0/dx[0];
-    const amrex::Real dzi = 1.0/dx[2];
+    const amrex::Real dxi = 1.0_rt/dx[0];
+    const amrex::Real dzi = 1.0_rt/dx[2];
 #if (AMREX_SPACEDIM == 3)
-    const amrex::Real dyi = 1.0/dx[1];
+    const amrex::Real dyi = 1.0_rt/dx[1];
 #endif
 
     const amrex::Real xmin = xyzmin[0];
@@ -347,8 +347,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<=depos_order; iy++){
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
-                Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*
-                    ex_arr(lo.x+j_ex+ix, lo.y+k_ex+iy, lo.z+l_ex+iz);
 #ifdef PULSAR
                 // Add the external field contribution for pulsar
                 int ii = lo.x + j_ex + ix;
@@ -374,6 +372,13 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                                                                    r, theta, phi, ex_ext);
                 // add contribution of ex_ext to
                 Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*ex_ext;
+                if (r > PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
+                    Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*
+                        ex_arr(lo.x+j_ex+ix, lo.y+k_ex+iy, lo.z+l_ex+iz);
+                }
+#else
+                Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*
+                    ex_arr(lo.x+j_ex+ix, lo.y+k_ex+iy, lo.z+l_ex+iz);
 #endif
             }
         }
@@ -382,8 +387,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<= depos_order - galerkin_interpolation; iy++){
             for (int ix=0; ix<=depos_order; ix++){
-                Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*
-                    ey_arr(lo.x+j_ey+ix, lo.y+k_ey+iy, lo.z+l_ey+iz);
 #ifdef PULSAR
                 // Add the external field contribution for pulsar
                 int ii = lo.x + j_ey + ix;
@@ -409,6 +412,13 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                                                                    r, theta, phi, ey_ext);
                 // add contribution of ex_ext to
                 Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*ey_ext;
+                if (r > PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
+                    Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*
+                        ey_arr(lo.x+j_ey+ix, lo.y+k_ey+iy, lo.z+l_ey+iz);
+                }
+#else
+                Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*
+                    ey_arr(lo.x+j_ey+ix, lo.y+k_ey+iy, lo.z+l_ey+iz);
 #endif
             }
         }
@@ -417,8 +427,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     for (int iz=0; iz<= depos_order - galerkin_interpolation; iz++){
         for (int iy=0; iy<=depos_order; iy++){
             for (int ix=0; ix<=depos_order; ix++){
-                Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*
-                    ez_arr(lo.x+j_ez+ix, lo.y+k_ez+iy, lo.z+l_ez+iz);
 #ifdef PULSAR
                 // Add the external field contribution for pulsar
                 int ii = lo.x + j_ez + ix;
@@ -444,6 +452,13 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                                                                    r, theta, phi, ez_ext);
                 // add contribution of ex_ext to
                 Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*ez_ext;
+                if (r > PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
+                    Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*
+                        ez_arr(lo.x+j_ez+ix, lo.y+k_ez+iy, lo.z+l_ez+iz);
+                }
+#else
+                Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*
+                    ez_arr(lo.x+j_ez+ix, lo.y+k_ez+iy, lo.z+l_ez+iz);
 #endif
             }
         }
@@ -452,8 +467,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<= depos_order - galerkin_interpolation; iy++){
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
-                Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*
-                    bz_arr(lo.x+j_bz+ix, lo.y+k_bz+iy, lo.z+l_bz+iz);
 #ifdef PULSAR
                 // Add the external field contribution for pulsar
                 int ii = lo.x + j_bz + ix;
@@ -479,6 +492,13 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                                                                    r, theta, phi, bz_ext);
                 // add contribution of ex_ext to
                 Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*bz_ext;
+                if (r > PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
+                    Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*
+                        bz_arr(lo.x+j_bz+ix, lo.y+k_bz+iy, lo.z+l_bz+iz);
+                }
+#else
+                Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*
+                    bz_arr(lo.x+j_bz+ix, lo.y+k_bz+iy, lo.z+l_bz+iz);
 #endif
             }
         }
@@ -487,8 +507,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     for (int iz=0; iz<= depos_order - galerkin_interpolation; iz++){
         for (int iy=0; iy<=depos_order; iy++){
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
-                Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*
-                    by_arr(lo.x+j_by+ix, lo.y+k_by+iy, lo.z+l_by+iz);
 #ifdef PULSAR
                 // Add the external field contribution for pulsar
                 int ii = lo.x + j_by + ix;
@@ -514,6 +532,13 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                                                                    r, theta, phi, by_ext);
                 // add contribution of by_ext to
                 Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*by_ext;
+                if (r > PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
+                    Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*
+                        by_arr(lo.x+j_by+ix, lo.y+k_by+iy, lo.z+l_by+iz);
+                }
+#else
+                Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*
+                    by_arr(lo.x+j_by+ix, lo.y+k_by+iy, lo.z+l_by+iz);
 #endif
             }
         }
@@ -522,8 +547,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     for (int iz=0; iz<= depos_order - galerkin_interpolation; iz++){
         for (int iy=0; iy<= depos_order - galerkin_interpolation; iy++){
             for (int ix=0; ix<=depos_order; ix++){
-                Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*
-                    bx_arr(lo.x+j_bx+ix, lo.y+k_bx+iy, lo.z+l_bx+iz);
 #ifdef PULSAR
                 // Add the external field contribution for pulsar
                 int ii = lo.x + j_bx + ix;
@@ -549,6 +572,13 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                                                                    r, theta, phi, bx_ext);
                 // add contribution of by_ext to
                 Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*bx_ext;
+                if (r > PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
+                    Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*
+                        bx_arr(lo.x+j_bx+ix, lo.y+k_bx+iy, lo.z+l_bx+iz);
+                }
+#else
+                Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*
+                    bx_arr(lo.x+j_bx+ix, lo.y+k_bx+iy, lo.z+l_bx+iz);
 #endif
             }
         }
@@ -588,7 +618,7 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
                     const std::array<amrex::Real, 3>& dx,
                     const std::array<amrex::Real, 3>& xyzmin,
                     const amrex::Dim3 lo,
-                    const long n_rz_azimuthal_modes
+                    const int n_rz_azimuthal_modes
 #ifdef PULSAR
                     ,
                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo = {},
@@ -684,7 +714,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::GpuArray<amrex::Real, 3>& dx_arr,
                      const amrex::GpuArray<amrex::Real, 3>& xyzmin_arr,
                      const amrex::Dim3& lo,
-                     const long n_rz_azimuthal_modes,
+                     const int n_rz_azimuthal_modes,
                      const int nox,
                      const bool galerkin_interpolation
 #ifdef PULSAR

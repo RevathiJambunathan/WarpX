@@ -5,7 +5,7 @@ target_sources(WarpX
     SpectralSolver.cpp
 )
 
-if(ENABLE_CUDA)
+if(WarpX_COMPUTE STREQUAL CUDA)
     target_sources(WarpX
       PRIVATE
         WrapCuFFT.cpp

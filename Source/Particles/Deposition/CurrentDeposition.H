@@ -55,7 +55,7 @@ void doDepositionShapeN(const GetParticlePosition& GetPosition,
                         const std::array<amrex::Real,3>& xyzmin,
                         const amrex::Dim3 lo,
                         const amrex::Real q,
-                        const long n_rz_azimuthal_modes)
+                        const int n_rz_azimuthal_modes)
 {
 #if !defined(WARPX_DIM_RZ)
     amrex::ignore_unused(n_rz_azimuthal_modes);
@@ -119,7 +119,7 @@ void doDepositionShapeN(const GetParticlePosition& GetPosition,
             amrex::Real particle_rad = std::sqrt((xp-xc)*(xp-xc)
                                                 +(yp-yc)*(yp-yc)
                                                 +(zp-zc)*(zp-zc));
-            if (particle_rad<PulsarParm::R_star - 0.0*PulsarParm::dR_star) {
+            if (particle_rad<=PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
                 wq = 0.0;
             }
 #endif
@@ -332,7 +332,7 @@ void doEsirkepovDepositionShapeN (const GetParticlePosition& GetPosition,
                                   const std::array<amrex::Real, 3> xyzmin,
                                   const amrex::Dim3 lo,
                                   const amrex::Real q,
-                                  const long n_rz_azimuthal_modes)
+                                  const int n_rz_azimuthal_modes)
 {
     using namespace amrex;
 #if !defined(WARPX_DIM_RZ)
@@ -398,7 +398,7 @@ void doEsirkepovDepositionShapeN (const GetParticlePosition& GetPosition,
             amrex::Real particle_rad = std::sqrt((xp-xc)*(xp-xc)
                                                 +(yp-yc)*(yp-yc)
                                                 +(zp-zc)*(zp-zc));
-            if (particle_rad<PulsarParm::R_star - 0.0*PulsarParm::dR_star) {
+            if (particle_rad<=PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
                 wq = 0.0;
             }
 #endif
@@ -653,7 +653,7 @@ void doVayDepositionShapeN (const GetParticlePosition& GetPosition,
                             const std::array<amrex::Real,3>& xyzmin,
                             const amrex::Dim3 lo,
                             const amrex::Real q,
-                            const long n_rz_azimuthal_modes)
+                            const int n_rz_azimuthal_modes)
 {
 #if (defined WARPX_DIM_RZ)
     amrex::ignore_unused(GetPosition,
@@ -727,7 +727,7 @@ void doVayDepositionShapeN (const GetParticlePosition& GetPosition,
             amrex::Real particle_rad = std::sqrt((xp-xc)*(xp-xc)
                                                 +(yp-yc)*(yp-yc)
                                                 +(zp-zc)*(zp-zc));
-            if (particle_rad<PulsarParm::R_star - 0.0*PulsarParm::dR_star) {
+            if (particle_rad<=PulsarParm::R_star + 3.*PulsarParm::dR_star ) {
                 wq = 0.0;
             }
 #endif
