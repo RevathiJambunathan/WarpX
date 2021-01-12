@@ -113,7 +113,7 @@ pulsar.EB_external = 1                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 0                  # [0/1]
 pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing density
 pulsar.Ninj_fraction = 0.2            # fraction of sigma injected
-pulsar.ModifyParticleWeight = 1       # (0/1) the fractional injection is achieved 
+pulsar.ModifyParticleWeight = 1       # (0/1) the fractional injection is achieved
                                       # by modifying particle weight if 1
                                       # by modifying num_ppc if 0
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ

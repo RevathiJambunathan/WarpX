@@ -182,7 +182,7 @@ struct InjectorPosition
                 y < ymax and y >= ymin and
                 z < zmax and z >= zmin);
     }
- 
+
 #ifdef PULSAR
     // bool: whether cell-center position specified is within pulsar injection region
     // So that these cells can inject particles

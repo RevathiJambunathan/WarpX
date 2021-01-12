@@ -58,7 +58,7 @@ amrex::Real GetExternalFieldAtCellLocation(int ii, int jj, int kk,
         PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time,
                                              Fr, Ftheta, Fphi);
     }
-    
+
     if (comp == 0) {
         // Convert (Fr, Ftheta, Fphi) to Xcomponent
         PulsarParm::ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
@@ -72,7 +72,7 @@ amrex::Real GetExternalFieldAtCellLocation(int ii, int jj, int kk,
         PulsarParm::ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                            r, theta, phi, Fext_comp);
     }
-    
+
     return Fext_comp;
 }
 
@@ -291,7 +291,7 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
                 int Field = 1; // 1 for Efield, 0 for Bfield
                 int comp = 0; // 0 for xcomponent
                 amrex::Real ex_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
-                                       Ex_stag, dom_lo, dom_hi, dx, 
+                                       Ex_stag, dom_lo, dom_hi, dx,
                                        cur_time, Field, comp);
                 Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*ex_ext;
             }
@@ -308,7 +308,7 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
                 int Field = 1; // 1 for Efield, 0 for Bfield
                 int comp = 1; // 1 for ycomponent
                 amrex::Real ey_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
-                                       Ey_stag, dom_lo, dom_hi, dx, 
+                                       Ey_stag, dom_lo, dom_hi, dx,
                                        cur_time, Field, comp);
                 Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*ey_ext;
             }
@@ -325,7 +325,7 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
                 int Field = 1; // 1 for Efield, 0 for Bfield
                 int comp = 2; // 2 for zcomponent
                 amrex::Real ez_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
-                                       Ez_stag, dom_lo, dom_hi, dx, 
+                                       Ez_stag, dom_lo, dom_hi, dx,
                                        cur_time, Field, comp);
                 Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*ez_ext;
             }
@@ -342,7 +342,7 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
                 int Field = 0; // 1 for Efield, 0 for Bfield
                 int comp = 2; // 2 for zcomponent
                 amrex::Real bz_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
-                                       Bz_stag, dom_lo, dom_hi, dx, 
+                                       Bz_stag, dom_lo, dom_hi, dx,
                                        cur_time, Field, comp);
                 Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*bz_ext;
             }
@@ -359,7 +359,7 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
                 int Field = 0; // 1 for Efield, 0 for Bfield
                 int comp = 1; // 1 for ycomponent
                 amrex::Real by_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
-                                       By_stag, dom_lo, dom_hi, dx, 
+                                       By_stag, dom_lo, dom_hi, dx,
                                        cur_time, Field, comp);
                 Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*by_ext;
             }
@@ -376,7 +376,7 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
                 int Field = 0; // 1 for Efield, 0 for Bfield
                 int comp = 0; // 0 for xcomponent
                 amrex::Real bx_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
-                                       Bx_stag, dom_lo, dom_hi, dx, 
+                                       Bx_stag, dom_lo, dom_hi, dx,
                                        cur_time, Field, comp);
                 Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*bx_ext;
             }
