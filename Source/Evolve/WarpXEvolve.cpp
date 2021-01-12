@@ -150,7 +150,7 @@ WarpX::Evolve (int numsteps)
                 Bx = Bfield_fp[lev][0].get();
                 By = Bfield_fp[lev][1].get();
                 Bz = Bfield_fp[lev][2].get();
-		amrex::IntVect ex_type = Ex->ixType().toIntVect();
+                amrex::IntVect ex_type = Ex->ixType().toIntVect();
                 amrex::IntVect ey_type = Ey->ixType().toIntVect();
                 amrex::IntVect ez_type = Ez->ixType().toIntVect();
                 amrex::IntVect bx_type = Bx->ixType().toIntVect();
