@@ -29,7 +29,8 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED int ModifyParticleWtAtInjection;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
     extern AMREX_GPU_DEVICE_MANAGED int damp_EB_internal;
-
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBcorotating_radius;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBdamping_radius;
     extern AMREX_GPU_DEVICE_MANAGED int verbose;
 
     void ReadParameters();
@@ -59,7 +60,7 @@ namespace PulsarParm
         amrex::Real s_phi   = std::sin(phi);
         amrex::Real r_ratio = R_star/r;
         // inside pulsar
-        if ( r < R_star -dR_star ) {
+        if ( r <= max_EBcorotating_radius ) {
             amrex::Real r2 = r_ratio * r_ratio;
             // Michel and Li -- eq 14 , 15
             Er     =  B_star * omega * r2 * r * s_theta * s_theta;
@@ -68,7 +69,7 @@ namespace PulsarParm
         }
 
         // outside pulsar
-        if ( r >= (R_star - dR_star ) ) {
+        if ( r > max_EBcorotating_radius ) {
             amrex::Real r4 = r_ratio*r_ratio*r_ratio*r_ratio;
             // Taking derivative of phi given in eq 30 of Michel and Li
             Er = B_star * omega * R_star * r4 * (1.0-3.0*c_theta*c_theta);
@@ -188,7 +189,7 @@ namespace PulsarParm
     void DampField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, amrex::GpuArray<int, 3> const mf_ixtype)
     {
         amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
-        if (r < R_star) {
+        if (r <= max_EBdamping_radius) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1
             // for damping_scale >= 10 or so:
             // Fd(0) ~ 0

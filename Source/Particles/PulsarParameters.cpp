@@ -25,6 +25,8 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
     AMREX_GPU_DEVICE_MANAGED int ModifyParticleWtAtInjection = 1;
     AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBcorotating_radius;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBdamping_radius;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -54,5 +56,12 @@ namespace PulsarParm
         amrex::Print() << " pulsar modify particle wt " << ModifyParticleWtAtInjection << "\n";
         amrex::Print() << " pulsar rhoGJ scaling " << rhoGJ_scale << "\n";
         amrex::Print() << " EB_external : " << EB_external << "\n";
+        // Max corotating radius defines the region where the EB field shifts from
+        // corotating (v X B) to quadrapole. default is R_star.
+        max_EBcorotating_radius = R_star;
+        pp.query("EB_corotating_maxradius", max_EBcorotating_radius);
+        // Radius of the region within which the EB fields are damped if damp_EB_internal = 1
+        max_EBdamping_radius = R_star;
+        pp.query("damp_EB_radius", max_EBdamping_radius);
     }
 }
