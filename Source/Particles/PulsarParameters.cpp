@@ -27,6 +27,10 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBcorotating_radius;
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBdamping_radius;
+    AMREX_GPU_DEVICE_MANAGED int turnoffdeposition = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_nodepos_radius;
+    AMREX_GPU_DEVICE_MANAGED int turnoff_plasmaEB_gather = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_nogather_radius;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -56,12 +60,35 @@ namespace PulsarParm
         amrex::Print() << " pulsar modify particle wt " << ModifyParticleWtAtInjection << "\n";
         amrex::Print() << " pulsar rhoGJ scaling " << rhoGJ_scale << "\n";
         amrex::Print() << " EB_external : " << EB_external << "\n";
-        // Max corotating radius defines the region where the EB field shifts from
-        // corotating (v X B) to quadrapole. default is R_star.
-        max_EBcorotating_radius = R_star;
-        pp.query("EB_corotating_maxradius", max_EBcorotating_radius);
-        // Radius of the region within which the EB fields are damped if damp_EB_internal = 1
-        max_EBdamping_radius = R_star;
-        pp.query("damp_EB_radius", max_EBdamping_radius);
+        if (EB_external == 1) {
+            // Max corotating radius defines the region where the EB field shifts from
+            // corotating (v X B) to quadrapole. default is R_star.
+            max_EBcorotating_radius = R_star;
+            pp.query("EB_corotating_maxradius", max_EBcorotating_radius);
+            amrex::Print() << " EB coratating maxradius : " << max_EBcorotating_radius << "\n";
+        }
+        if (damp_EB_internal == 1) {
+            // Radius of the region within which the EB fields are damped
+            max_EBdamping_radius = R_star;
+            pp.query("damp_EB_radius", max_EBdamping_radius);
+            amrex::Print() << " max EB damping radius : " << max_EBdamping_radius << "\n";
+        }
+        // query to see if particle j,rho deposition should be turned off
+        // within some region interior to the star
+        // default is 0
+        pp.query("turnoffdeposition", turnoffdeposition);
+        amrex::Print() << " is deposition off ? " << turnoffdeposition << "\n";
+        if (turnoffdeposition == 1) {
+            max_nodepos_radius = R_star;
+            pp.query("max_nodepos_radius", max_nodepos_radius);
+            amrex::Print() << " deposition turned off within radius : " << max_nodepos_radius << "\n";
+        }
+        pp.query("turnoff_plamsaEB_gather", turnoff_plasmaEB_gather);
+        amrex::Print() << " is plasma EB gather off ? " << turnoff_plasmaEB_gather << "\n";
+        if (turnoff_plasmaEB_gather == 1) {
+            max_nogather_radius = R_star;
+            pp.query("max_nogather_radius", max_nogather_radius);
+            amrex::Print() << " gather off within radius : " << max_nogather_radius << "\n";
+        }
     }
 }

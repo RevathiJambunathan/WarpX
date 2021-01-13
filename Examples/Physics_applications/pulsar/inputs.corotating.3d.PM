@@ -125,3 +125,11 @@ pulsar.damp_EB_internal = 1             # Damp internal electric field
 pulsar.damp_EB_radius = 12032         # The radius within which EB should be damped.
                                       # default is r_star (damping will include this radius)
 pulsar.damping_scale = 1000.0            # Damping scale factor for internal electric field
+pulsar.turnoffdeposition = 0         # (0/1) 0 for depositing (default)
+                                      #       1 for no deposition
+pulsar.max_nodepos_radius = 0.        # radius within which particle deposition for j/rho
+                                      # is turned off. (r<=max_radius)
+pulsar.turnoff_plasmaEB_gather = 0    # (0/1) 0 is default. always gather
+                                      # 1 for no gather of self-consistent fields
+pulsar.max_nogather_radius = 0.       # radius within which self-consistent field gather
+                                      # is turned off

@@ -439,13 +439,41 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
             getExternalE(ip, Exp[ip], Eyp[ip], Ezp[ip]);
             getExternalB(ip, Bxp[ip], Byp[ip], Bzp[ip]);
 
+#ifdef PULSAR
+            // temporarily adding this to check if turning off EB-gather
+            // of self-consistent fields within a region
+            // makes a difference
+            int dogather = 1;
+            if (PulsarParm::turnoff_plasmaEB_gather == 1) {
+                const amrex::Real xc = PulsarParm::center_star[0];
+                const amrex::Real yc = PulsarParm::center_star[1];
+                const amrex::Real zc = PulsarParm::center_star[2];
+                // find radius of the particle
+                amrex::Real rp = std::sqrt( (xp-xc)*(xp-xc)
+                                          + (yp-yc)*(yp-yc)
+                                          + (zp-zc)*(zp-zc) );
+                // set dogather to 0 if particle within user-defined nogather radius
+                if (rp <= PulsarParm::max_nogather_radius) {
+                    dogather = 0;
+                }
+            }
+            if (dogather == 1) {
+                doGatherShapeN<depos_order, lower_in_v>(
+                    xp, yp, zp, Exp[ip], Eyp[ip], Ezp[ip], Bxp[ip], Byp[ip], Bzp[ip],
+                    ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+                    ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
+                    dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+            }
+#else // if not a pulsar simulation
             doGatherShapeN<depos_order, lower_in_v>(
                 xp, yp, zp, Exp[ip], Eyp[ip], Ezp[ip], Bxp[ip], Byp[ip], Bzp[ip],
                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                 dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+#endif // end if pulsar
         }
         );
+
 }
 
 /**

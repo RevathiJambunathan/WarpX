@@ -31,6 +31,10 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED int damp_EB_internal;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBcorotating_radius;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBdamping_radius;
+    extern AMREX_GPU_DEVICE_MANAGED int turnoffdeposition;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_nodepos_radius;
+    extern AMREX_GPU_DEVICE_MANAGED int turnoff_plasmaEB_gather;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_nogather_radius;
     extern AMREX_GPU_DEVICE_MANAGED int verbose;
 
     void ReadParameters();
