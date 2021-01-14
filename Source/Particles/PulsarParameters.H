@@ -36,6 +36,7 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED int turnoff_plasmaEB_gather;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_nogather_radius;
     extern AMREX_GPU_DEVICE_MANAGED int verbose;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
 
     void ReadParameters();
 

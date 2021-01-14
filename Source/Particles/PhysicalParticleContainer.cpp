@@ -2207,7 +2207,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                       Real r = std::sqrt((x-xc)*(x-xc)
                                        + (y-yc)*(y-yc)
                                        + (z-zc)*(z-zc));
-                      if (r < (PulsarParm::R_star )) {
+                      if (r <= (PulsarParm::max_particle_absorption_radius)) {
                           pp[i].id() = -1;
                       }
             });

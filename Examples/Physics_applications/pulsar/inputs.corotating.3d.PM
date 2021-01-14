@@ -120,6 +120,9 @@ pulsar.Ninj_fraction = 0.2            # fraction of sigma injected
 pulsar.ModifyParticleWeight = 1       # (0/1) the fractional injection is achieved
                                       # by modifying particle weight if 1
                                       # by modifying num_ppc if 0
+pulsar.max_particle_absorption_radius = 12032   # Maximum radius within which particles are
+                                                # deleted every timestep.
+                                                # Default is Rstar
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
 pulsar.damp_EB_internal = 1             # Damp internal electric field
 pulsar.damp_EB_radius = 12032         # The radius within which EB should be damped.
