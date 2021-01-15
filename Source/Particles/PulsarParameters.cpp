@@ -61,8 +61,8 @@ namespace PulsarParm
         particle_inject_rmax = R_star;
         pp.query("particle_inj_rmin", particle_inject_rmin);
         pp.query("particle_inj_rmax", particle_inject_rmax);
-        amrex::Print() << " min radius of particle injection : " << particle_inject_rmin << "\n";      
-        amrex::Print() << " max radius of particle injection : " << particle_inject_rmax << "\n";      
+        amrex::Print() << " min radius of particle injection : " << particle_inject_rmin << "\n";
+        amrex::Print() << " max radius of particle injection : " << particle_inject_rmax << "\n";
 
         pp.query("ModifyParticleWeight", ModifyParticleWtAtInjection);
         // The maximum radius within which particles are absorbed/deleted every timestep.
