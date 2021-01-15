@@ -561,7 +561,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     // modifying particle weight to achieve fractional injection
     if (PulsarParm::ModifyParticleWtAtInjection == 1) {
         scale_fac = scale_fac*PulsarParm::Ninj_fraction;
-        amrex::Print() << " scale_fac " << scale_fac << "\n";
     }
 #endif
 
