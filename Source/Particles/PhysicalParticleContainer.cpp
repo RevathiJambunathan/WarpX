@@ -713,8 +713,9 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             // inject particles
             amrex::Real buffer_factor = 2.0;
             // is cell-center inside the pulsar ring
-            if (inj_pos->insidePulsarBoundsCC( rad, PulsarParm::R_star,
-                                               PulsarParm::dR_star*buffer_factor) )
+            if (inj_pos->insidePulsarBoundsCC( rad, PulsarParm::particle_inject_rmin,
+                                                    PulsarParm::particle_inject_rmax,
+                                                    PularParm::dR_star*buffer_factor) );
             {
                 auto index = overlap_box.index(iv);
                 const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();

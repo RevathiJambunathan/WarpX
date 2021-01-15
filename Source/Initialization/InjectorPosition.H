@@ -186,20 +186,22 @@ struct InjectorPosition
 #ifdef PULSAR
     // bool: whether cell-center position specified is within pulsar injection region
     // So that these cells can inject particles
+    // a buffer factor of 2*dR (2*dx) is used to ensure cells partially cut by sphere
+    // inject particles
     AMREX_GPU_HOST_DEVICE
     bool
-    insidePulsarBoundsCC (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
+    insidePulsarBoundsCC (amrex::Real r, amrex::Real r_min, amrex::Real r_max, amrex::Real dR_factor) const noexcept
     {
-        return (r<=(R_star + dR_star) and r>=(R_star - dR_star));
+        return (r<=(r_max + dR_factor) and r>=(r_min-dR_factor));
     }
 
     // bool: whether particle position specified is within pulsar injection region
     // So that these cells can inject particles
     AMREX_GPU_HOST_DEVICE
     bool
-    insidePulsarBounds (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
+    insidePulsarBounds (amrex::Real r, amrex::Real r_min, amrex::Real r_max) const noexcept
     {
-        return (r<=(R_star + dR_star) and r>=(R_star - dR_star));
+        return (r<=(r_max) and r>=(r_min));
     }
 #endif
 

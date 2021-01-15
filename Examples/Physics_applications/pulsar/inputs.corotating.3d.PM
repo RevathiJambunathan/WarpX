@@ -120,6 +120,8 @@ pulsar.Ninj_fraction = 0.2            # fraction of sigma injected
 pulsar.ModifyParticleWeight = 1       # (0/1) the fractional injection is achieved
                                       # by modifying particle weight if 1
                                       # by modifying num_ppc if 0
+pulsar.particle_inj_rmin = 10632      # default is Rstar-dR (consistent with density function above)
+pulsar.particle_inj_rmax = 12032      # default is Rstar (consistent with density function)
 pulsar.max_particle_absorption_radius = 12032   # Maximum radius within which particles are
                                                 # deleted every timestep.
                                                 # Default is Rstar

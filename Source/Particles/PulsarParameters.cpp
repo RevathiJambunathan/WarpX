@@ -32,6 +32,8 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED int turnoff_plasmaEB_gather = 0;
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_nogather_radius;
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -54,6 +56,14 @@ namespace PulsarParm
         amrex::Print() << " Pulsar B_star : " << B_star << "\n";
         pp.get("max_ndens", max_ndens);
         pp.get("Ninj_fraction",Ninj_fraction);
+
+        particle_inject_rmin = R_star - dR_star;
+        particle_inject_rmax = R_star;
+        pp.query("particle_inj_rmin", particle_inject_rmin);
+        pp.query("particle_inj_rmax", particle_inject_rmax);
+        amrex::Print() << " min radius of particle injection : " << particle_inject_rmin << "\n";      
+        amrex::Print() << " max radius of particle injection : " << particle_inject_rmax << "\n";      
+
         pp.query("ModifyParticleWeight", ModifyParticleWtAtInjection);
         // The maximum radius within which particles are absorbed/deleted every timestep.
         max_particle_absorption_radius = R_star;
