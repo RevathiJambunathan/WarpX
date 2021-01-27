@@ -12,6 +12,10 @@
 #include <AMReX_Dim3.H>
 #include <AMReX_Utility.H>
 
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+
 // struct whose getPositionUnitBox returns x, y and z for a particle with
 // random distribution inside a unit cell.
 struct InjectorPositionRandom
@@ -41,14 +45,31 @@ struct InjectorPositionRegular
                         amrex::RandomEngine const&) const noexcept
     {
         using namespace amrex;
-
+#ifdef PULSAR
+#if (defined WARPX_DIM_3D) || (defined WARPX_DIM_RZ)
+        int nx, ny, nz;
+        if (PulsarParm::ModifyParticleWtAtInjection == 1) {
+            nx = ref_fac*ppc.x;
+            ny = ref_fac*ppc.y;
+            nz = ref_fac*ppc.z;
+        } else if (PulsarParm::ModifyParticleWtAtInjection == 0) {
+            amrex::Real ninj_per_dim = std::cbrt(PulsarParm::Ninj_fraction);
+            nx = ref_fac*ppc.x*ninj_per_dim;
+            ny = ref_fac*ppc.y*ninj_per_dim;
+            nz = ref_fac*ppc.z*ninj_per_dim;
+        }
+#else
+        amrex::Abort("pulsar sim does not support 2d yet");
+#endif // endif for 3D
+#else // else ifndef PULSAR
         int const nx = ref_fac*ppc.x;
         int const ny = ref_fac*ppc.y;
 #if (defined WARPX_DIM_3D) || (defined WARPX_DIM_RZ)
         int const nz = ref_fac*ppc.z;
 #else
         int const nz = 1;
-#endif
+#endif // 3D ifdef
+#endif // PULSAR ifdef
         int const ix_part = i_part / (ny*nz);  // written this way backward compatibility
         int const iz_part = (i_part-ix_part*(ny*nz)) / ny;
         int const iy_part = (i_part-ix_part*(ny*nz)) - ny*iz_part;
@@ -58,6 +79,17 @@ struct InjectorPositionRegular
             (0.5_rt + iz_part) / nz
         };
     }
+
+#ifdef PULSAR
+    AMREX_GPU_HOST_DEVICE
+    amrex::XDim3
+    getppcInEachDim () const noexcept
+    {
+        using namespace amrex;
+        return XDim3{ppc.x, ppc.y, ppc.z};
+    }
+#endif
+
 private:
     amrex::Dim3 ppc;
 };
@@ -123,6 +155,25 @@ struct InjectorPosition
         };
     }
 
+#ifdef PULSAR
+    AMREX_GPU_HOST_DEVICE
+    amrex::XDim3
+    getppcInEachDim () const noexcept
+    {
+        switch (type)
+        {
+        case Type::regular:
+        {
+            return object.regular.getppcInEachDim();
+        }
+        default:
+        {
+            return object.regular.getppcInEachDim();
+        }
+        };
+    }
+#endif
+
     // bool: whether position specified is within bounds.
     AMREX_GPU_HOST_DEVICE
     bool
@@ -132,15 +183,26 @@ struct InjectorPosition
                 y < ymax and y >= ymin and
                 z < zmax and z >= zmin);
     }
- 
-    // bool: whether position specified is withing pulsar injection region
+
 #ifdef PULSAR
+    // bool: whether cell-center position specified is within pulsar injection region
+    // So that these cells can inject particles
+    // a buffer factor of 2*dR (2*dx) is used to ensure cells partially cut by sphere
+    // inject particles
     AMREX_GPU_HOST_DEVICE
     bool
-    insidePulsarBounds (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
+    insidePulsarBoundsCC (amrex::Real r, amrex::Real r_min, amrex::Real r_max, amrex::Real dR_factor) const noexcept
     {
-        //return (r<=R_star and r>=(R_star-dR_star));
-        return (r<=(R_star+dR_star) and r>=(R_star-dR_star));
+        return (r<=(r_max + dR_factor) and r>=(r_min-dR_factor));
+    }
+
+    // bool: whether particle position specified is within pulsar injection region
+    // So that these cells can inject particles
+    AMREX_GPU_HOST_DEVICE
+    bool
+    insidePulsarBounds (amrex::Real r, amrex::Real r_min, amrex::Real r_max) const noexcept
+    {
+        return (r<=(r_max) and r>=(r_min));
     }
 #endif
 

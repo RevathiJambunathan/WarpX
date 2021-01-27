@@ -3,18 +3,12 @@
 
 #include "Particles/WarpXParticleContainer.H"
 #include "Particles/Pusher/GetAndSetPosition.H"
-#ifdef PULSAR
-    #include "Particles/PulsarParameters.H"
-#endif
 
 #include <AMReX_REAL.H>
 
 #include <limits>
 
 enum ExternalFieldInitType { Constant, Parser
-#ifdef PULSAR
-     , Pulsar_Efield, Pulsar_Bfield
-#endif
  };
 
 /** \brief Base class for functors that assign external
@@ -52,20 +46,6 @@ struct GetExternalField
             field_y += m_yfield_partparser(x, y, z, m_time);
             field_z += m_zfield_partparser(x, y, z, m_time);
         }
-#ifdef PULSAR
-        else if (m_type == Pulsar_Efield)
-        {
-            amrex::ParticleReal x, y, z;
-            m_get_position(i, x, y, z);
-            PulsarParm::PulsarEField(x, y, z, field_x, field_y, field_z, m_time);
-        }
-        else if (m_type == Pulsar_Bfield)
-        {
-            amrex::ParticleReal x, y, z;
-            m_get_position(i, x, y, z);
-            PulsarParm::PulsarBField(x, y, z, field_x, field_y, field_z, m_time);
-        }
-#endif
         else
         {
             amrex::Abort("ExternalFieldInitType not known!!! \n");
