@@ -182,20 +182,15 @@ WarpX::Evolve (int numsteps)
                 Bx = Bfield_fp[lev][0].get();
                 By = Bfield_fp[lev][1].get();
                 Bz = Bfield_fp[lev][2].get();
-                Gpu::ManagedVector<int> Ex_stag, Ey_stag, Ez_stag, Bx_stag, By_stag, Bz_stag;
-                Ex_stag.resize(3);
-                Ey_stag.resize(3);
-                Ez_stag.resize(3);
-                Bx_stag.resize(3);
-                By_stag.resize(3);
-                Bz_stag.resize(3);
                 amrex::IntVect ex_type = Ex->ixType().toIntVect();
                 amrex::IntVect ey_type = Ey->ixType().toIntVect();
                 amrex::IntVect ez_type = Ez->ixType().toIntVect();
                 amrex::IntVect bx_type = Bx->ixType().toIntVect();
                 amrex::IntVect by_type = By->ixType().toIntVect();
                 amrex::IntVect bz_type = Bz->ixType().toIntVect();
-                for (int idim = 0; idim < AMREX_SPACEDIM-1; ++idim) {
+                amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag, Bx_stag, By_stag, Bz_stag;
+                for (int idim = 0; idim < 3; ++idim)
+                {
                     Ex_stag[idim] = ex_type[idim];
                     Ey_stag[idim] = ey_type[idim];
                     Ez_stag[idim] = ez_type[idim];
@@ -203,12 +198,6 @@ WarpX::Evolve (int numsteps)
                     By_stag[idim] = by_type[idim];
                     Bz_stag[idim] = bz_type[idim];
                 }
-                int const* const AMREX_RESTRICT Ex_stag_ptr = Ex_stag.data();
-                int const* const AMREX_RESTRICT Ey_stag_ptr = Ey_stag.data();
-                int const* const AMREX_RESTRICT Ez_stag_ptr = Ez_stag.data();
-                int const* const AMREX_RESTRICT Bx_stag_ptr = Bx_stag.data();
-                int const* const AMREX_RESTRICT By_stag_ptr = By_stag.data();
-                int const* const AMREX_RESTRICT Bz_stag_ptr = Bz_stag.data();
                 auto geom = Geom(lev).data();
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -226,15 +215,15 @@ WarpX::Evolve (int numsteps)
                     amrex::ParallelFor(tex, tey, tez,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Exfab, Ex_stag_ptr);
+                        PulsarParm::DampField(i, j, k, geom, Exfab, Ex_stag);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Eyfab, Ey_stag_ptr);
+                        PulsarParm::DampField(i, j, k, geom, Eyfab, Ey_stag);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Ezfab, Ez_stag_ptr);
+                        PulsarParm::DampField(i, j, k, geom, Ezfab, Ez_stag);
                     });
                 }
                 for ( MFIter mfi(*Bx, TilingIfNotGPU()); mfi.isValid(); ++mfi )
@@ -250,19 +239,21 @@ WarpX::Evolve (int numsteps)
                     amrex::ParallelFor(tex, tey, tez,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Bxfab, Bx_stag_ptr);
+                        PulsarParm::DampField(i, j, k, geom, Bxfab, Bx_stag);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Byfab, By_stag_ptr);
+                        PulsarParm::DampField(i, j, k, geom, Byfab, By_stag);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampEField(i, j, k, geom, Bzfab, Bz_stag_ptr);
+                        PulsarParm::DampField(i, j, k, geom, Bzfab, Bz_stag);
                     });
                 }
             }
         }
+        FillBoundaryE(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
+        FillBoundaryB(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
 #endif
 
         if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
