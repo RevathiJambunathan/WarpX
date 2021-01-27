@@ -1166,7 +1166,11 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     Efield_avg_fp[lev][1] = std::make_unique<MultiFab>(amrex::convert(ba,Ey_nodal_flag),dm,ncomps,ngE);
     Efield_avg_fp[lev][2] = std::make_unique<MultiFab>(amrex::convert(ba,Ez_nodal_flag),dm,ncomps,ngE);
 
+#ifdef PULSAR
+    bool deposit_charge =  do_dive_cleaning || plot_rho;
+#else
     bool deposit_charge = do_dive_cleaning || (plot_rho && do_back_transformed_diagnostics);
+#endif // pulsar endif
     if (WarpX::maxwell_solver_id == MaxwellSolverAlgo::PSATD) {
         deposit_charge = do_dive_cleaning || (plot_rho && do_back_transformed_diagnostics)
                          || update_with_rho || current_correction;
