@@ -23,7 +23,17 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED int verbose = 0;
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
     AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
+    AMREX_GPU_DEVICE_MANAGED int ModifyParticleWtAtInjection = 1;
     AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBcorotating_radius;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBdamping_radius;
+    AMREX_GPU_DEVICE_MANAGED int turnoffdeposition = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_nodepos_radius;
+    AMREX_GPU_DEVICE_MANAGED int turnoff_plasmaEB_gather = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_nogather_radius;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -46,11 +56,53 @@ namespace PulsarParm
         amrex::Print() << " Pulsar B_star : " << B_star << "\n";
         pp.get("max_ndens", max_ndens);
         pp.get("Ninj_fraction",Ninj_fraction);
+
+        particle_inject_rmin = R_star - dR_star;
+        particle_inject_rmax = R_star;
+        pp.query("particle_inj_rmin", particle_inject_rmin);
+        pp.query("particle_inj_rmax", particle_inject_rmax);
+        amrex::Print() << " min radius of particle injection : " << particle_inject_rmin << "\n";
+        amrex::Print() << " max radius of particle injection : " << particle_inject_rmax << "\n";
+
+        pp.query("ModifyParticleWeight", ModifyParticleWtAtInjection);
+        // The maximum radius within which particles are absorbed/deleted every timestep.
+        max_particle_absorption_radius = R_star;
+        pp.query("max_particle_absorption_radius", max_particle_absorption_radius);
         pp.get("rhoGJ_scale",rhoGJ_scale);
         amrex::Print() << " pulsar max ndens " << max_ndens << "\n";
         amrex::Print() << " pulsar ninj fraction " << Ninj_fraction << "\n";
+        amrex::Print() << " pulsar modify particle wt " << ModifyParticleWtAtInjection << "\n";
         amrex::Print() << " pulsar rhoGJ scaling " << rhoGJ_scale << "\n";
         amrex::Print() << " EB_external : " << EB_external << "\n";
+        if (EB_external == 1) {
+            // Max corotating radius defines the region where the EB field shifts from
+            // corotating (v X B) to quadrapole. default is R_star.
+            max_EBcorotating_radius = R_star;
+            pp.query("EB_corotating_maxradius", max_EBcorotating_radius);
+            amrex::Print() << " EB coratating maxradius : " << max_EBcorotating_radius << "\n";
+        }
+        if (damp_EB_internal == 1) {
+            // Radius of the region within which the EB fields are damped
+            max_EBdamping_radius = R_star;
+            pp.query("damp_EB_radius", max_EBdamping_radius);
+            amrex::Print() << " max EB damping radius : " << max_EBdamping_radius << "\n";
+        }
+        // query to see if particle j,rho deposition should be turned off
+        // within some region interior to the star
+        // default is 0
+        pp.query("turnoffdeposition", turnoffdeposition);
+        amrex::Print() << " is deposition off ? " << turnoffdeposition << "\n";
+        if (turnoffdeposition == 1) {
+            max_nodepos_radius = R_star;
+            pp.query("max_nodepos_radius", max_nodepos_radius);
+            amrex::Print() << " deposition turned off within radius : " << max_nodepos_radius << "\n";
+        }
+        pp.query("turnoff_plamsaEB_gather", turnoff_plasmaEB_gather);
+        amrex::Print() << " is plasma EB gather off ? " << turnoff_plasmaEB_gather << "\n";
+        if (turnoff_plasmaEB_gather == 1) {
+            max_nogather_radius = R_star;
+            pp.query("max_nogather_radius", max_nogather_radius);
+            amrex::Print() << " gather off within radius : " << max_nogather_radius << "\n";
+        }
     }
-
 }

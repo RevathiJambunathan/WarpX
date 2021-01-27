@@ -5,15 +5,77 @@
  *
  * License: BSD-3-Clause-LBNL
  */
-#ifndef FIELDGATHER_H_
-#define FIELDGATHER_H_
+#ifndef GATHEREXTERNALPULSARFIELDONGRID_H_
+#define GATHEREXTERNALPULSARFIELDONGRID_H_
 
+#ifdef PULSAR
 #include "Particles/Pusher/GetAndSetPosition.H"
 #include "Particles/Gather/GetExternalFields.H"
 #include "Particles/ShapeFactors.H"
 #include "Utils/WarpX_Complex.H"
-
+#include "Particles/PulsarParameters.H"
 #include <AMReX.H>
+
+
+/**
+ * Returns the x/y/z component of the E/B applied field for pulsar set-up.
+ *
+ * \param ii, jj, kk : indices in x, y, z
+ * \param mf_type    : staggered location of the field
+ * \param domain_lo  : physical coordinates of the lower corner of the domain
+ * \param domain_hi  : physical coordinates of the upper corner of the domain
+ * \param dx         : cell size in x, y, z
+ * \param cur_time   : the current physical time of the simulation
+ * \param Field     : 0 for Bfield, 1 for Efield
+ * \param comp       : x(ncomp=0), y(ncomp=1), or z(ncomp=2) component
+*/
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real GetExternalFieldAtCellLocation(int ii, int jj, int kk,
+        amrex::GpuArray<int, 3> const f_type,
+        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_lo,
+        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_hi,
+        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dx,
+        amrex::Real cur_time, int Field, int comp)
+{
+    amrex::Real xcell, ycell, zcell;
+    amrex::Real r, theta, phi;
+    amrex::Real Fr, Ftheta, Fphi;
+    amrex::Real Fext_comp;
+    // compute cell coordinates, (x,y,z) corresponding to (ii,jj,kk)
+    // based on the staggered Bx location on the yee-grid
+    PulsarParm::ComputeCellCoordinates( ii, jj, kk, f_type, domain_lo,
+                                        dx, xcell, ycell, zcell );
+    // Convert (x,y,z) to (r,theta,phi)
+    PulsarParm::ConvertCartesianToSphericalCoord( xcell, ycell, zcell,
+                                                  domain_lo, domain_hi,
+                                                  r, theta, phi);
+    if (Field == 0) {
+        // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
+        PulsarParm::ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                             Fr, Ftheta, Fphi);
+    } else if (Field == 1) {
+        // Compute External vacuum fields of the pulsar (Br, Btheta, Bphi)
+        PulsarParm::ExternalEFieldSpherical( r, theta, phi, cur_time,
+                                             Fr, Ftheta, Fphi);
+    }
+
+    if (comp == 0) {
+        // Convert (Fr, Ftheta, Fphi) to Xcomponent
+        PulsarParm::ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                           r, theta, phi, Fext_comp);
+    } else if (comp == 1) {
+        // Convert (Fr, Ftheta, Fphi) to YComponent
+        PulsarParm::ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                           r, theta, phi, Fext_comp);
+    } else if (comp == 2) {
+        // Convert (Fr, Ftheta, Fphi) to ZComponent
+        PulsarParm::ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                           r, theta, phi, Fext_comp);
+    }
+
+    return Fext_comp;
+}
+
 
 /**
  * \brief Field gather for a single particle
@@ -35,7 +97,7 @@
  */
 template <int depos_order, int galerkin_interpolation>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void doGatherShapeN (const amrex::ParticleReal xp,
+void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::ParticleReal yp,
                      const amrex::ParticleReal zp,
                      amrex::ParticleReal& Exp,
@@ -59,43 +121,48 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::GpuArray<amrex::Real, 3>& dx,
                      const amrex::GpuArray<amrex::Real, 3>& xyzmin,
                      const amrex::Dim3& lo,
-                     const int n_rz_azimuthal_modes)
+                     const long n_rz_azimuthal_modes,
+                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo = {},
+                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi = {},
+                     amrex::Real cur_time = 0._rt )
 {
     using namespace amrex;
 
 #if defined(WARPX_DIM_XZ)
-    amrex::ignore_unused(yp);
+    amrex::Abort("pulsar does not work in 2D");
 #endif
 
 #ifndef WARPX_DIM_RZ
-    amrex::ignore_unused(n_rz_azimuthal_modes);
+    amrex::Abort("pulsar does not work in RZ");
 #endif
 
     const amrex::Real dxi = 1.0_rt/dx[0];
-    const amrex::Real dzi = 1.0_rt/dx[2];
-#if (AMREX_SPACEDIM == 3)
     const amrex::Real dyi = 1.0_rt/dx[1];
-#endif
+    const amrex::Real dzi = 1.0_rt/dx[2];
 
     const amrex::Real xmin = xyzmin[0];
-#if (AMREX_SPACEDIM == 3)
     const amrex::Real ymin = xyzmin[1];
-#endif
     const amrex::Real zmin = xyzmin[2];
 
     constexpr int zdir = (AMREX_SPACEDIM - 1);
     constexpr int NODE = amrex::IndexType::NODE;
     constexpr int CELL = amrex::IndexType::CELL;
 
+    // store staggering of ex-bz in GpuArray
+    amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag, Bx_stag, By_stag, Bz_stag;
+    for (int idim = 0; idim < 3; ++idim)
+    {
+        Ex_stag[idim] = ex_type[idim];
+        Ey_stag[idim] = ey_type[idim];
+        Ez_stag[idim] = ez_type[idim];
+        Bx_stag[idim] = bx_type[idim];
+        By_stag[idim] = by_type[idim];
+        Bz_stag[idim] = bz_type[idim];
+    }
     // --- Compute shape factors
     // x direction
     // Get particle position
-#ifdef WARPX_DIM_RZ
-    const amrex::Real rp = std::sqrt(xp*xp + yp*yp);
-    const amrex::Real x = (rp - xmin)*dxi;
-#else
     const amrex::Real x = (xp-xmin)*dxi;
-#endif
 
     // j_[eb][xyz] leftmost grid point in x that the particle touches for the centering of each current
     // sx_[eb][xyz] shape factor along x for the centering of each current
@@ -137,7 +204,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     int const j_by = ((by_type[0] == NODE) ? j_node_v : j_cell_v);
     int const j_bz = ((bz_type[0] == NODE) ? j_node_v : j_cell_v);
 
-#if (AMREX_SPACEDIM == 3)
     // y direction
     const amrex::Real y = (yp-ymin)*dyi;
     amrex::Real sy_node[depos_order + 1];
@@ -173,7 +239,6 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     int const k_by = ((by_type[1] == NODE) ? k_node   : k_cell  );
     int const k_bz = ((bz_type[1] == NODE) ? k_node_v : k_cell_v);
 
-#endif
     // z direction
     const amrex::Real z = (zp-zmin)*dzi;
     amrex::Real sz_node[depos_order + 1];
@@ -214,167 +279,113 @@ void doGatherShapeN (const amrex::ParticleReal xp,
     // AMREX_SPACEDIM nested loops because the deposition
     // order can differ for each component of each field
     // when galerkin_interpolation is set to 1
-#if (AMREX_SPACEDIM == 2)
-    // Gather field on particle Eyp from field on grid ey_arr
-    for (int iz=0; iz<=depos_order; iz++){
-        for (int ix=0; ix<=depos_order; ix++){
-            Eyp += sx_ey[ix]*sz_ey[iz]*
-                ey_arr(lo.x+j_ey+ix, lo.y+l_ey+iz, 0, 0);
-        }
-    }
-    // Gather field on particle Exp from field on grid ex_arr
-    // Gather field on particle Bzp from field on grid bz_arr
-    for (int iz=0; iz<=depos_order; iz++){
-        for (int ix=0; ix<=depos_order-galerkin_interpolation; ix++){
-            Exp += sx_ex[ix]*sz_ex[iz]*
-                ex_arr(lo.x+j_ex+ix, lo.y+l_ex+iz, 0, 0);
-            Bzp += sx_bz[ix]*sz_bz[iz]*
-                bz_arr(lo.x+j_bz+ix, lo.y+l_bz+iz, 0, 0);
-        }
-    }
-    // Gather field on particle Ezp from field on grid ez_arr
-    // Gather field on particle Bxp from field on grid bx_arr
-    for (int iz=0; iz<=depos_order-galerkin_interpolation; iz++){
-        for (int ix=0; ix<=depos_order; ix++){
-            Ezp += sx_ez[ix]*sz_ez[iz]*
-                ez_arr(lo.x+j_ez+ix, lo.y+l_ez+iz, 0, 0);
-            Bxp += sx_bx[ix]*sz_bx[iz]*
-                bx_arr(lo.x+j_bx+ix, lo.y+l_bx+iz, 0, 0);
-        }
-    }
-    // Gather field on particle Byp from field on grid by_arr
-    for (int iz=0; iz<=depos_order-galerkin_interpolation; iz++){
-        for (int ix=0; ix<=depos_order-galerkin_interpolation; ix++){
-            Byp += sx_by[ix]*sz_by[iz]*
-                by_arr(lo.x+j_by+ix, lo.y+l_by+iz, 0, 0);
-        }
-    }
 
-#ifdef WARPX_DIM_RZ
-
-    amrex::Real costheta;
-    amrex::Real sintheta;
-    if (rp > 0.) {
-        costheta = xp/rp;
-        sintheta = yp/rp;
-    } else {
-        costheta = 1.;
-        sintheta = 0.;
-    }
-    const Complex xy0 = Complex{costheta, -sintheta};
-    Complex xy = xy0;
-
-    for (int imode=1 ; imode < n_rz_azimuthal_modes ; imode++) {
-
-        // Gather field on particle Eyp from field on grid ey_arr
-        for (int iz=0; iz<=depos_order; iz++){
-            for (int ix=0; ix<=depos_order; ix++){
-                const amrex::Real dEy = (+ ey_arr(lo.x+j_ey+ix, lo.y+l_ey+iz, 0, 2*imode-1)*xy.real()
-                                         - ey_arr(lo.x+j_ey+ix, lo.y+l_ey+iz, 0, 2*imode)*xy.imag());
-                Eyp += sx_ey[ix]*sz_ey[iz]*dEy;
-            }
-        }
-        // Gather field on particle Exp from field on grid ex_arr
-        // Gather field on particle Bzp from field on grid bz_arr
-        for (int iz=0; iz<=depos_order; iz++){
-            for (int ix=0; ix<=depos_order-galerkin_interpolation; ix++){
-                const amrex::Real dEx = (+ ex_arr(lo.x+j_ex+ix, lo.y+l_ex+iz, 0, 2*imode-1)*xy.real()
-                                         - ex_arr(lo.x+j_ex+ix, lo.y+l_ex+iz, 0, 2*imode)*xy.imag());
-                Exp += sx_ex[ix]*sz_ex[iz]*dEx;
-                const amrex::Real dBz = (+ bz_arr(lo.x+j_bz+ix, lo.y+l_bz+iz, 0, 2*imode-1)*xy.real()
-                                         - bz_arr(lo.x+j_bz+ix, lo.y+l_bz+iz, 0, 2*imode)*xy.imag());
-                Bzp += sx_bz[ix]*sz_bz[iz]*dBz;
-            }
-        }
-        // Gather field on particle Ezp from field on grid ez_arr
-        // Gather field on particle Bxp from field on grid bx_arr
-        for (int iz=0; iz<=depos_order-galerkin_interpolation; iz++){
-            for (int ix=0; ix<=depos_order; ix++){
-                const amrex::Real dEz = (+ ez_arr(lo.x+j_ez+ix, lo.y+l_ez+iz, 0, 2*imode-1)*xy.real()
-                                         - ez_arr(lo.x+j_ez+ix, lo.y+l_ez+iz, 0, 2*imode)*xy.imag());
-                Ezp += sx_ez[ix]*sz_ez[iz]*dEz;
-                const amrex::Real dBx = (+ bx_arr(lo.x+j_bx+ix, lo.y+l_bx+iz, 0, 2*imode-1)*xy.real()
-                                         - bx_arr(lo.x+j_bx+ix, lo.y+l_bx+iz, 0, 2*imode)*xy.imag());
-                Bxp += sx_bx[ix]*sz_bx[iz]*dBx;
-            }
-        }
-        // Gather field on particle Byp from field on grid by_arr
-        for (int iz=0; iz<=depos_order-galerkin_interpolation; iz++){
-            for (int ix=0; ix<=depos_order-galerkin_interpolation; ix++){
-                const amrex::Real dBy = (+ by_arr(lo.x+j_by+ix, lo.y+l_by+iz, 0, 2*imode-1)*xy.real()
-                                         - by_arr(lo.x+j_by+ix, lo.y+l_by+iz, 0, 2*imode)*xy.imag());
-                Byp += sx_by[ix]*sz_by[iz]*dBy;
-            }
-        }
-        xy = xy*xy0;
-    }
-
-    // Convert Exp and Eyp (which are actually Er and Etheta) to Ex and Ey
-    const amrex::Real Exp_save = Exp;
-    Exp = costheta*Exp - sintheta*Eyp;
-    Eyp = costheta*Eyp + sintheta*Exp_save;
-    const amrex::Real Bxp_save = Bxp;
-    Bxp = costheta*Bxp - sintheta*Byp;
-    Byp = costheta*Byp + sintheta*Bxp_save;
-#endif
-
-#else // (AMREX_SPACEDIM == 3)
-    // Gather field on particle Exp from field on grid ex_arr
+    // Gather Pulsar external field using grid resolution on particle Exp
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<=depos_order; iy++){
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
-                Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*
-                    ex_arr(lo.x+j_ex+ix, lo.y+k_ex+iy, lo.z+l_ex+iz);
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_ex + ix;
+                int jj = lo.y + k_ex + iy;
+                int kk = lo.z + l_ex + iz;
+                int Field = 1; // 1 for Efield, 0 for Bfield
+                int comp = 0; // 0 for xcomponent
+                amrex::Real ex_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
+                                       Ex_stag, dom_lo, dom_hi, dx,
+                                       cur_time, Field, comp);
+                Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*ex_ext;
             }
         }
     }
-    // Gather field on particle Eyp from field on grid ey_arr
+    // Gather Pulsar external field using grid resolution on particle Eyp
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<= depos_order - galerkin_interpolation; iy++){
             for (int ix=0; ix<=depos_order; ix++){
-                Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*
-                    ey_arr(lo.x+j_ey+ix, lo.y+k_ey+iy, lo.z+l_ey+iz);
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_ey + ix;
+                int jj = lo.y + k_ey + iy;
+                int kk = lo.z + l_ey + iz;
+                int Field = 1; // 1 for Efield, 0 for Bfield
+                int comp = 1; // 1 for ycomponent
+                amrex::Real ey_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
+                                       Ey_stag, dom_lo, dom_hi, dx,
+                                       cur_time, Field, comp);
+                Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*ey_ext;
             }
         }
     }
-    // Gather field on particle Ezp from field on grid ez_arr
+    // Gather Pulsar external field using grid resolution on particle Ezp
     for (int iz=0; iz<= depos_order - galerkin_interpolation; iz++){
         for (int iy=0; iy<=depos_order; iy++){
             for (int ix=0; ix<=depos_order; ix++){
-                Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*
-                    ez_arr(lo.x+j_ez+ix, lo.y+k_ez+iy, lo.z+l_ez+iz);
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_ez + ix;
+                int jj = lo.y + k_ez + iy;
+                int kk = lo.z + l_ez + iz;
+                int Field = 1; // 1 for Efield, 0 for Bfield
+                int comp = 2; // 2 for zcomponent
+                amrex::Real ez_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
+                                       Ez_stag, dom_lo, dom_hi, dx,
+                                       cur_time, Field, comp);
+                Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*ez_ext;
             }
         }
     }
-    // Gather field on particle Bzp from field on grid bz_arr
+    // Gather Pulsar external field using grid resolution on particle Bzp
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<= depos_order - galerkin_interpolation; iy++){
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
-                Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*
-                    bz_arr(lo.x+j_bz+ix, lo.y+k_bz+iy, lo.z+l_bz+iz);
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_bz + ix;
+                int jj = lo.y + k_bz + iy;
+                int kk = lo.z + l_bz + iz;
+                int Field = 0; // 1 for Efield, 0 for Bfield
+                int comp = 2; // 2 for zcomponent
+                amrex::Real bz_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
+                                       Bz_stag, dom_lo, dom_hi, dx,
+                                       cur_time, Field, comp);
+                Bzp += sx_bz[ix]*sy_bz[iy]*sz_bz[iz]*bz_ext;
             }
         }
     }
-    // Gather field on particle Byp from field on grid by_arr
+    // Gather Pulsar external field using grid resolution on particle Byp
     for (int iz=0; iz<= depos_order - galerkin_interpolation; iz++){
         for (int iy=0; iy<=depos_order; iy++){
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
-                Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*
-                    by_arr(lo.x+j_by+ix, lo.y+k_by+iy, lo.z+l_by+iz);
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_by + ix;
+                int jj = lo.y + k_by + iy;
+                int kk = lo.z + l_by + iz;
+                int Field = 0; // 1 for Efield, 0 for Bfield
+                int comp = 1; // 1 for ycomponent
+                amrex::Real by_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
+                                       By_stag, dom_lo, dom_hi, dx,
+                                       cur_time, Field, comp);
+                Byp += sx_by[ix]*sy_by[iy]*sz_by[iz]*by_ext;
             }
         }
     }
-    // Gather field on particle Bxp from field on grid bx_arr
+    // Gather Pulsar external field using grid resolution on particle Bxp
     for (int iz=0; iz<= depos_order - galerkin_interpolation; iz++){
         for (int iy=0; iy<= depos_order - galerkin_interpolation; iy++){
             for (int ix=0; ix<=depos_order; ix++){
-                Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*
-                    bx_arr(lo.x+j_bx+ix, lo.y+k_bx+iy, lo.z+l_bx+iz);
+                // Add the external field contribution for pulsar
+                int ii = lo.x + j_bx + ix;
+                int jj = lo.y + k_bx + iy;
+                int kk = lo.z + l_bx + iz;
+                int Field = 0; // 1 for Efield, 0 for Bfield
+                int comp = 0; // 0 for xcomponent
+                amrex::Real bx_ext = GetExternalFieldAtCellLocation( ii, jj, kk,
+                                       Bx_stag, dom_lo, dom_hi, dx,
+                                       cur_time, Field, comp);
+                Bxp += sx_bx[ix]*sy_bx[iy]*sz_bx[iz]*bx_ext;
             }
         }
     }
-#endif
 }
+
+
+
 
 /**
  * \brief Field gather for particles
@@ -393,7 +404,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
  * \param n_rz_azimuthal_modes : Number of azimuthal modes when using RZ geometry
  */
 template <int depos_order, int lower_in_v>
-void doGatherShapeN(const GetParticlePosition& getPosition,
+void doPulsarFieldGatherShapeN(const GetParticlePosition& getPosition,
                     const GetExternalEField& getExternalE, const GetExternalBField& getExternalB,
                     amrex::ParticleReal * const Exp, amrex::ParticleReal * const Eyp,
                     amrex::ParticleReal * const Ezp, amrex::ParticleReal * const Bxp,
@@ -406,9 +417,12 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
                     amrex::FArrayBox const * const bzfab,
                     const long np_to_gather,
                     const std::array<amrex::Real, 3>& dx,
-                    const std::array<amrex::Real, 3> xyzmin,
+                    const std::array<amrex::Real, 3>& xyzmin,
                     const amrex::Dim3 lo,
-                    const int n_rz_azimuthal_modes)
+                    const long n_rz_azimuthal_modes,
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo = {},
+                    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi = {},
+                    amrex::Real cur_time = 0._rt )
 {
 
     amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
@@ -439,41 +453,13 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
             getExternalE(ip, Exp[ip], Eyp[ip], Ezp[ip]);
             getExternalB(ip, Bxp[ip], Byp[ip], Bzp[ip]);
 
-#ifdef PULSAR
-            // temporarily adding this to check if turning off EB-gather
-            // of self-consistent fields within a region
-            // makes a difference
-            int dogather = 1;
-            if (PulsarParm::turnoff_plasmaEB_gather == 1) {
-                const amrex::Real xc = PulsarParm::center_star[0];
-                const amrex::Real yc = PulsarParm::center_star[1];
-                const amrex::Real zc = PulsarParm::center_star[2];
-                // find radius of the particle
-                amrex::Real rp = std::sqrt( (xp-xc)*(xp-xc)
-                                          + (yp-yc)*(yp-yc)
-                                          + (zp-zc)*(zp-zc) );
-                // set dogather to 0 if particle within user-defined nogather radius
-                if (rp <= PulsarParm::max_nogather_radius) {
-                    dogather = 0;
-                }
-            }
-            if (dogather == 1) {
-                doGatherShapeN<depos_order, lower_in_v>(
-                    xp, yp, zp, Exp[ip], Eyp[ip], Ezp[ip], Bxp[ip], Byp[ip], Bzp[ip],
-                    ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                    ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                    dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
-            }
-#else // if not a pulsar simulation
-            doGatherShapeN<depos_order, lower_in_v>(
+            doPulsarFieldGatherShapeN<depos_order, lower_in_v>(
                 xp, yp, zp, Exp[ip], Eyp[ip], Ezp[ip], Bxp[ip], Byp[ip], Bzp[ip],
                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
-#endif // end if pulsar
-        }
-        );
-
+                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                dom_lo, dom_hi, cur_time);
+        });
 }
 
 /**
@@ -494,7 +480,7 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
  * \param galerkin_interpolation        : whether to use lower order in v
  */
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void doGatherShapeN (const amrex::ParticleReal xp,
+void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::ParticleReal yp,
                      const amrex::ParticleReal zp,
                      amrex::ParticleReal& Exp,
@@ -520,43 +506,57 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const amrex::Dim3& lo,
                      const int n_rz_azimuthal_modes,
                      const int nox,
-                     const bool galerkin_interpolation)
+                     const bool galerkin_interpolation,
+                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_lo = {},
+                     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const& dom_hi = {},
+                     amrex::Real cur_time = 0._rt )
 {
     if (galerkin_interpolation) {
         if (nox == 1) {
-            doGatherShapeN<1,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+            doPulsarFieldGatherShapeN<1,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                                dom_lo, dom_hi, cur_time
+                                );
         } else if (nox == 2) {
-            doGatherShapeN<2,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+            doPulsarFieldGatherShapeN<2,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                                dom_lo, dom_hi, cur_time
+                                );
         } else if (nox == 3) {
-            doGatherShapeN<3,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+            doPulsarFieldGatherShapeN<3,1>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                                dom_lo, dom_hi, cur_time
+                                );
         }
     } else {
         if (nox == 1) {
-            doGatherShapeN<1,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+            doPulsarFieldGatherShapeN<1,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                                dom_lo, dom_hi, cur_time
+                                );
         } else if (nox == 2) {
-            doGatherShapeN<2,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+            doPulsarFieldGatherShapeN<2,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                                dom_lo, dom_hi, cur_time);
         } else if (nox == 3) {
-            doGatherShapeN<3,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+            doPulsarFieldGatherShapeN<3,0>(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                 ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
                                 ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes);
+                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+                                dom_lo, dom_hi, cur_time);
         }
     }
 }
 
-#endif // FIELDGATHER_H_
+#endif // ifdef pulsar
+#endif // GATHEREXTERNALPULSARFIELDONGRID_H_
