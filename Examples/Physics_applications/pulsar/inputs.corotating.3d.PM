@@ -88,12 +88,12 @@ plasma_p.density_min = 1E0
 
 diagnostics.diags_names = plt chk
 plt.diag_type = Full
-plt.period = 20
+plt.intervals = 20
 plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
 
 chk.format = checkpoint
 chk.diag_type = Full
-chk.period = 1000
+chk.intervals = 1000
 
 #################################
 ######### PULSAR SETUP ##########
