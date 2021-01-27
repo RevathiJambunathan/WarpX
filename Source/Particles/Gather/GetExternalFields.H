@@ -2,9 +2,6 @@
 #define WARPX_PARTICLES_GATHER_GETEXTERNALFIELDS_H_
 
 #include "Particles/Pusher/GetAndSetPosition.H"
-#ifdef PULSAR
-    #include "Particles/PulsarParameters.H"
-#endif
 
 #include "Particles/WarpXParticleContainer_fwd.H"
 
@@ -15,11 +12,7 @@
 #include <AMReX_Parser.H>
 #include <AMReX_REAL.H>
 
-enum ExternalFieldInitType { Constant, Parser, RepeatedPlasmaLens
-#ifdef PULSAR
-     , Pulsar_Efield, Pulsar_Bfield
-#endif
- };
+enum ExternalFieldInitType { Constant, Parser, RepeatedPlasmaLens};
 
 /** \brief Base class for functors that assign external
  *         field values (E or B) to particles.
@@ -143,20 +136,6 @@ struct GetExternalField
             }
 
         }
-#ifdef PULSAR
-        else if (m_type == Pulsar_Efield)
-        {
-            amrex::ParticleReal x, y, z;
-            m_get_position(i, x, y, z);
-            PulsarParm::PulsarEField(x, y, z, field_x, field_y, field_z, m_time);
-        }
-        else if (m_type == Pulsar_Bfield)
-        {
-            amrex::ParticleReal x, y, z;
-            m_get_position(i, x, y, z);
-            PulsarParm::PulsarBField(x, y, z, field_x, field_y, field_z, m_time);
-        }
-#endif
         else
         {
             amrex::Abort("ExternalFieldInitType not known!!! \n");

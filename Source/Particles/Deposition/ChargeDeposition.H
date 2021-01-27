@@ -104,6 +104,25 @@ void doChargeDepositionShapeN (const GetParticlePosition& GetPosition,
             amrex::ParticleReal xp, yp, zp;
             GetPosition(ip, xp, yp, zp);
 
+#ifdef PULSAR
+            // temporarily adding this to check if turning off j-deposition
+            // within a region that is corotating makes a difference
+            if (PulsarParm::turnoffdeposition == 1) {
+                const amrex::Real xc = PulsarParm::center_star[0];
+                const amrex::Real yc = PulsarParm::center_star[1];
+                const amrex::Real zc = PulsarParm::center_star[2];
+                // find radius of the particle
+                amrex::Real rp = std::sqrt( (xp-xc)*(xp-xc)
+                                          + (yp-yc)*(yp-yc)
+                                          + (zp-zc)*(zp-zc) );
+                // change the locally defined particle weight, wq, to 0
+                // within the region defined by r<=max_radius_nodepos
+                if (rp <= PulsarParm::max_nodepos_radius) {
+                    wq = 0.;
+                }
+            }
+#endif
+
             // --- Compute shape factors
             // x direction
             // Get particle position in grid coordinates
