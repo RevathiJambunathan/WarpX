@@ -97,7 +97,7 @@ namespace PulsarParm
             pp.query("max_nodepos_radius", max_nodepos_radius);
             amrex::Print() << " deposition turned off within radius : " << max_nodepos_radius << "\n";
         }
-        pp.query("turnoff_plamsaEB_gather", turnoff_plasmaEB_gather);
+        pp.query("turnoff_plasmaEB_gather", turnoff_plasmaEB_gather);
         amrex::Print() << " is plasma EB gather off ? " << turnoff_plasmaEB_gather << "\n";
         if (turnoff_plasmaEB_gather == 1) {
             max_nogather_radius = R_star;
