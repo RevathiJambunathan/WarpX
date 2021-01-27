@@ -1554,7 +1554,11 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     }
 #endif
 
+#ifdef PULSAR
+    bool deposit_charge =  true;
+#else
     bool deposit_charge = do_dive_cleaning || (do_electrostatic == ElectrostaticSolverAlgo::LabFrame);
+#endif // pulsar endif
     if (WarpX::maxwell_solver_id == MaxwellSolverAlgo::PSATD) {
         deposit_charge = do_dive_cleaning || update_with_rho || current_correction;
     }
