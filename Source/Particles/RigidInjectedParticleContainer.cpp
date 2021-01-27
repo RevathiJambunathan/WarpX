@@ -484,6 +484,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
                                dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
                                nox, galerkin_interpolation);
+
                 getExternalE(ip, Exp, Eyp, Ezp);
                 getExternalB(ip, Bxp, Byp, Bzp);
 
