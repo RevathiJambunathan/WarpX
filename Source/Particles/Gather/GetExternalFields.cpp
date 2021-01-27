@@ -50,14 +50,6 @@ GetExternalEField::GetExternalEField (const WarpXParIter& a_pti, int a_offset) n
         m_repeated_plasma_lens_strengths_E = mypc.d_repeated_plasma_lens_strengths_E.data();
         m_repeated_plasma_lens_strengths_B = mypc.d_repeated_plasma_lens_strengths_B.data();
     }
-#ifdef PULSAR
-    if (PulsarParm::EB_external == 1)
-    {
-        m_type = Pulsar_Efield;
-        m_time = warpx.gett_new(a_pti.GetLevel());
-        m_get_position = GetParticlePosition(a_pti, a_offset);
-    }
-#endif
 }
 
 GetExternalBField::GetExternalBField (const WarpXParIter& a_pti, int a_offset) noexcept
@@ -100,12 +92,4 @@ GetExternalBField::GetExternalBField (const WarpXParIter& a_pti, int a_offset) n
         m_repeated_plasma_lens_strengths_E = mypc.d_repeated_plasma_lens_strengths_E.data();
         m_repeated_plasma_lens_strengths_B = mypc.d_repeated_plasma_lens_strengths_B.data();
     }
-#ifdef PULSAR
-    if (PulsarParm::EB_external == 1)
-    {
-        m_type = Pulsar_Bfield;
-        m_time = warpx.gett_new(a_pti.GetLevel());
-        m_get_position = GetParticlePosition(a_pti, a_offset);
-    }
-#endif
 }

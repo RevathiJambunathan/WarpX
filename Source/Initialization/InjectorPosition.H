@@ -226,17 +226,6 @@ struct InjectorPosition
                 y < ymax and y >= ymin and
                 z < zmax and z >= zmin);
     }
- 
-    // bool: whether position specified is withing pulsar injection region
-#ifdef PULSAR
-    AMREX_GPU_HOST_DEVICE
-    bool
-    insidePulsarBounds (amrex::Real r, amrex::Real R_star, amrex::Real dR_star) const noexcept
-    {
-    //    return (r>=R_star and r<=(R_star+dR_star));
-        return (r<=R_star and r>=(R_star-dR_star));
-    }
-#endif    
 
 #ifdef PULSAR
     // bool: whether cell-center position specified is within pulsar injection region

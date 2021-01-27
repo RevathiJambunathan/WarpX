@@ -1065,6 +1065,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                         continue;
                     }
 #ifdef PULSAR
+                    //amrex::Print() << " old xyz  : " << xb << " " << yb << " " << z0 << "\n";
                     amrex::Real xc = PulsarParm::center_star[0];
                     amrex::Real yc = PulsarParm::center_star[1];
                     amrex::Real zc = PulsarParm::center_star[2];
@@ -1591,7 +1592,7 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
             amrex::HostDevice::Atomic::Add( &(*cost)[mfi.index()], wt);
         }
     }
-
+    amrex::Print() << " newly added particles : " << TotalNumberOfParticles()-valid_particles_beforeAdd << " total max particles " << Nmax_particles<< "\n";
     // The function that calls this is responsible for redistributing particles.
 }
 
