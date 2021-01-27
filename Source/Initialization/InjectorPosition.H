@@ -53,9 +53,10 @@ struct InjectorPositionRegular
             ny = ref_fac*ppc.y;
             nz = ref_fac*ppc.z;
         } else if (PulsarParm::ModifyParticleWtAtInjection == 0) {
-            nx = ref_fac*ppc.x*std::cbrt(PulsarParm::Ninj_fraction);
-            ny = ref_fac*ppc.y*std::cbrt(PulsarParm::Ninj_fraction);
-            nz = ref_fac*ppc.z*std::cbrt(PulsarParm::Ninj_fraction);
+            amrex::Real ninj_per_dim = std::cbrt(PulsarParm::Ninj_fraction);
+            nx = ref_fac*ppc.x*ninj_per_dim;
+            ny = ref_fac*ppc.y*ninj_per_dim;
+            nz = ref_fac*ppc.z*ninj_per_dim;
         }
 #else
         amrex::Abort("pulsar sim does not support 2d yet");

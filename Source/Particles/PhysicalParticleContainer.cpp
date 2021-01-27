@@ -218,8 +218,7 @@ void PhysicalParticleContainer::InitData ()
     // Init ionization module here instead of in the PhysicalParticleContainer
     // constructor because dt is required
     if (do_field_ionization) {InitIonizationModule();}
-#ifdef PULSAR
-#else
+#ifndef PULSAR
     AddParticles(0); // Note - add on level 0
     Redistribute();  // We then redistribute
 #endif
@@ -884,7 +883,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     // the next generated particle.
 
                     // include ballistic correction for plasma species with bulk motion
-                    amrex::Real z0 = applyBallisticCorrection(pos, inj_mom, gamma_boost,
+                    const amrex::Real z0 = applyBallisticCorrection(pos, inj_mom, gamma_boost,
                                                              beta_boost, t);
                     if (!inj_pos->insideBounds(xb, yb, z0)) {
                         p.id() = -1;
@@ -897,7 +896,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     amrex::Real zc = PulsarParm::center_star[2];
                     amrex::Real rad = std::sqrt( (xb-xc)*(xb-xc) + (yb-yc)*(yb-yc) + (z0-zc)*(z0-zc));
                     if (!inj_pos->insidePulsarBounds(rad,PulsarParm::R_star,PulsarParm::dR_star)) {
-                        //convert x, y, z to r, theta, phi;
                          p.id() = -1;
                        continue;
                     }
