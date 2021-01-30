@@ -1070,7 +1070,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     amrex::Real yc = PulsarParm::center_star[1];
                     amrex::Real zc = PulsarParm::center_star[2];
                     amrex::Real rad = std::sqrt( (xb-xc)*(xb-xc) + (yb-yc)*(yb-yc) + (z0-zc)*(z0-zc));
-                    if (!inj_pos->insidePulsarBounds(rad,PulsarParm::R_star,PulsarParm::dR_star)) {
+                    if (!inj_pos->insidePulsarBounds(rad,PulsarParm::particle_inject_rmin,
+                                                         PulsarParm::particle_inject_rmax)) {
                          p.id() = -1;
                        continue;
                     }
