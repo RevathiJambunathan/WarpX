@@ -138,3 +138,5 @@ pulsar.turnoff_plasmaEB_gather = 0    # (0/1) 0 is default. always gather
                                       # 1 for no gather of self-consistent fields
 pulsar.max_nogather_radius = 0.       # radius within which self-consistent field gather
                                       # is turned off
+pulsar.nullifyEB = 1                  # more strict than damp EB, sets fields to zero
+pulsar.max_nullifyEB_radius = 12032   # all cells within r<nullifyradius will have EB=0

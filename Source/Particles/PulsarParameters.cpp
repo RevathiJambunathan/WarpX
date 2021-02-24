@@ -34,6 +34,8 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
+    AMREX_GPU_DEVICE_MANAGED int nullifyEB = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_nullifyEB_radius;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -104,5 +106,12 @@ namespace PulsarParm
             pp.query("max_nogather_radius", max_nogather_radius);
             amrex::Print() << " gather off within radius : " << max_nogather_radius << "\n";
         }
+        pp.query("nullifyEB",nullifyEB);
+        if (nullifyEB == 1) {
+            max_nullifyEB_radius = R_star;
+            pp.query("max_nullifyEB_radius", max_nullifyEB_radius);
+            amrex::Print() << " rmax nullifying plasma EB " << max_nullifyEB_radius << "\n";
+        }
+        
     }
 }

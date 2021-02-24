@@ -146,7 +146,7 @@ WarpX::Evolve (int numsteps)
         }
 
 #ifdef PULSAR
-        if (PulsarParm::damp_EB_internal) {
+        if (PulsarParm::damp_EB_internal == 1) {
             MultiFab *Ex, *Ey, *Ez;
             MultiFab *Bx, *By, *Bz;
             for (int lev = 0; lev <= finest_level; ++lev) {

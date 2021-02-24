@@ -39,6 +39,8 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
+    extern AMREX_GPU_DEVICE_MANAGED int nullifyEB;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_nullifyEB_radius;
 
     void ReadParameters();
 
@@ -203,6 +205,17 @@ namespace PulsarParm
             // Fd(R_star) ~ 1
             const amrex::Real Fd = std::tanh(damping_scale * (r / R_star - 1.0)) + 1.0;
             Efield(i, j, k) = Efield(i, j, k) * Fd;
+        }
+    }
+
+    /** Sets the field to zero, if i,j,k is inside a user-defined max_nullifyEB_radius
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void NullifyField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Field, amrex::GpuArray<int, 3> const mf_ixtype)
+    {
+        amrex::Real r = Spherical::r(i, j, k, geom, mf_ixtype);
+        if (r <= max_nullifyEB_radius) {
+            Field(i, j, k) = 0.;
         }
     }
 }

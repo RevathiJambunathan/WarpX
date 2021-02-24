@@ -132,10 +132,6 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
     amrex::Abort("pulsar does not work in 2D");
 #endif
 
-#ifndef WARPX_DIM_RZ
-    amrex::Abort("pulsar does not work in RZ");
-#endif
-
     const amrex::Real dxi = 1.0_rt/dx[0];
     const amrex::Real dyi = 1.0_rt/dx[1];
     const amrex::Real dzi = 1.0_rt/dx[2];

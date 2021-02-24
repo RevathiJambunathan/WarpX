@@ -16,7 +16,9 @@
 #endif
 #include "Utils/WarpXConst.H"
 #include <AMReX_Gpu.H>
-
+#ifdef PULSAR
+#include "WarpX.H"
+#endif
 
 using namespace amrex;
 
@@ -149,7 +151,37 @@ void FiniteDifferenceSolver::EvolveECartesian (
             );
 
         }
-
+#ifdef PULSAR
+        // set Efield to zero if set_plasmaEB_to_zero
+        if (PulsarParm::nullifyEB == 1) {
+            amrex::IntVect ex_type = Efield[0]->ixType().toIntVect();
+            amrex::IntVect ey_type = Efield[1]->ixType().toIntVect();
+            amrex::IntVect ez_type = Efield[2]->ixType().toIntVect();
+            amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag;
+            for (int idim = 0; idim < 3; ++idim)
+            {
+                Ex_stag[idim] = ex_type[idim];
+                Ey_stag[idim] = ey_type[idim];
+                Ez_stag[idim] = ez_type[idim];
+            }
+            auto &warpx = WarpX::GetInstance();
+            auto geom = warpx.Geom(0).data();
+            amrex::ParallelFor(tex, tey, tez,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                {
+                    PulsarParm::NullifyField(i, j, k, geom, Ex, Ex_stag);
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                {
+                    PulsarParm::NullifyField(i, j, k, geom, Ey, Ey_stag);
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                {
+                    PulsarParm::NullifyField(i, j, k, geom, Ez, Ez_stag);
+                }
+            );          
+        }
+#endif
     }
 
 }
