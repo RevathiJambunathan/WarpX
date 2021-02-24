@@ -110,7 +110,7 @@ pulsar.dR = 1400                       # thickness on the surface of the pulsar
                                        # consistency requires dR = my_constants.dR
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
-pulsar.E_external_monopole = 0                  # [0/1]
+pulsar.E_external_monopole = 1                  # [0/1]
 pulsar.EB_corotating_maxradius = 12032 # The radius where E-field changes from corotating
                                        # inside the star to quadrapole outside.
                                        # Default is R_star. (r<=cor_radius) i.e. the includes
