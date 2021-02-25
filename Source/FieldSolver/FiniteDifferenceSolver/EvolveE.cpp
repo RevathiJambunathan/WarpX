@@ -71,7 +71,18 @@ void FiniteDifferenceSolver::EvolveECartesian (
     amrex::Real const dt ) {
 
     Real constexpr c2 = PhysConst::c * PhysConst::c;
-
+#ifdef PULSAR
+    amrex::IntVect ex_type = Efield[0]->ixType().toIntVect();
+    amrex::IntVect ey_type = Efield[1]->ixType().toIntVect();
+    amrex::IntVect ez_type = Efield[2]->ixType().toIntVect();
+    amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag;
+    for (int idim = 0; idim < 3; ++idim)
+    {
+        Ex_stag[idim] = ex_type[idim];
+        Ey_stag[idim] = ey_type[idim];
+        Ez_stag[idim] = ez_type[idim];
+    }
+#endif
     // Loop through the grids, and over the tiles within each grid
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -154,16 +165,6 @@ void FiniteDifferenceSolver::EvolveECartesian (
 #ifdef PULSAR
         // set Efield to zero if set_plasmaEB_to_zero
         if (PulsarParm::nullifyEB == 1) {
-            amrex::IntVect ex_type = Efield[0]->ixType().toIntVect();
-            amrex::IntVect ey_type = Efield[1]->ixType().toIntVect();
-            amrex::IntVect ez_type = Efield[2]->ixType().toIntVect();
-            amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag;
-            for (int idim = 0; idim < 3; ++idim)
-            {
-                Ex_stag[idim] = ex_type[idim];
-                Ey_stag[idim] = ey_type[idim];
-                Ez_stag[idim] = ez_type[idim];
-            }
             auto &warpx = WarpX::GetInstance();
             auto geom = warpx.Geom(0).data();
             amrex::ParallelFor(tex, tey, tez,

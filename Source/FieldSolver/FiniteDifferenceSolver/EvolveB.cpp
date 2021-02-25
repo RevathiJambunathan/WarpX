@@ -61,7 +61,18 @@ void FiniteDifferenceSolver::EvolveBCartesian (
     std::array< std::unique_ptr<amrex::MultiFab>, 3 >& Bfield,
     std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Efield,
     amrex::Real const dt ) {
-
+#ifdef PULSAR
+    amrex::IntVect bx_type = Bfield[0]->ixType().toIntVect();
+    amrex::IntVect by_type = Bfield[1]->ixType().toIntVect();
+    amrex::IntVect bz_type = Bfield[2]->ixType().toIntVect();
+    amrex::GpuArray<int, 3> Bx_stag, By_stag, Bz_stag;
+    for (int idim = 0; idim < 3; ++idim)
+    {   
+        Bx_stag[idim] = bx_type[idim];
+        By_stag[idim] = by_type[idim];
+        Bz_stag[idim] = bz_type[idim];
+    }
+#endif
     // Loop through the grids, and over the tiles within each grid
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -111,16 +122,6 @@ void FiniteDifferenceSolver::EvolveBCartesian (
 #ifdef PULSAR
         // set Efield to zero if set_plasmaEB_to_zero
         if (PulsarParm::nullifyEB == 1) {
-            amrex::IntVect bx_type = Bfield[0]->ixType().toIntVect();
-            amrex::IntVect by_type = Bfield[1]->ixType().toIntVect();
-            amrex::IntVect bz_type = Bfield[2]->ixType().toIntVect();
-            amrex::GpuArray<int, 3> Bx_stag, By_stag, Bz_stag;
-            for (int idim = 0; idim < 3; ++idim)
-            {   
-                Bx_stag[idim] = bx_type[idim];
-                By_stag[idim] = by_type[idim];
-                Bz_stag[idim] = bz_type[idim];
-            }
             auto &warpx = WarpX::GetInstance();
             auto geom = warpx.Geom(0).data();
             amrex::ParallelFor(tbx, tby, tbz,
