@@ -36,6 +36,10 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
     AMREX_GPU_DEVICE_MANAGED int nullifyEB = 0;
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_nullifyEB_radius;
+    AMREX_GPU_DEVICE_MANAGED int ForceFreeCondition = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_FF_radius;
+    AMREX_GPU_DEVICE_MANAGED int nullify_FF_jparallel = 0;
+    AMREX_GPU_DEVICE_MANAGED int subtract_FF_Eparallel = 0;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -111,6 +115,15 @@ namespace PulsarParm
             max_nullifyEB_radius = R_star;
             pp.query("max_nullifyEB_radius", max_nullifyEB_radius);
             amrex::Print() << " rmax nullifying plasma EB " << max_nullifyEB_radius << "\n";
+        }
+        pp.query("ForceFree", ForceFreeCondition);
+        if (ForceFreeCondition == 1) {
+            max_FF_radius = 12032;
+            nullify_FF_jparallel = 1;
+            subtract_FF_Eparallel = 1;
+            pp.query("max_FF_radius", max_FF_radius);
+            pp.query("nullify_FF_jparallel", nullify_FF_jparallel);
+            pp.query("subtract_FF_Eparallel", subtract_FF_Eparallel);
         }
         
     }

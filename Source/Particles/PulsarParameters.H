@@ -41,6 +41,11 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
     extern AMREX_GPU_DEVICE_MANAGED int nullifyEB;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_nullifyEB_radius;
+    extern AMREX_GPU_DEVICE_MANAGED int ForceFreeCondition;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_FF_radius;
+    extern AMREX_GPU_DEVICE_MANAGED int nullify_FF_jparallel;
+    extern AMREX_GPU_DEVICE_MANAGED int subtract_FF_Eparallel;
+    
 
     void ReadParameters();
 
@@ -191,6 +196,35 @@ namespace PulsarParm
              amrex::Real const phi, amrex::Real & F_z)
     {
         F_z = F_r * std::cos(theta) - F_theta * std::sin(theta);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalRComponent ( amrex::Real const F_x,
+        amrex::Real const F_y, amrex::Real const F_z, amrex::Real const r,
+        amrex::Real const theta, amrex::Real const phi, amrex::Real & F_r)
+    {
+        F_r = F_x * std::sin(theta) * std::cos(phi)
+            + F_y * std::sin(theta) * std::sin(phi)
+            + F_z * std::cos(theta);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalThetaComponent ( amrex::Real const F_x,
+        amrex::Real const F_y, amrex::Real const F_z, amrex::Real const r,
+        amrex::Real const theta, amrex::Real const phi, amrex::Real & F_theta)
+    {
+        F_theta = F_x * std::cos(theta) * std::cos(phi)
+                + F_y * std::cos(theta) * std::sin(phi)
+                - F_z * std::sin(theta);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalPhiComponent ( amrex::Real const F_x,
+        amrex::Real const F_y, amrex::Real const F_z, amrex::Real const r,
+        amrex::Real const theta, amrex::Real const phi, amrex::Real & F_phi)
+    {
+        F_phi = (-1.) * F_x * std::sin(phi)
+              + F_y * std::cos(phi);
     }
 
 

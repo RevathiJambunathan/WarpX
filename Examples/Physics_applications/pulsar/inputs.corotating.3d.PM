@@ -43,9 +43,9 @@ my_constants.c = 299792458.
 my_constants.B_star = 8.0323e-6                  # magnetic field of NS (T)
 my_constants.dR = 1400
 my_constants.to = 2.e-4
-interpolation.nox = 3
-interpolation.noy = 3
-interpolation.noz = 3
+interpolation.nox = 1
+interpolation.noy = 1
+interpolation.noz = 1
 
 
 #################################
@@ -111,7 +111,7 @@ pulsar.dR = 1400                       # thickness on the surface of the pulsar
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 1                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 1                  # [0/1]
-pulsar.EB_corotating_maxradius = 12032 # The radius where E-field changes from corotating
+pulsar.EB_corotating_maxradius = 12500 # The radius where E-field changes from corotating
                                        # inside the star to quadrapole outside.
                                        # Default is R_star. (r<=cor_radius) i.e. the includes
                                        # the r specified in the input
@@ -126,17 +126,21 @@ pulsar.max_particle_absorption_radius = 12032   # Maximum radius within which pa
                                                 # deleted every timestep.
                                                 # Default is Rstar
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
-pulsar.damp_EB_internal = 1             # Damp internal electric field
+pulsar.damp_EB_internal = 0             # Damp internal electric field
 pulsar.damp_EB_radius = 12032         # The radius within which EB should be damped.
                                       # default is r_star (damping will include this radius)
 pulsar.damping_scale = 1000.0            # Damping scale factor for internal electric field
 pulsar.turnoffdeposition = 0         # (0/1) 0 for depositing (default)
                                       #       1 for no deposition
-pulsar.max_nodepos_radius = 0.        # radius within which particle deposition for j/rho
+pulsar.max_nodepos_radius = 12032.        # radius within which particle deposition for j/rho
                                       # is turned off. (r<=max_radius)
 pulsar.turnoff_plasmaEB_gather = 0    # (0/1) 0 is default. always gather
                                       # 1 for no gather of self-consistent fields
-pulsar.max_nogather_radius = 0.       # radius within which self-consistent field gather
+pulsar.max_nogather_radius = 12032.       # radius within which self-consistent field gather
                                       # is turned off
 pulsar.nullifyEB = 1                  # more strict than damp EB, sets fields to zero
 pulsar.max_nullifyEB_radius = 12032   # all cells within r<nullifyradius will have EB=0
+pulsar.ForceFree = 0                  # setting force-free condition in pulsar
+pulsar.max_FF_radius = 12032          # setting force free condition in r<rstar
+pulsar.nullify_FF_jparallel = 1       # setting j_parallel (jr, jtheta) in r<rstar to zero
+pulsar.subtract_FF_Eparallel = 1      # setting E_parallel (Er, Etheta) in r<rstar to zero

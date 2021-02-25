@@ -14,6 +14,7 @@
 #include "WarpX.H"
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXUtil.H"
+#include "Utils/CoarsenIO.H"
 #include "Python/WarpXWrappers.h"
 #include "Utils/IonizationEnergiesTable.H"
 #include "Particles/Gather/FieldGather.H"
@@ -1232,6 +1233,145 @@ PhysicalParticleContainer::Evolve (int lev,
     if (do_splitting && (a_dt_type == DtType::SecondHalf || a_dt_type == DtType::Full) ){
         SplitParticles(lev);
     }
+
+#ifdef PULSAR
+    if (PulsarParm::ForceFreeCondition == 1 && PulsarParm::nullify_FF_jparallel == 1) {
+        auto & warpx = WarpX::GetInstance();
+        const auto problo = warpx.Geom(lev).ProbLoArray();
+        const auto probhi = warpx.Geom(lev).ProbHiArray();
+        amrex::Real cur_time = warpx.gett_new(lev);
+        amrex::GpuArray<amrex::Real, 3> dx_arr = { warpx.Geom(lev).CellSize(0),
+                                                   warpx.Geom(lev).CellSize(1),
+                                                   warpx.Geom(lev).CellSize(2)
+                                                 };
+        std::unique_ptr<amrex::MultiFab> jx_old;
+        std::unique_ptr<amrex::MultiFab> jy_old;
+        std::unique_ptr<amrex::MultiFab> jz_old;
+        jx_old.reset(new MultiFab(jx.boxArray(), jx.DistributionMap(), 1, jx.nGrow() ));
+        jy_old.reset(new MultiFab(jy.boxArray(), jy.DistributionMap(), 1, jy.nGrow() ));
+        jz_old.reset(new MultiFab(jz.boxArray(), jz.DistributionMap(), 1, jz.nGrow() ));
+        amrex::IntVect jx_type = jx.ixType().toIntVect();
+        amrex::IntVect jy_type = jy.ixType().toIntVect();
+        amrex::IntVect jz_type = jz.ixType().toIntVect();
+        amrex::GpuArray<int, 3> jx_stag, jy_stag, jz_stag, cr_ratio;
+        for (int idim = 0; idim < 3; ++idim)
+        {
+            jx_stag[idim] = jx_type[idim];
+            jy_stag[idim] = jy_type[idim];
+            jz_stag[idim] = jz_type[idim];
+            cr_ratio[idim] = 1;
+        }
+        // Modify current in pulsar to retain only EXB term.
+       for (MFIter mfi(jx, TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
+           Array4<amrex::Real> const& jx_arr = jx.array(mfi);
+           Array4<amrex::Real> const& jy_arr = jy.array(mfi);
+           Array4<amrex::Real> const& jz_arr = jz.array(mfi);
+           Array4<amrex::Real> const& jx_old_arr = jx_old->array(mfi);
+           Array4<amrex::Real> const& jy_old_arr = jy_old->array(mfi);
+           Array4<amrex::Real> const& jz_old_arr = jz_old->array(mfi);
+           amrex::Box const& tjx = mfi.tilebox(jx_type);
+           amrex::Box const& tjy = mfi.tilebox(jy_type);
+           amrex::Box const& tjz = mfi.tilebox(jz_type);
+
+           amrex::ParallelFor (tjx, tjy, tjz,
+               [=] AMREX_GPU_DEVICE ( int i, int j, int k) {
+                   // Compute coordinates at i,j,k
+                   amrex::Real x, y, z;
+                   PulsarParm::ComputeCellCoordinates (i, j, k, jx_stag, problo, dx_arr,
+                                                       x, y, z);
+                   amrex::Real r, theta, phi;
+                   PulsarParm::ConvertCartesianToSphericalCoord (x, y, z, problo, probhi,
+                                                                 r, theta, phi);
+                   if (r <= PulsarParm::max_FF_radius ) {
+                       // convert jx, jy, jz to jr, jtheta, jphi
+                       amrex::Real jx_loc = jx_old_arr(i,j,k);
+                       amrex::Real jy_loc = CoarsenIO::Interp(jy_old_arr, jy_stag, jx_stag,
+                                                              cr_ratio, i, j, k, 0);
+                       amrex::Real jz_loc = CoarsenIO::Interp(jz_old_arr, jz_stag, jx_stag,
+                                                              cr_ratio, i, j, k, 0);
+                       amrex::Real jr, jtheta, jphi;
+                       PulsarParm::ConvertCartesianToSphericalRComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jr);
+                       PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jtheta);
+                       PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jphi);
+                       // set jr, jtheta to zero
+                       jr = 0.;
+                       jtheta = 0.;
+                       // reconvert jr, jtheta, jphi to x-component
+                       PulsarParm::ConvertSphericalToCartesianXComponent(
+                           jr, jtheta, jphi, r, theta, phi, jx_loc);
+                       // reset jx to have only the perpendicular jphi component.
+                       jx_arr(i, j, k) = jx_loc;
+                   }
+               },
+
+               [=] AMREX_GPU_DEVICE ( int i, int j, int k) {
+                   amrex::Real x, y, z;
+                   PulsarParm::ComputeCellCoordinates (i, j, k, jy_stag, problo, dx_arr,
+                                                       x, y, z);
+                   amrex::Real r, theta, phi;
+                   PulsarParm::ConvertCartesianToSphericalCoord (x, y, z, problo, probhi,
+                                                                 r, theta, phi);
+                   if (r <= PulsarParm::max_FF_radius) {
+                       amrex::Real jy_loc = jy_old_arr(i,j,k);
+                       amrex::Real jx_loc = CoarsenIO::Interp(jx_old_arr, jx_stag, jy_stag,
+                                                              cr_ratio, i, j, k, 0);
+                       amrex::Real jz_loc = CoarsenIO::Interp(jz_old_arr, jz_stag, jy_stag,
+                                                              cr_ratio, i, j, k, 0);
+                       amrex::Real jr, jtheta, jphi;
+                       PulsarParm::ConvertCartesianToSphericalRComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jr);
+                       PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jtheta);
+                       PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jphi);
+                       // set jr, jtheta to zero
+                       jr = 0.;
+                       jtheta = 0.;
+                       // reconvert jr, jtheta, jphi to x-component
+                       PulsarParm::ConvertSphericalToCartesianYComponent(
+                           jr, jtheta, jphi, r, theta, phi, jy_loc);
+                       jy_arr(i, j, k) = jy_loc;
+                   }
+               },
+
+               [=] AMREX_GPU_DEVICE ( int i, int j, int k) {
+                   amrex::Real x, y, z;
+                   PulsarParm::ComputeCellCoordinates (i, j, k, jz_stag, problo, dx_arr,
+                                                       x, y, z);
+                   amrex::Real r, theta, phi;
+                   PulsarParm::ConvertCartesianToSphericalCoord (x, y, z, problo, probhi,
+                                                                 r, theta, phi);
+                   if ( r <= PulsarParm::max_FF_radius) {
+                       amrex::Real jz_loc = jz_old_arr(i,j,k);
+                       amrex::Real jx_loc = CoarsenIO::Interp(jx_old_arr, jx_stag, jz_stag,
+                                                              cr_ratio, i, j, k, 0);
+                       amrex::Real jy_loc = CoarsenIO::Interp(jy_old_arr, jy_stag, jz_stag,
+                                                              cr_ratio, i, j, k, 0);
+                       amrex::Real jr, jtheta, jphi;
+                       PulsarParm::ConvertCartesianToSphericalRComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jr);
+                       PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jtheta);
+                       PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                           jx_loc, jy_loc, jz_loc, r, theta, phi, jphi);
+                       // set jr, jtheta to 0
+                       jr = 0.;
+                       jtheta = 0.;
+                       // reconvert jr, jtheta, jphi to x-component
+                       PulsarParm::ConvertSphericalToCartesianZComponent(
+                           jr, jtheta, jphi, r, theta, phi, jz_loc);
+                       jy_arr(i, j, k) = jz_loc;
+                   }
+               }                             
+           );
+       }
+    }
+                    
+#endif                    
+
 }
 
 void

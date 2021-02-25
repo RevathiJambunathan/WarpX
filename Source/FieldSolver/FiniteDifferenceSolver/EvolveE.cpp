@@ -6,6 +6,7 @@
  */
 
 #include "Utils/WarpXAlgorithmSelection.H"
+#include "Utils/CoarsenIO.H"
 #include "FiniteDifferenceSolver.H"
 #ifdef WARPX_DIM_RZ
 #   include "FiniteDifferenceAlgorithms/CylindricalYeeAlgorithm.H"
@@ -71,7 +72,18 @@ void FiniteDifferenceSolver::EvolveECartesian (
     amrex::Real const dt ) {
 
     Real constexpr c2 = PhysConst::c * PhysConst::c;
-
+#ifdef PULSAR
+    amrex::IntVect ex_type = Efield[0]->ixType().toIntVect();
+    amrex::IntVect ey_type = Efield[1]->ixType().toIntVect();
+    amrex::IntVect ez_type = Efield[2]->ixType().toIntVect();
+    amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag;
+    for (int idim = 0; idim < 3; ++idim)
+    {
+        Ex_stag[idim] = ex_type[idim];
+        Ey_stag[idim] = ey_type[idim];
+        Ez_stag[idim] = ez_type[idim];
+    }
+#endif
     // Loop through the grids, and over the tiles within each grid
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -154,16 +166,6 @@ void FiniteDifferenceSolver::EvolveECartesian (
 #ifdef PULSAR
         // set Efield to zero if set_plasmaEB_to_zero
         if (PulsarParm::nullifyEB == 1) {
-            amrex::IntVect ex_type = Efield[0]->ixType().toIntVect();
-            amrex::IntVect ey_type = Efield[1]->ixType().toIntVect();
-            amrex::IntVect ez_type = Efield[2]->ixType().toIntVect();
-            amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag;
-            for (int idim = 0; idim < 3; ++idim)
-            {
-                Ex_stag[idim] = ex_type[idim];
-                Ey_stag[idim] = ey_type[idim];
-                Ez_stag[idim] = ez_type[idim];
-            }
             auto &warpx = WarpX::GetInstance();
             auto geom = warpx.Geom(0).data();
             amrex::ParallelFor(tex, tey, tez,
@@ -183,7 +185,133 @@ void FiniteDifferenceSolver::EvolveECartesian (
         }
 #endif
     }
-
+//#ifdef PULSAR
+//    if (PulsarParm::ForceFreeCondition == 1 && PulsarParm::subtract_FF_Eparallel == 1) {
+//        auto & warpx = WarpX::GetInstance();
+//        const auto problo = warpx.Geom(0).ProbLoArray();
+//        const auto probhi = warpx.Geom(0).ProbHiArray();
+//        amrex::Real cur_time = warpx.gett_new(0);
+//        amrex::GpuArray<amrex::Real, 3> dx_arr = { warpx.Geom(0).CellSize(0),
+//                                                   warpx.Geom(0).CellSize(1),
+//                                                   warpx.Geom(0).CellSize(2)
+//                                                 };
+//        std::unique_ptr<amrex::MultiFab> Ex_old;
+//        std::unique_ptr<amrex::MultiFab> Ey_old;
+//        std::unique_ptr<amrex::MultiFab> Ez_old;
+//        Ex_old.reset(new MultiFab(Efield[0]->boxArray(), Efield[0]->DistributionMap(), 1, Efield[0]->nGrow() ));
+//        Ey_old.reset(new MultiFab(Efield[1]->boxArray(), Efield[1]->DistributionMap(), 1, Efield[1]->nGrow() ));
+//        Ez_old.reset(new MultiFab(Efield[2]->boxArray(), Efield[2]->DistributionMap(), 1, Efield[2]->nGrow() ));
+//        amrex::GpuArray<int, 3> cr_ratio;
+//        for (int idim = 0; idim < 3; ++idim)
+//        {
+//            cr_ratio[idim] = 1;
+//        }
+//        // Loop through the grids, and over the tiles within each grid
+//#ifdef AMREX_USE_OMP
+//#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+//#endif
+//        for ( MFIter mfi(*Efield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
+//    
+//            // Extract field data for this grid/tile
+//            Array4<Real> const& Ex = Efield[0]->array(mfi);
+//            Array4<Real> const& Ey = Efield[1]->array(mfi);
+//            Array4<Real> const& Ez = Efield[2]->array(mfi);
+//            Array4<Real> const& Ex_old_arr = Ex_old->array(mfi);
+//            Array4<Real> const& Ey_old_arr = Ey_old->array(mfi);
+//            Array4<Real> const& Ez_old_arr = Ez_old->array(mfi);
+//            // Extract tileboxes for which to loop
+//            Box const& tex  = mfi.tilebox(Efield[0]->ixType().toIntVect());
+//            Box const& tey  = mfi.tilebox(Efield[1]->ixType().toIntVect());
+//            Box const& tez  = mfi.tilebox(Efield[2]->ixType().toIntVect());
+//            // Loop over the cells and update the fields
+//            amrex::ParallelFor (tex, tey, tez,
+//                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+//                    amrex::Real x, y, z;
+//                    PulsarParm::ComputeCellCoordinates (i, j, k, Ex_stag, problo, dx_arr,
+//                                                        x, y, z);
+//                    amrex::Real r, theta, phi;
+//                    PulsarParm::ConvertCartesianToSphericalCoord (x, y, z, problo, probhi,
+//                                                                  r, theta, phi);
+//                    if ( r <= PulsarParm::max_FF_radius) {
+//                        amrex::Real Ex_loc = Ex_old_arr(i,j,k);
+//                        amrex::Real Ey_loc = CoarsenIO::Interp(Ey_old_arr, Ey_stag, Ex_stag,
+//                                                        cr_ratio, i, j, k, 0);
+//                        amrex::Real Ez_loc = CoarsenIO::Interp(Ez_old_arr, Ez_stag, Ex_stag,
+//                                                        cr_ratio, i, j, k, 0);
+//                        amrex::Real Er, Etheta, Ephi; 
+//                        PulsarParm::ConvertCartesianToSphericalRComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Er);
+//                        PulsarParm::ConvertCartesianToSphericalThetaComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Etheta);
+//                        PulsarParm::ConvertCartesianToSphericalPhiComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Ephi);
+//                        Er = 0.;
+//                        Etheta = 0.;
+//                        PulsarParm::ConvertSphericalToCartesianXComponent(
+//                            Er, Etheta, Ephi, r, theta, phi, Ex_loc);
+//                        Ex(i, j, k) = Ex_loc;
+//                        
+//                    }
+//                },
+//                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+//                    amrex::Real x, y, z;
+//                    PulsarParm::ComputeCellCoordinates (i, j, k, Ey_stag, problo, dx_arr,
+//                                                        x, y, z);
+//                    amrex::Real r, theta, phi;
+//                    PulsarParm::ConvertCartesianToSphericalCoord (x, y, z, problo, probhi,
+//                                                                  r, theta, phi);
+//                    if ( r <= PulsarParm::max_FF_radius) {
+//                        amrex::Real Ey_loc = Ey_old_arr(i,j,k);
+//                        amrex::Real Ex_loc = CoarsenIO::Interp(Ex_old_arr, Ex_stag, Ey_stag,
+//                                                        cr_ratio, i, j, k, 0);
+//                        amrex::Real Ez_loc = CoarsenIO::Interp(Ez_old_arr, Ez_stag, Ey_stag,
+//                                                        cr_ratio, i, j, k, 0);
+//                        amrex::Real Er, Etheta, Ephi; 
+//                        PulsarParm::ConvertCartesianToSphericalRComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Er);
+//                        PulsarParm::ConvertCartesianToSphericalThetaComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Etheta);
+//                        PulsarParm::ConvertCartesianToSphericalPhiComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Ephi);
+//                        Er = 0.;
+//                        Etheta = 0.;
+//                        PulsarParm::ConvertSphericalToCartesianYComponent(
+//                            Er, Etheta, Ephi, r, theta, phi, Ey_loc);
+//                        Ey(i, j, k) = Ey_loc;
+//                    }
+//                },
+//                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+//                    amrex::Real x, y, z;
+//                    PulsarParm::ComputeCellCoordinates (i, j, k, Ez_stag, problo, dx_arr,
+//                                                        x, y, z);
+//                    amrex::Real r, theta, phi;
+//                    PulsarParm::ConvertCartesianToSphericalCoord (x, y, z, problo, probhi,
+//                                                                  r, theta, phi);
+//                    if ( r <= PulsarParm::max_FF_radius) {
+//                        amrex::Real Ez_loc = Ez_old_arr(i,j,k);
+//                        amrex::Real Ex_loc = CoarsenIO::Interp(Ex_old_arr, Ex_stag, Ez_stag,
+//                                                        cr_ratio, i, j, k, 0);
+//                        amrex::Real Ey_loc = CoarsenIO::Interp(Ey_old_arr, Ey_stag, Ez_stag,
+//                                                        cr_ratio, i, j, k, 0);
+//                        amrex::Real Er, Etheta, Ephi; 
+//                        PulsarParm::ConvertCartesianToSphericalRComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Er);
+//                        PulsarParm::ConvertCartesianToSphericalThetaComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Etheta);
+//                        PulsarParm::ConvertCartesianToSphericalPhiComponent(
+//                            Ex_loc, Ey_loc, Ez_loc, r, theta, phi, Ephi);
+//                        Er = 0.;
+//                        Etheta = 0.;
+//                        PulsarParm::ConvertSphericalToCartesianZComponent(
+//                            Er, Etheta, Ephi, r, theta, phi, Ez_loc);
+//                        Ez(i, j, k) = Ez_loc;
+//                    }
+//                }
+//            ); 
+//        }
+//
+//    }
+//#endif
 }
 
 #else // corresponds to ifndef WARPX_DIM_RZ
