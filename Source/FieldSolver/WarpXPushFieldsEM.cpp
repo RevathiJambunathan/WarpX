@@ -220,11 +220,20 @@ WarpX::EvolveE (amrex::Real a_dt)
 void
 WarpX::EvolveE (int lev, amrex::Real a_dt)
 {
-    WARPX_PROFILE("WarpX::EvolveE()");
-    EvolveE(lev, PatchType::fine, a_dt);
-    if (lev > 0)
-    {
-        EvolveE(lev, PatchType::coarse, a_dt);
+    const amrex::Vector<int> iter = getistep();
+    if (iter[lev]<=1) {
+        EvolveE(lev, PatchType::fine, a_dt);
+        if (lev > 0)
+        {
+            EvolveE(lev, PatchType::coarse, a_dt);
+        }
+    } else {
+        WARPX_PROFILE("WarpX::EvolveE()");
+        EvolveE(lev, PatchType::fine, a_dt);
+        if (lev > 0)
+        {
+            EvolveE(lev, PatchType::coarse, a_dt);
+        }
     }
 }
 
@@ -331,8 +340,13 @@ WarpX::MacroscopicEvolveE (amrex::Real a_dt)
 void
 WarpX::MacroscopicEvolveE (int lev, amrex::Real a_dt) {
 
-    WARPX_PROFILE("WarpX::MacroscopicEvolveE()");
-    MacroscopicEvolveE(lev, PatchType::fine, a_dt);
+    const amrex::Vector<int> iter = getistep();
+    if (iter[lev] <= 1) {
+        MacroscopicEvolveE(lev, PatchType::fine, a_dt);
+    } else {
+        WARPX_PROFILE("WarpX::MacroscopicEvolveE()");
+        MacroscopicEvolveE(lev, PatchType::fine, a_dt);
+    }	    
     if (lev > 0) {
         amrex::Abort("Macroscopic EvolveE is not implemented for lev>0, yet.");
     }
@@ -405,8 +419,14 @@ WarpX::MacroscopicEvolveHM (amrex::Real a_dt)
 void
 WarpX::MacroscopicEvolveHM (int lev, amrex::Real a_dt) {
 
-    WARPX_PROFILE("WarpX::MacroscopicEvolveHM()");
-    MacroscopicEvolveHM(lev, PatchType::fine, a_dt);
+    const amrex::Vector<int> iter = getistep();
+    if (iter[lev] <= 1) {
+        MacroscopicEvolveHM(lev, PatchType::fine, a_dt);
+    }	
+    else {	     
+        WARPX_PROFILE("WarpX::MacroscopicEvolveHM()");
+        MacroscopicEvolveHM(lev, PatchType::fine, a_dt);
+    }     
     if (lev > 0) {
         amrex::Abort("Macroscopic EvolveHM is not implemented for lev>0, yet.");
     }
@@ -448,8 +468,13 @@ WarpX::MacroscopicEvolveHM_2nd (amrex::Real a_dt)
 void
 WarpX::MacroscopicEvolveHM_2nd (int lev, amrex::Real a_dt) {
 
-    WARPX_PROFILE("WarpX::MacroscopicEvolveHM_2nd()");
-    MacroscopicEvolveHM_2nd(lev, PatchType::fine, a_dt);
+    const amrex::Vector<int> iter = getistep();
+    if (iter[lev] <= 1) {
+        MacroscopicEvolveHM_2nd(lev, PatchType::fine, a_dt);
+    } else {	    
+        WARPX_PROFILE("WarpX::MacroscopicEvolveHM_2nd()");
+        MacroscopicEvolveHM_2nd(lev, PatchType::fine, a_dt);
+    }    
     if (lev > 0) {
         amrex::Abort("Macroscopic EvolveHM_2nd is not implemented for lev>0, yet.");
     }

@@ -45,6 +45,209 @@ WarpX::Evolve (int numsteps)
     Real walltime, walltime_start = amrex::second();
     for (int step = istep[0]; step < numsteps_max && cur_time < stop_time; ++step)
     {
+        if (step <= 1) {
+        Real walltime_beg_step = amrex::second();
+
+        multi_diags->NewIteration();
+
+        // Start loop on time steps
+        amrex::Print() << "\nSTEP " << step+1 << " starts ...\n";
+
+        if (warpx_py_beforestep) warpx_py_beforestep();
+
+        amrex::LayoutData<amrex::Real>* cost = WarpX::getCosts(0);
+        if (cost) {
+            if (WarpX::maxwell_solver_id == MaxwellSolverAlgo::PSATD)
+                amrex::Abort("LoadBalance for PSATD: TODO");
+            if (step > 0 && load_balance_intervals.contains(step+1))
+            {
+                LoadBalance();
+
+                // Reset the costs to 0
+                ResetCosts();
+            }
+            for (int lev = 0; lev <= finest_level; ++lev)
+            {
+                cost = WarpX::getCosts(lev);
+                if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
+                {
+                    // Perform running average of the costs
+                    // (Giving more importance to most recent costs; only needed
+                    // for timers update, heuristic load balance considers the
+                    // instantaneous costs)
+                    for (int i : cost->IndexArray())
+                    {
+                        (*cost)[i] *= (1. - 2./load_balance_intervals.localPeriod(step+1));
+                    }
+                }
+            }
+        }	
+
+        // At the beginning, we have B^{n} and E^{n}.
+        // Particles have p^{n} and x^{n}.
+        // is_synchronized is true.
+        if (is_synchronized) {
+            // Not called at each iteration, so exchange all guard cells
+            FillBoundaryE(guard_cells.ng_alloc_EB, guard_cells.ng_Extra);
+#ifndef WARPX_MAG_LLG
+            FillBoundaryB(guard_cells.ng_alloc_EB, guard_cells.ng_Extra);
+#endif
+#ifdef WARPX_MAG_LLG
+            FillBoundaryH(guard_cells.ng_alloc_EB, guard_cells.ng_Extra);
+            FillBoundaryM(guard_cells.ng_alloc_EB, guard_cells.ng_Extra);
+#endif
+            UpdateAuxilaryData();
+            FillBoundaryAux(guard_cells.ng_UpdateAux);
+            // on first step, push p by -0.5*dt
+            for (int lev = 0; lev <= finest_level; ++lev)
+            {
+                mypc->PushP(lev, -0.5*dt[lev],
+                            *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
+                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2]);
+            }
+            is_synchronized = false;
+        } else {
+            // Beyond one step, we have E^{n} and B^{n}.
+            // Particles have p^{n-1/2} and x^{n}.
+
+            // E and B are up-to-date inside the domain only
+            FillBoundaryE(guard_cells.ng_FieldGather, guard_cells.ng_Extra);
+            FillBoundaryB(guard_cells.ng_FieldGather, guard_cells.ng_Extra);
+#ifdef WARPX_MAG_LLG
+            FillBoundaryH(guard_cells.ng_FieldGather, guard_cells.ng_Extra);
+            FillBoundaryM(guard_cells.ng_FieldGather, guard_cells.ng_Extra);
+#endif
+            // E and B: enough guard cells to update Aux or call Field Gather in fp and cp
+            // Need to update Aux on lower levels, to interpolate to higher levels.
+            if (fft_do_time_averaging)
+            {
+                FillBoundaryE_avg(guard_cells.ng_FieldGather, guard_cells.ng_Extra);
+                FillBoundaryB_avg(guard_cells.ng_FieldGather, guard_cells.ng_Extra);
+            }
+            // TODO Remove call to FillBoundaryAux before UpdateAuxilaryData?
+            if (WarpX::maxwell_solver_id != MaxwellSolverAlgo::PSATD)
+                FillBoundaryAux(guard_cells.ng_UpdateAux);
+            UpdateAuxilaryData();
+            FillBoundaryAux(guard_cells.ng_UpdateAux);
+        }
+        if (do_subcycling == 0 || finest_level == 0) {
+            OneStep_nosub(cur_time);
+            // E : guard cells are up-to-date
+            // B : guard cells are NOT up-to-date
+            // F : guard cells are NOT up-to-date
+        } else if (do_subcycling == 1 && finest_level == 1) {
+            OneStep_sub1(cur_time);
+        } else {
+            amrex::Print() << "Error: do_subcycling = " << do_subcycling << std::endl;
+            amrex::Abort("Unsupported do_subcycling type");
+        }
+
+        if (num_mirrors>0){
+            applyMirrors(cur_time);
+            // E : guard cells are NOT up-to-date
+            // B : guard cells are NOT up-to-date
+        }
+
+        if (warpx_py_beforeEsolve) warpx_py_beforeEsolve();
+
+        if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
+            // At the end of last step, push p by 0.5*dt to synchronize
+            UpdateAuxilaryData();
+            FillBoundaryAux(guard_cells.ng_UpdateAux);
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                mypc->PushP(lev, 0.5*dt[lev],
+                            *Efield_aux[lev][0],*Efield_aux[lev][1],
+                            *Efield_aux[lev][2],
+                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],
+                            *Bfield_aux[lev][2]);
+            }
+            is_synchronized = true;
+        }
+
+        if (warpx_py_afterEsolve) warpx_py_afterEsolve();
+
+        for (int lev = 0; lev <= max_level; ++lev) {
+            ++istep[lev];
+        }
+
+        cur_time += dt[0];
+
+        ShiftGalileanBoundary();
+
+        if (do_back_transformed_diagnostics) {
+            std::unique_ptr<MultiFab> cell_centered_data = nullptr;
+            if (WarpX::do_back_transformed_fields) {
+                cell_centered_data = GetCellCenteredData();
+            }
+            myBFD->writeLabFrameData(cell_centered_data.get(), *mypc, geom[0], cur_time, dt[0]);
+        }
+
+        bool move_j = is_synchronized;
+        // If is_synchronized we need to shift j too so that next step we can evolve E by dt/2.
+        // We might need to move j because we are going to make a plotfile.
+
+        int num_moved = MoveWindow(move_j);
+
+        mypc->ApplyBoundaryConditions();
+        // Electrostatic solver: particles can move by an arbitrary number of cells
+        if( do_electrostatic != ElectrostaticSolverAlgo::None )
+        {
+            mypc->Redistribute();
+        } else
+        {
+            // Electromagnetic solver: due to CFL condition, particles can
+            // only move by one or two cells per time step
+            if (max_level == 0) {
+                int num_redistribute_ghost = num_moved;
+                if ((m_v_galilean[0]!=0) or (m_v_galilean[1]!=0) or (m_v_galilean[2]!=0)) {
+                    // Galilean algorithm ; particles can move by up to 2 cells
+                    num_redistribute_ghost += 2;
+                } else {
+                    // Standard algorithm ; particles can move by up to 1 cell
+                    num_redistribute_ghost += 1;
+                }
+                mypc->RedistributeLocal(num_redistribute_ghost);
+            }
+            else {
+                mypc->Redistribute();
+            }
+        }
+
+
+        if (sort_intervals.contains(step+1)) {
+            amrex::Print() << "re-sorting particles \n";
+            mypc->SortParticlesByBin(sort_bin_size);
+        }
+
+        amrex::Print()<< "STEP " << step+1 << " ends." << " TIME = " << cur_time
+                      << " DT = " << dt[0] << "\n";
+        Real walltime_end_step = amrex::second();
+        walltime = walltime_end_step - walltime_start;
+        amrex::Print()<< "Walltime = " << walltime
+                      << " s; This step = " << walltime_end_step-walltime_beg_step
+                      << " s; Avg. per step = " << walltime/(step+1) << " s\n";
+
+        // sync up time
+        for (int i = 0; i <= max_level; ++i) {
+            t_new[i] = cur_time;
+        }
+        /// reduced diags
+        if (reduced_diags->m_plot_rd != 0)
+        {
+            reduced_diags->ComputeDiags(step);
+            reduced_diags->WriteToFile(step);
+        }
+        multi_diags->FilterComputePackFlush( step );
+
+        if (cur_time >= stop_time - 1.e-3*dt[0]) {
+            break;
+        }
+
+        if (warpx_py_afterstep) warpx_py_afterstep();
+	
+        // end no profiler condition		
+	} else {	    // profile
+        WARPX_PROFILE("WarpX::EvolveLoop()");
         Real walltime_beg_step = amrex::second();
 
         multi_diags->NewIteration();
@@ -247,6 +450,7 @@ WarpX::Evolve (int numsteps)
         if (warpx_py_afterstep) warpx_py_afterstep();
 
         // End loop on time steps
+	}
     }
 
     multi_diags->FilterComputePackFlush( istep[0], true );
