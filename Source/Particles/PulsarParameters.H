@@ -169,7 +169,8 @@ namespace PulsarParm
              amrex::Real const phi, amrex::Real & F_x)
     {
         F_x = F_r     * std::sin(theta) * std::cos(phi)
-            + F_theta * std::cos(theta) * std::cos(phi);
+            + F_theta * std::cos(theta) * std::cos(phi)
+            - F_phi   * std::sin(phi);
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -179,7 +180,8 @@ namespace PulsarParm
              amrex::Real const phi, amrex::Real & F_y)
     {
         F_y = F_r     * std::sin(theta) * std::sin(phi)
-            + F_theta * std::cos(theta) * std::sin(phi);
+            + F_theta * std::cos(theta) * std::sin(phi)
+            + F_phi   * std::cos(phi);
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
