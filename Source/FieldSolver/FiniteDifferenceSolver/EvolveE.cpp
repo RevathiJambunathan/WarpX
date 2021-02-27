@@ -90,6 +90,9 @@ void FiniteDifferenceSolver::EvolveECartesian (
         Ez_stag[idim] = ez_type[idim];
     }
     amrex::Real cur_time = warpx.gett_new(0);
+    int turnOffMaxwell = PulsarParm::turnOffMaxwell;
+    amrex::Real max_turnOffMaxwell_radius = PulsarParm::max_turnOffMaxwell_radius;
+    amrex::Real max_corotatingEongrid_radius = PulsarParm::max_corotatingEongrid_radius;
 #endif
 
     // Loop through the grids, and over the tiles within each grid
@@ -126,24 +129,87 @@ void FiniteDifferenceSolver::EvolveECartesian (
         amrex::ParallelFor(tex, tey, tez,
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
+#ifdef PULSAR
+                int updateEx = 1;
+                if (turnOffMaxwell == 1) {
+                    // get cell coordinates
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, Ex_stag, problo, dx,
+                                                       x, y, z);
+                    // convert (x,y,z) to (r, theta, phi);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                r, theta, phi);
+                    if (r < max_turnOffMaxwell_radius) updateEx = 0;
+                }
+                if (updateEx == 1) {
+                    Ex(i, j, k) += c2 * dt * (
+                        - T_Algo::DownwardDz(By, coefs_z, n_coefs_z, i, j, k)
+                        + T_Algo::DownwardDy(Bz, coefs_y, n_coefs_y, i, j, k)
+                        - PhysConst::mu0 * jx(i, j, k) );
+                }
+#else                
                 Ex(i, j, k) += c2 * dt * (
                     - T_Algo::DownwardDz(By, coefs_z, n_coefs_z, i, j, k)
                     + T_Algo::DownwardDy(Bz, coefs_y, n_coefs_y, i, j, k)
                     - PhysConst::mu0 * jx(i, j, k) );
+#endif
             },
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
+#ifdef PULSAR
+                int updateEy = 1;
+                if (turnOffMaxwell == 1) {
+                    // get cell coordinates
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, Ey_stag, problo, dx,
+                                                       x, y, z);
+                    // convert (x,y,z) to (r, theta, phi);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                r, theta, phi);
+                    if (r < max_turnOffMaxwell_radius) updateEy = 0;
+                }
+                if (updateEy == 1) {
+                    Ey(i, j, k) += c2 * dt * (
+                        - T_Algo::DownwardDx(Bz, coefs_x, n_coefs_x, i, j, k)
+                        + T_Algo::DownwardDz(Bx, coefs_z, n_coefs_z, i, j, k)
+                        - PhysConst::mu0 * jy(i, j, k) );
+                }
+#else
                 Ey(i, j, k) += c2 * dt * (
                     - T_Algo::DownwardDx(Bz, coefs_x, n_coefs_x, i, j, k)
                     + T_Algo::DownwardDz(Bx, coefs_z, n_coefs_z, i, j, k)
                     - PhysConst::mu0 * jy(i, j, k) );
+#endif
             },
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
+#ifdef PULSAR
+                int updateEz = 1;
+                if (turnOffMaxwell == 1) {
+                    // get cell coordinates
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, Ez_stag, problo, dx,
+                                                       x, y, z);
+                    // convert (x,y,z) to (r, theta, phi);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                r, theta, phi);
+                    if (r >= max_turnOffMaxwell_radius) updateEz = 0;
+                }
+                if (updateEz == 1) {
+                    Ez(i, j, k) += c2 * dt * (
+                        - T_Algo::DownwardDy(Bx, coefs_y, n_coefs_y, i, j, k)
+                        + T_Algo::DownwardDx(By, coefs_x, n_coefs_x, i, j, k)
+                        - PhysConst::mu0 * jz(i, j, k) );
+                }
+#else
                 Ez(i, j, k) += c2 * dt * (
                     - T_Algo::DownwardDy(Bx, coefs_y, n_coefs_y, i, j, k)
                     + T_Algo::DownwardDx(By, coefs_x, n_coefs_x, i, j, k)
                     - PhysConst::mu0 * jz(i, j, k) );
+#endif
             }
 
         );
@@ -186,7 +252,7 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     amrex::Real r, theta, phi;
                     PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
                                                                 r, theta, phi);
-                    if (r <= PulsarParm::max_corotatingEongrid_radius) {
+                    if (r <= max_corotatingEongrid_radius) {
                         // Compute corotating E
                         amrex::Real Er, Etheta, Ephi;
                         PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
@@ -207,7 +273,7 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     amrex::Real r, theta, phi;
                     PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
                                                                 r, theta, phi);
-                    if (r <= PulsarParm::max_corotatingEongrid_radius) {
+                    if (r <= max_corotatingEongrid_radius) {
                         // Compute corotating E                      
                         amrex::Real Er, Etheta, Ephi;
                         PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
@@ -228,7 +294,7 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     amrex::Real r, theta, phi;
                     PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
                                                                 r, theta, phi);
-                    if (r <= PulsarParm::max_corotatingEongrid_radius) {
+                    if (r <= max_corotatingEongrid_radius) {
                         // Compute corotating E                      
                         amrex::Real Er, Etheta, Ephi;
                         PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,

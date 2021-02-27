@@ -14,6 +14,10 @@
 #   include "FiniteDifferenceAlgorithms/CartesianCKCAlgorithm.H"
 #   include "FiniteDifferenceAlgorithms/CartesianNodalAlgorithm.H"
 #endif
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#    include "WarpX.H"
+#endif
 #include <AMReX_Gpu.H>
 
 using namespace amrex;
@@ -62,6 +66,26 @@ void FiniteDifferenceSolver::EvolveBCartesian (
     std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& Efield,
     amrex::Real const dt ) {
 
+#ifdef PULSAR
+    auto & warpx = WarpX::GetInstance();
+    amrex::IntVect bx_type = Bfield[0]->ixType().toIntVect();
+    amrex::IntVect by_type = Bfield[1]->ixType().toIntVect();
+    amrex::IntVect bz_type = Bfield[2]->ixType().toIntVect();
+    const auto dx = warpx.Geom(0).CellSizeArray();
+    const auto problo = warpx.Geom(0).ProbLoArray();
+    const auto probhi = warpx.Geom(0).ProbHiArray();
+    amrex::GpuArray<int, 3> Bx_stag;
+    amrex::GpuArray<int, 3> By_stag;
+    amrex::GpuArray<int, 3> Bz_stag;
+    for (int idim = 0; idim < 3; ++idim) {
+        Bx_stag[idim] = bx_type[idim];
+        By_stag[idim] = by_type[idim];
+        Bz_stag[idim] = bz_type[idim];
+    }
+    int turnOffMaxwell = PulsarParm::turnOffMaxwell;
+    amrex::Real max_turnOffMaxwell_radius = PulsarParm::max_turnOffMaxwell_radius;
+#endif
+
     // Loop through the grids, and over the tiles within each grid
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
@@ -93,18 +117,69 @@ void FiniteDifferenceSolver::EvolveBCartesian (
         amrex::ParallelFor(tbx, tby, tbz,
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
+#ifdef PULSAR
+                int updateBx = 1;
+                if (turnOffMaxwell == 1) {
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, Bx_stag, problo, dx,
+                                                       x, y, z);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                 r, theta, phi);
+                    if (r < max_turnOffMaxwell_radius) updateBx = 0;
+                }
+                if (updateBx == 1) {
+                    Bx(i, j, k) += dt * T_Algo::UpwardDz(Ey, coefs_z, n_coefs_z, i, j, k)
+                                 - dt * T_Algo::UpwardDy(Ez, coefs_y, n_coefs_y, i, j, k);
+                }
+#else
                 Bx(i, j, k) += dt * T_Algo::UpwardDz(Ey, coefs_z, n_coefs_z, i, j, k)
                              - dt * T_Algo::UpwardDy(Ez, coefs_y, n_coefs_y, i, j, k);
+#endif
             },
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
+#ifdef PULSAR
+                int updateBy = 1;
+                if (turnOffMaxwell == 1) {
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, By_stag, problo, dx,
+                                                       x, y, z);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                 r, theta, phi);
+                    if (r < max_turnOffMaxwell_radius) updateBy = 0;
+                }
+                if (updateBy == 1) {
+                    By(i, j, k) += dt * T_Algo::UpwardDx(Ez, coefs_x, n_coefs_x, i, j, k)
+                                 - dt * T_Algo::UpwardDz(Ex, coefs_z, n_coefs_z, i, j, k);
+                }
+#else
                 By(i, j, k) += dt * T_Algo::UpwardDx(Ez, coefs_x, n_coefs_x, i, j, k)
                              - dt * T_Algo::UpwardDz(Ex, coefs_z, n_coefs_z, i, j, k);
+#endif
             },
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
+#ifdef PULSAR
+                int updateBz = 1;
+                if (turnOffMaxwell == 1) {
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, Bz_stag, problo, dx,
+                                                       x, y, z);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                 r, theta, phi);
+                    if (r < max_turnOffMaxwell_radius) updateBz = 0;
+                }
+                if (updateBz == 1) {
+                    Bz(i, j, k) += dt * T_Algo::UpwardDy(Ex, coefs_y, n_coefs_y, i, j, k)
+                                 - dt * T_Algo::UpwardDx(Ey, coefs_x, n_coefs_x, i, j, k);
+                }
+#else
                 Bz(i, j, k) += dt * T_Algo::UpwardDy(Ex, coefs_y, n_coefs_y, i, j, k)
                              - dt * T_Algo::UpwardDx(Ey, coefs_x, n_coefs_x, i, j, k);
+#endif
             }
 
         );
