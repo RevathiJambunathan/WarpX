@@ -185,12 +185,15 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     amrex::Real r, theta, phi;
                     PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
                                                                 r, theta, phi);
-                    // Compute corotating E
-                    amrex::Real Er, Etheta, Ephi;
-                    PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
-                                                          Er, Etheta, Ephi);
                     if (r <= PulsarParm::max_corotatingEongrid_radius) {
-                        Ex(i, j, k) += 0.;               
+                        // Compute corotating E
+                        amrex::Real Er, Etheta, Ephi;
+                        PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                              Er, Etheta, Ephi);
+                        amrex::Real Ex_loc;
+                        PulsarParm::ConvertSphericalToCartesianXComponent( Er, Etheta, Ephi,
+                                                                      r, theta, phi, Ex_loc);
+                        Ex(i, j, k) += Ex_loc;
                     }
                 },
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -203,12 +206,15 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     amrex::Real r, theta, phi;
                     PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
                                                                 r, theta, phi);
-                    // Compute corotating E                      
-                    amrex::Real Er, Etheta, Ephi;
-                    PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
-                                                          Er, Etheta, Ephi);
                     if (r <= PulsarParm::max_corotatingEongrid_radius) {
-                        Ey(i, j, k) += 0.;               
+                        // Compute corotating E                      
+                        amrex::Real Er, Etheta, Ephi;
+                        PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                              Er, Etheta, Ephi);
+                        amrex::Real Ey_loc;
+                        PulsarParm::ConvertSphericalToCartesianYComponent( Er, Etheta, Ephi,
+                                                                      r, theta, phi, Ey_loc);
+                        Ey(i, j, k) += Ey_loc;
                     }
                 },
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -221,21 +227,21 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     amrex::Real r, theta, phi;
                     PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
                                                                 r, theta, phi);
-                    // Compute corotating E                      
-                    amrex::Real Er, Etheta, Ephi;
-                    PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
-                                                          Er, Etheta, Ephi);
                     if (r <= PulsarParm::max_corotatingEongrid_radius) {
-                        Ez(i, j, k) += 0.;               
+                        // Compute corotating E                      
+                        amrex::Real Er, Etheta, Ephi;
+                        PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                              Er, Etheta, Ephi);
+                        amrex::Real Ez_loc;
+                        PulsarParm::ConvertSphericalToCartesianZComponent( Er, Etheta, Ephi,
+                                                                      r, theta, phi, Ez_loc);
+                        Ez(i, j, k) += Ez_loc;
                     }
                 }
             );    
         }
-        amrex::Gpu::synchronize();
 #endif
-
     }
-    amrex::Gpu::synchronize();
 
 }
 
