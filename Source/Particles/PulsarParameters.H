@@ -39,6 +39,10 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
+    extern AMREX_GPU_DEVICE_MANAGED int set_corotatingEongrid;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_corotatingEongrid_radius;
+    extern AMREX_GPU_DEVICE_MANAGED int turnOffMaxwell;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_turnOffMaxwell_radius;
 
     void ReadParameters();
 
@@ -52,6 +56,31 @@ namespace PulsarParm
          }
 
          return omega;
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void CorotatingEFieldSpherical (amrex::Real const r, amrex::Real const theta,
+                                    amrex::Real const phi, amrex::Real const time,
+                                    amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
+    {
+        amrex::Real omega = Omega(time);
+        amrex::Real c_theta = std::cos(theta);
+        amrex::Real s_theta = std::sin(theta);
+        amrex::Real c_phi   = std::cos(phi);
+        amrex::Real s_phi   = std::sin(phi);
+        Er = 0.;
+        Etheta = 0.;
+        Ephi = 0. ;
+        if (r>(R_star - 3*dR_star)) {
+            amrex::Real r_ratio = R_star/r;
+            amrex::Real r2 = r_ratio * r_ratio;
+            // Michel and Li -- eq 14 , 15
+            Er     =  B_star * omega * r2 * r * s_theta * s_theta;
+            Etheta = -B_star * omega * r2 * r * 2.0 * s_theta * c_theta;
+            Ephi = 0.0; // aligned magnetic and rotation axis
+        }
+
+
     }
 
 

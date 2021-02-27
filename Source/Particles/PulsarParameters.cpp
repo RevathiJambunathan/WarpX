@@ -34,6 +34,10 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
+    AMREX_GPU_DEVICE_MANAGED int set_corotatingEongrid = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_corotatingEongrid_radius;
+    AMREX_GPU_DEVICE_MANAGED int turnOffMaxwell =0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_turnOffMaxwell_radius;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -103,6 +107,19 @@ namespace PulsarParm
             max_nogather_radius = R_star;
             pp.query("max_nogather_radius", max_nogather_radius);
             amrex::Print() << " gather off within radius : " << max_nogather_radius << "\n";
+        }
+        
+        pp.query("set_corotatingEongrid",set_corotatingEongrid);
+        if (set_corotatingEongrid == 1) {
+            max_corotatingEongrid_radius = R_star + 3*dR_star;
+            pp.query("max_corotatingEongrid_radius", max_corotatingEongrid_radius);
+            amrex::Print() << " corotating E on grid for r < " << max_corotatingEongrid_radius << "\n";      
+        }
+        pp.query("turnOffMaxwell", turnOffMaxwell);
+        if (turnOffMaxwell == 1) {
+            max_turnOffMaxwell_radius = R_star;
+            pp.query("max_turnOffMaxwell_radius", max_turnOffMaxwell_radius);
+            amrex::Print() << " turnning off maxwell for r < " << max_turnOffMaxwell_radius << "\n"; 
         }
     }
 }

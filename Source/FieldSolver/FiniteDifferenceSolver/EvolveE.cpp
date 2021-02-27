@@ -16,6 +16,9 @@
 #endif
 #include "Utils/WarpXConst.H"
 #include <AMReX_Gpu.H>
+#ifdef PULSAR
+#    include "WarpX.H"
+#endif
 
 
 using namespace amrex;
@@ -69,6 +72,24 @@ void FiniteDifferenceSolver::EvolveECartesian (
     amrex::Real const dt ) {
 
     Real constexpr c2 = PhysConst::c * PhysConst::c;
+#ifdef PULSAR
+    auto &warpx = WarpX::GetInstance();
+    amrex::IntVect ex_type = Efield[0]->ixType().toIntVect();
+    amrex::IntVect ey_type = Efield[1]->ixType().toIntVect();
+    amrex::IntVect ez_type = Efield[2]->ixType().toIntVect();
+    const auto dx = warpx.Geom(0).CellSizeArray();
+    const auto problo = warpx.Geom(0).ProbLoArray();
+    const auto probhi = warpx.Geom(0).ProbHiArray();
+    amrex::GpuArray<int, 3> Ex_stag;
+    amrex::GpuArray<int, 3> Ey_stag;
+    amrex::GpuArray<int, 3> Ez_stag;
+    for (int idim = 0; idim < 3; ++idim) {
+        Ex_stag[idim] = ex_type[idim];
+        Ey_stag[idim] = ey_type[idim];
+        Ez_stag[idim] = ez_type[idim];
+    }
+    amrex::Real cur_time = warpx.gett_new(0);
+#endif
 
     // Loop through the grids, and over the tiles within each grid
 #ifdef AMREX_USE_OMP
@@ -150,7 +171,71 @@ void FiniteDifferenceSolver::EvolveECartesian (
 
         }
 
+#ifdef PULSAR
+        if (PulsarParm::set_corotatingEongrid == 1) {
+            amrex::ParallelFor(tex, tey, tez,
+
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+
+                    // get cell coordinates
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, Ex_stag, problo, dx,
+                                                       x, y, z);
+                    // convert (x,y,z) to (r, theta, phi);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                r, theta, phi);
+                    // Compute corotating E
+                    amrex::Real Er, Etheta, Ephi;
+                    PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                          Er, Etheta, Ephi);
+                    if (r <= PulsarParm::max_corotatingEongrid_radius) {
+                        Ex(i, j, k) += 0.;               
+                    }
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+
+                    // get cell coordinates
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, Ey_stag, problo, dx,
+                                                       x, y, z);
+                    // convert (x,y,z) to (r, theta, phi);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                r, theta, phi);
+                    // Compute corotating E                      
+                    amrex::Real Er, Etheta, Ephi;
+                    PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                          Er, Etheta, Ephi);
+                    if (r <= PulsarParm::max_corotatingEongrid_radius) {
+                        Ey(i, j, k) += 0.;               
+                    }
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+
+                    // get cell coordinates
+                    amrex::Real x, y, z;
+                    PulsarParm::ComputeCellCoordinates(i, j, k, Ez_stag, problo, dx,
+                                                       x, y, z);
+                    // convert (x,y,z) to (r, theta, phi);
+                    amrex::Real r, theta, phi;
+                    PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                                r, theta, phi);
+                    // Compute corotating E                      
+                    amrex::Real Er, Etheta, Ephi;
+                    PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                          Er, Etheta, Ephi);
+                    if (r <= PulsarParm::max_corotatingEongrid_radius) {
+                        Ez(i, j, k) += 0.;               
+                    }
+                }
+            );    
+        }
+        amrex::Gpu::synchronize();
+#endif
+
     }
+    amrex::Gpu::synchronize();
 
 }
 
