@@ -37,7 +37,7 @@ my_constants.dens  = 5.544e6
 my_constants.xc  = 90000
 my_constants.yc  = 90000
 my_constants.zc  = 90000
-my_constants.r_star  = 12000
+my_constants.r_star  = 13500
 my_constants.omega = 6245.676
 my_constants.c = 299792458.
 my_constants.B_star = 8.0323e-6                  # magnetic field of NS (T)
@@ -100,7 +100,7 @@ chk.intervals = 1000
 #################################
 pulsar.pulsarType = "dead"             # [dead/active]: sets particle injection type
 pulsar.omega_star = 6245.676               # angular velocity of NS (rad/s)
-pulsar.ramp_omega_time = 0.0             # time over which to ramp up NS angular velocity (s)
+pulsar.ramp_omega_time = 1e-5             # time over which to ramp up NS angular velocity (s)
                                            # if ramp_omega_time < 0, omega = omega_star for any t
                                            # consistency requires ramp_omega_time = my_constants.to
 pulsar.center_star = 90000 90000 90000
@@ -109,7 +109,7 @@ pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
 pulsar.dR = 1400                       # thickness on the surface of the pulsar
                                        # consistency requires dR = my_constants.dR
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
-pulsar.EB_external = 1                 # [0/1]: to apply external E and B
+pulsar.EB_external = 0                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 0                  # [0/1]
 pulsar.EB_corotating_maxradius = 12032 # The radius where E-field changes from corotating
                                        # inside the star to quadrapole outside.
@@ -126,10 +126,10 @@ pulsar.max_particle_absorption_radius = 12032   # Maximum radius within which pa
                                                 # deleted every timestep.
                                                 # Default is Rstar
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
-pulsar.damp_EB_internal = 1             # Damp internal electric field
+pulsar.damp_EB_internal = 0             # Damp internal electric field
 pulsar.damp_EB_radius = 12032         # The radius within which EB should be damped.
                                       # default is r_star (damping will include this radius)
-pulsar.damping_scale = 1000.0            # Damping scale factor for internal electric field
+pulsar.damping_scale = 1000000.0            # Damping scale factor for internal electric field
 pulsar.turnoffdeposition = 0         # (0/1) 0 for depositing (default)
                                       #       1 for no deposition
 pulsar.max_nodepos_radius = 0.        # radius within which particle deposition for j/rho
@@ -138,3 +138,8 @@ pulsar.turnoff_plasmaEB_gather = 0    # (0/1) 0 is default. always gather
                                       # 1 for no gather of self-consistent fields
 pulsar.max_nogather_radius = 0.       # radius within which self-consistent field gather
                                       # is turned off
+pulsar.set_corotatingEongrid = 1      # default is 0 to set E on grid to corotating E
+pulsar.max_corotatingEongrid_radius = 16232 # 3 cells outside rstar
+pulsar.turnOffMaxwell = 1             # default is 0
+pulsar.max_turnOffMaxwell_radius = 12032 # radius of the star (no maxwell inside r<Rstar)
+
