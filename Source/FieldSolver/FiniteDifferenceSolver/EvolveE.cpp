@@ -18,6 +18,7 @@
 #include <AMReX_Gpu.H>
 #ifdef PULSAR
 #    include "WarpX.H"
+#    include "Particles/PulsarParameters.H"
 #endif
 
 
