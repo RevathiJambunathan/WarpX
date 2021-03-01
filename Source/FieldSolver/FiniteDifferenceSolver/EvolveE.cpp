@@ -255,7 +255,7 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     if (r <= max_corotatingEongrid_radius) {
                         // Compute corotating E
                         amrex::Real Er, Etheta, Ephi;
-                        PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                        PulsarParm::CorotatingEFieldSpherical(r, theta, phi, cur_time,
                                                               Er, Etheta, Ephi);
                         amrex::Real Ex_loc;
                         PulsarParm::ConvertSphericalToCartesianXComponent( Er, Etheta, Ephi,
@@ -276,7 +276,7 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     if (r <= max_corotatingEongrid_radius) {
                         // Compute corotating E                      
                         amrex::Real Er, Etheta, Ephi;
-                        PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                        PulsarParm::CorotatingEFieldSpherical(r, theta, phi, cur_time,
                                                               Er, Etheta, Ephi);
                         amrex::Real Ey_loc;
                         PulsarParm::ConvertSphericalToCartesianYComponent( Er, Etheta, Ephi,
@@ -297,7 +297,7 @@ void FiniteDifferenceSolver::EvolveECartesian (
                     if (r <= max_corotatingEongrid_radius) {
                         // Compute corotating E                      
                         amrex::Real Er, Etheta, Ephi;
-                        PulsarParm::ExternalEFieldSpherical(r, theta, phi, cur_time,
+                        PulsarParm::CorotatingEFieldSpherical(r, theta, phi, cur_time,
                                                               Er, Etheta, Ephi);
                         amrex::Real Ez_loc;
                         PulsarParm::ConvertSphericalToCartesianZComponent( Er, Etheta, Ephi,
