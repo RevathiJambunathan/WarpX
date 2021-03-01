@@ -154,7 +154,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
 #ifdef PULSAR
                 amrex::Real Ex_cor = 0.;
                 amrex::Real x, y, z;
-                PulsarParm::ComputeCellCoordinates(i, j, k, Ex_stag, problo, probhi,dx,
+                PulsarParm::ComputeCellCoordinates(i, j, k, Ex_stag, problo, dx,
                                                    x, y, z);
                 amrex::Real r, theta, phi;
                 PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
@@ -184,7 +184,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
 #ifdef PULSAR
                 amrex::Real Ey_cor = 0.;
                 amrex::Real x, y, z;
-                PulsarParm::ComputeCellCoordinates(i, j, k, Ey_stag, problo, probhi,dx,
+                PulsarParm::ComputeCellCoordinates(i, j, k, Ey_stag, problo, dx,
                                                    x, y, z);
                 amrex::Real r, theta, phi;
                 PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
@@ -214,7 +214,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
 #ifdef PULSAR
                 amrex::Real Ez_cor = 0.;
                 amrex::Real x, y, z;
-                PulsarParm::ComputeCellCoordinates(i, j, k, Ez_stag, problo, probhi,dx,
+                PulsarParm::ComputeCellCoordinates(i, j, k, Ez_stag, problo, dx,
                                                    x, y, z);
                 amrex::Real r, theta, phi;
                 PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
