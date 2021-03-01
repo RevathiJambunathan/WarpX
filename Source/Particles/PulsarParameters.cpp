@@ -34,6 +34,8 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_E_corotating_radius;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real min_E_corotating_radius;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -104,5 +106,9 @@ namespace PulsarParm
             pp.query("max_nogather_radius", max_nogather_radius);
             amrex::Print() << " gather off within radius : " << max_nogather_radius << "\n";
         }
+        max_E_corotating_radius = R_star;
+        min_E_corotating_radius = 0.;
+        pp.query("max_E_corotating_radius", max_E_corotating_radius);
+        pp.query("min_E_corotating_radius", min_E_corotating_radius);
     }
 }

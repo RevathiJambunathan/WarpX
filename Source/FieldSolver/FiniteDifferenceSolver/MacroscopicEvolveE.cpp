@@ -9,6 +9,9 @@
 #endif
 #include "Utils/WarpXConst.H"
 #include "Utils/CoarsenIO.H"
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
 #include <WarpX.H>
 #include <AMReX.H>
 #include <AMReX_Gpu.H>
@@ -91,7 +94,11 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
     amrex::GpuArray<int, 3> const& Ey_stag = macroscopic_properties->Ey_IndexType;
     amrex::GpuArray<int, 3> const& Ez_stag = macroscopic_properties->Ez_IndexType;
     amrex::GpuArray<int, 3> const& macro_cr     = macroscopic_properties->macro_cr_ratio;
-
+    auto &warpx = WarpX::GetInstance();
+    const auto problo = warpx.Geom(0).ProbLoArray();
+    const auto probhi = warpx.Geom(0).ProbHiArray();
+    const auto dx = warpx.Geom(0).CellSizeArray();
+    amrex::Real cur_time = warpx.gett_new(0);
 
     // Loop through the grids, and over the tiles within each grid
 #ifdef AMREX_USE_OMP
@@ -144,7 +151,24 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
                                            Ex_stag, macro_cr, i, j, k, scomp);
                 amrex::Real alpha = T_MacroAlgo::alpha( sigma_interp, epsilon_interp, dt);
                 amrex::Real beta = T_MacroAlgo::beta( sigma_interp, epsilon_interp, dt);
+#ifdef PULSAR
+                amrex::Real Ex_cor = 0.;
+                amrex::Real x, y, z;
+                PulsarParm::ComputeCellCoordinates(i, j, k, Ex_stag, problo, probhi,dx,
+                                                   x, y, z);
+                amrex::Real r, theta, phi;
+                PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                             r, theta, phi);
+                amrex::Real Er, Etheta, Ephi;
+                PulsarParm::CorotatingEFieldSpherical (r, theta, phi, cur_time,
+                                                       Er, Etheta, Ephi);
+                PulsarParm::ConvertSphericalToCartesianXComponent (Er, Etheta, Ephi,
+                                                                   r, theta, phi,
+                                                                   Ex_cor);
+                Ex(i, j, k) = alpha * (Ex(i, j, k) + Ex_cor)
+#else
                 Ex(i, j, k) = alpha * Ex(i, j, k)
+#endif
                             + beta * ( - T_Algo::DownwardDz(Hy, coefs_z, n_coefs_z, i, j, k,0)
                                        + T_Algo::DownwardDy(Hz, coefs_y, n_coefs_y, i, j, k,0)
                                      ) - beta * jx(i, j, k);
@@ -157,8 +181,24 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
                                            Ey_stag, macro_cr, i, j, k, scomp);
                 amrex::Real alpha = T_MacroAlgo::alpha( sigma_interp, epsilon_interp, dt);
                 amrex::Real beta = T_MacroAlgo::beta( sigma_interp, epsilon_interp, dt);
-
+#ifdef PULSAR
+                amrex::Real Ey_cor = 0.;
+                amrex::Real x, y, z;
+                PulsarParm::ComputeCellCoordinates(i, j, k, Ey_stag, problo, probhi,dx,
+                                                   x, y, z);
+                amrex::Real r, theta, phi;
+                PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                             r, theta, phi);
+                amrex::Real Er, Etheta, Ephi;
+                PulsarParm::CorotatingEFieldSpherical (r, theta, phi, cur_time,
+                                                       Er, Etheta, Ephi);
+                PulsarParm::ConvertSphericalToCartesianXComponent (Er, Etheta, Ephi,
+                                                                   r, theta, phi,
+                                                                   Ey_cor);
+                Ey(i, j, k) = alpha * (Ey(i, j, k) + Ey_cor);
+#else
                 Ey(i, j, k) = alpha * Ey(i, j, k)
+#endif
                             + beta * ( - T_Algo::DownwardDx(Hz, coefs_x, n_coefs_x, i, j, k,0)
                                        + T_Algo::DownwardDz(Hx, coefs_z, n_coefs_z, i, j, k,0)
                                      ) - beta * jy(i, j, k);
@@ -171,8 +211,24 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
                                            Ez_stag, macro_cr, i, j, k, scomp);
                 amrex::Real alpha = T_MacroAlgo::alpha( sigma_interp, epsilon_interp, dt);
                 amrex::Real beta = T_MacroAlgo::beta( sigma_interp, epsilon_interp, dt);
-
+#ifdef PULSAR
+                amrex::Real Ez_cor = 0.;
+                amrex::Real x, y, z;
+                PulsarParm::ComputeCellCoordinates(i, j, k, Ez_stag, problo, probhi,dx,
+                                                   x, y, z);
+                amrex::Real r, theta, phi;
+                PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
+                                                             r, theta, phi);
+                amrex::Real Er, Etheta, Ephi;
+                PulsarParm::CorotatingEFieldSpherical (r, theta, phi, cur_time,
+                                                       Er, Etheta, Ephi);
+                PulsarParm::ConvertSphericalToCartesianXComponent (Er, Etheta, Ephi,
+                                                                   r, theta, phi,
+                                                                   Ez_cor);
+                Ez(i, j, k) = alpha * (Ez(i, j, k) + Ez_cor)
+#else
                 Ez(i, j, k) = alpha * Ez(i, j, k)
+#endif
                             + beta * ( - T_Algo::DownwardDy(Hx, coefs_y, n_coefs_y, i, j, k,0)
                                        + T_Algo::DownwardDx(Hy, coefs_x, n_coefs_x, i, j, k,0)
                                      ) - beta * jz(i, j, k);
