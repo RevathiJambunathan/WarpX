@@ -192,7 +192,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
                 amrex::Real Er, Etheta, Ephi;
                 PulsarParm::CorotatingEFieldSpherical (r, theta, phi, cur_time,
                                                        Er, Etheta, Ephi);
-                PulsarParm::ConvertSphericalToCartesianXComponent (Er, Etheta, Ephi,
+                PulsarParm::ConvertSphericalToCartesianYComponent (Er, Etheta, Ephi,
                                                                    r, theta, phi,
                                                                    Ey_cor);
                 Ey(i, j, k) = alpha * (Ey(i, j, k) + Ey_cor);
@@ -222,7 +222,7 @@ void FiniteDifferenceSolver::MacroscopicEvolveECartesian (
                 amrex::Real Er, Etheta, Ephi;
                 PulsarParm::CorotatingEFieldSpherical (r, theta, phi, cur_time,
                                                        Er, Etheta, Ephi);
-                PulsarParm::ConvertSphericalToCartesianXComponent (Er, Etheta, Ephi,
+                PulsarParm::ConvertSphericalToCartesianZComponent (Er, Etheta, Ephi,
                                                                    r, theta, phi,
                                                                    Ez_cor);
                 Ez(i, j, k) = alpha * (Ez(i, j, k) + Ez_cor)
