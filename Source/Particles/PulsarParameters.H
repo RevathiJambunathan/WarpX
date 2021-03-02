@@ -70,8 +70,8 @@ namespace PulsarParm
         if ( r <= max_EBcorotating_radius ) {
             amrex::Real r2 = r_ratio * r_ratio;
             // Michel and Li -- eq 14 , 15
-            Er     =  B_star * omega * r2 * r * s_theta * s_theta;
-            Etheta = -B_star * omega * r2 * r * 2.0 * s_theta * c_theta;
+            Er     =  B_star * omega * r2 * R_star * s_theta * s_theta;
+            Etheta = -B_star * omega * r2 * R_star * 2.0 * s_theta * c_theta;
             Ephi = 0.0; // aligned magnetic and rotation axis
         }
 
