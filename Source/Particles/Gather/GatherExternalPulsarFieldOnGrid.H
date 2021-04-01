@@ -132,7 +132,7 @@ void doPulsarFieldGatherShapeN (const amrex::ParticleReal xp,
     amrex::Abort("pulsar does not work in 2D");
 #endif
 
-#ifndef WARPX_DIM_RZ
+#ifdef WARPX_DIM_RZ
     amrex::Abort("pulsar does not work in RZ");
 #endif
 

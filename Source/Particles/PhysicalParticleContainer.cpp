@@ -338,6 +338,9 @@ void PhysicalParticleContainer::InitData ()
     // Init ionization module here instead of in the PhysicalParticleContainer
     // constructor because dt is required
     if (do_field_ionization) {InitIonizationModule();}
+// temp for test
+    AddParticles(0); // Note - add on level 0
+    Redistribute();  // We then redistribute
 #ifndef PULSAR
     AddParticles(0); // Note - add on level 0
     Redistribute();  // We then redistribute
@@ -2176,11 +2179,11 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                    dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
                                    nox, galerkin_interpolation);
 #ifdef PULSAR
-                    doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
-                                   ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                                   ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                   dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                                   nox, galerkin_interpolation, problo, probhi, cur_time);
+//                    doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+//                                   ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+//                                   ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
+//                                   dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+//                                   nox, galerkin_interpolation, problo, probhi, cur_time);
 #endif
                 }
                 // Externally applied E-field in Cartesian co-ordinates
@@ -2583,11 +2586,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                            dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
                            nox, galerkin_interpolation);
 #ifdef PULSAR
-            doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
-                           ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                           ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                           dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                           nox, galerkin_interpolation, problo, probhi, cur_time);
+//            doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+//                           ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+//                           ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
+//                           dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+//                           nox, galerkin_interpolation, problo, probhi, cur_time);
 #endif
         }
         // Externally applied E-field in Cartesian co-ordinates
@@ -2784,7 +2787,11 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 #ifdef PULSAR
 void PhysicalParticleContainer::PulsarParticleInjection() {
 
-     AddPlasma( 0 );
+    // temp change for singe particle test
+    // AddPlasma( 0 );
+    
+    AddParticles(0); // Note - add on level 0
+    Redistribute();  // We then redistribute
 }
 
 void PhysicalParticleContainer::PulsarParticleRemoval() {
