@@ -118,6 +118,9 @@ WarpX::Evolve (int numsteps)
             }
         }
 
+#ifdef PULSAR
+//        mypc->PulsarParticleInjection();
+#endif
         // At the beginning, we have B^{n} and E^{n}.
         // Particles have p^{n} and x^{n}.
         // is_synchronized is true.
@@ -359,7 +362,6 @@ WarpX::Evolve (int numsteps)
            amrex::Print() << " rho is computed \n";
         }
         mypc->PulsarParticleRemoval();
-        mypc->PulsarParticleInjection();
 #endif
 
 #ifdef PULSAR
