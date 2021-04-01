@@ -86,6 +86,9 @@ WarpX::Evolve (int numsteps)
             }
         }
 
+#ifdef PULSAR
+//        mypc->PulsarParticleInjection();
+#endif
         // At the beginning, we have B^{n} and E^{n}.
         // Particles have p^{n} and x^{n}.
         // is_synchronized is true.
@@ -247,8 +250,8 @@ WarpX::Evolve (int numsteps)
                 }
             }
         }
-        FillBoundaryE(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
-        FillBoundaryB(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
+        FillBoundaryE(guard_cells.ng_FieldSolver);
+        FillBoundaryB(guard_cells.ng_FieldSolver);
 #endif
 
         if (warpx_py_beforeEsolve) warpx_py_beforeEsolve();
@@ -299,7 +302,6 @@ WarpX::Evolve (int numsteps)
            amrex::Print() << " rho is computed \n";
         }
         mypc->PulsarParticleRemoval();
-        mypc->PulsarParticleInjection();
 #endif
 
         mypc->ApplyBoundaryConditions();

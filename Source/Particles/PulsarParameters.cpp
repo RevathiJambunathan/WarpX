@@ -4,6 +4,7 @@
 #include <AMReX_RealVect.H>
 #include <AMReX_REAL.H>
 #include <AMReX_GpuQualifiers.H>
+#include "WarpX.H"
 
 namespace PulsarParm
 {
@@ -34,6 +35,12 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
     AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real corotatingE_maxradius;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real enforceDipoleB_maxradius;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Bfield;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Efield;
+    AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
+    AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -104,5 +111,302 @@ namespace PulsarParm
             pp.query("max_nogather_radius", max_nogather_radius);
             amrex::Print() << " gather off within radius : " << max_nogather_radius << "\n";
         }
+        corotatingE_maxradius = R_star;
+        enforceDipoleB_maxradius = R_star;
+        pp.query("corotatingE_maxradius", corotatingE_maxradius);
+        pp.query("enforceDipoleB_maxradius", enforceDipoleB_maxradius);
+        InitializeGrid_with_Pulsar_Bfield = 1;
+        InitializeGrid_with_Pulsar_Efield = 1;
+        pp.query("init_dipoleBfield", InitializeGrid_with_Pulsar_Bfield);
+        pp.query("init_corotatingEfield", InitializeGrid_with_Pulsar_Efield);
+        enforceCorotatingE = 1;
+        enforceDipoleB = 1;
+        pp.query("enforceCorotatingE", enforceCorotatingE);
+        pp.query("enforceDipoleB", enforceDipoleB);
+    }
+
+    /** To initialize the grid with dipole magnetic field everywhere and corotating vacuum
+     *  electric field inside the pulsar radius.
+     */
+    void InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::MultiFab *mfy,
+        amrex::MultiFab *mfz, const int lev, const bool init_Bfield)
+    {
+        auto & warpx = WarpX::GetInstance();
+        const auto dx = warpx.Geom(lev).CellSizeArray();
+        const auto problo = warpx.Geom(lev).ProbLoArray();
+        const auto probhi = warpx.Geom(lev).ProbHiArray();
+        const RealBox& real_box = warpx.Geom(lev).ProbDomain();
+        amrex::Real cur_time = warpx.gett_new(lev);
+        amrex::IntVect x_nodal_flag = mfx->ixType().toIntVect();
+        amrex::IntVect y_nodal_flag = mfy->ixType().toIntVect();
+        amrex::IntVect z_nodal_flag = mfz->ixType().toIntVect();
+        GpuArray<int, 3> x_IndexType;
+        GpuArray<int, 3> y_IndexType;
+        GpuArray<int, 3> z_IndexType;
+        for (int idim = 0; idim < 3; ++idim) {
+            x_IndexType[idim] = x_nodal_flag[idim];
+            y_IndexType[idim] = y_nodal_flag[idim];
+            z_IndexType[idim] = z_nodal_flag[idim];
+        }
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (MFIter mfi(*mfx, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        {
+            const amrex::Box& tbx = mfi.tilebox(x_nodal_flag, mfx->nGrowVect() );
+            const amrex::Box& tby = mfi.tilebox(y_nodal_flag, mfx->nGrowVect() );
+            const amrex::Box& tbz = mfi.tilebox(z_nodal_flag, mfx->nGrowVect() );
+            
+            amrex::Array4<amrex::Real> const& mfx_arr = mfx->array(mfi);
+            amrex::Array4<amrex::Real> const& mfy_arr = mfy->array(mfi);
+            amrex::Array4<amrex::Real> const& mfz_arr = mfz->array(mfi);
+
+            amrex::ParallelFor (tbx, tby, tbz,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    // Initialize with Bfield in spherical coordinates
+                    if (init_Bfield == 1) ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                                   Fr, Ftheta, Fphi);
+                    // Initialize corotating EField in r < corotating 
+                    if (init_Bfield == 0) {
+                        if (r <= corotatingE_maxradius) {
+                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      Fr, Ftheta, Fphi);
+                        }
+                    }
+                    // Convert to x component
+                    ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                        r, theta, phi, mfx_arr(i,j,k));
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    // Initialize with Bfield in spherical coordinates                    
+                    if (init_Bfield == 1) ExternalBFieldSpherical (r, theta, phi, cur_time,
+                                                                   Fr, Ftheta, Fphi);
+                    // Initialize corotating Efield in r < corotating
+                    if (init_Bfield == 0) {
+                        if (r <= corotatingE_maxradius) {
+                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      Fr, Ftheta, Fphi);
+                        }
+                    }
+                    // convert to y component
+                    ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                        r, theta, phi, mfy_arr(i,j,k));
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    // Initialize with Bfield in spherical coordinates
+                    if (init_Bfield == 1) ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                                  Fr, Ftheta, Fphi);
+                    // Initialize corotating Efield in r < corotating
+                    if (init_Bfield == 0) {
+                        if (r <= corotatingE_maxradius) {
+                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      Fr, Ftheta, Fphi);
+                        }
+                    }
+                    ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                        r, theta, phi, mfz_arr(i,j,k));
+                }
+            );
+        } // mfiter loop
+    } // InitializeExternalField
+
+
+    void ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Efield,
+                                    const int lev, const amrex::Real a_dt)
+    {
+        amrex::Print() << " applying corotating Efield BC\n";
+        auto & warpx = WarpX::GetInstance();
+        const auto dx = warpx.Geom(lev).CellSizeArray();
+        const auto problo = warpx.Geom(lev).ProbLoArray();
+        const auto probhi = warpx.Geom(lev).ProbHiArray();
+        const RealBox& real_box = warpx.Geom(lev).ProbDomain();
+        amrex::Real cur_time = warpx.gett_new(lev) + a_dt;
+        amrex::IntVect x_nodal_flag = Efield[0]->ixType().toIntVect();
+        amrex::IntVect y_nodal_flag = Efield[1]->ixType().toIntVect();
+        amrex::IntVect z_nodal_flag = Efield[2]->ixType().toIntVect();
+        GpuArray<int, 3> x_IndexType;
+        GpuArray<int, 3> y_IndexType;
+        GpuArray<int, 3> z_IndexType;
+        for (int idim = 0; idim < 3; ++idim) {
+            x_IndexType[idim] = x_nodal_flag[idim];
+            y_IndexType[idim] = y_nodal_flag[idim];
+            z_IndexType[idim] = z_nodal_flag[idim];
+        }
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (MFIter mfi(*Efield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        {
+            const amrex::Box& tex = mfi.tilebox(x_nodal_flag);
+            const amrex::Box& tey = mfi.tilebox(y_nodal_flag);
+            const amrex::Box& tez = mfi.tilebox(z_nodal_flag);
+            amrex::Array4<amrex::Real> const& Ex_arr = Efield[0]->array(mfi);
+            amrex::Array4<amrex::Real> const& Ey_arr = Efield[1]->array(mfi);
+            amrex::Array4<amrex::Real> const& Ez_arr = Efield[2]->array(mfi);
+            // loop over cells and set Efield for r < corotating
+            amrex::ParallelFor(tex, tey, tez,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    if (r <= enforceCorotatingE) {
+                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                  Fr, Ftheta, Fphi);
+                        ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, Ex_arr(i,j,k));
+                    }
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    if (r <= enforceCorotatingE) {
+                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                  Fr, Ftheta, Fphi);
+                        ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, Ey_arr(i,j,k));
+                    }
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    if (r <= enforceCorotatingE) {
+                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                  Fr, Ftheta, Fphi);
+                        ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, Ez_arr(i,j,k));
+                    }
+                }
+            );
+        }
+        
+        
+    }
+
+    void ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Bfield,
+                                    const int lev, const amrex::Real a_dt)
+    {
+        amrex::Print() << " applying corotating Bfield BC\n";
+        auto & warpx = WarpX::GetInstance();
+        const auto dx = warpx.Geom(lev).CellSizeArray();
+        const auto problo = warpx.Geom(lev).ProbLoArray();
+        const auto probhi = warpx.Geom(lev).ProbHiArray();
+        const RealBox& real_box = warpx.Geom(lev).ProbDomain();
+        amrex::Real cur_time = warpx.gett_new(lev) + a_dt;
+        amrex::IntVect x_nodal_flag = Bfield[0]->ixType().toIntVect();
+        amrex::IntVect y_nodal_flag = Bfield[1]->ixType().toIntVect();
+        amrex::IntVect z_nodal_flag = Bfield[2]->ixType().toIntVect();
+        GpuArray<int, 3> x_IndexType;
+        GpuArray<int, 3> y_IndexType;
+        GpuArray<int, 3> z_IndexType;
+        for (int idim = 0; idim < 3; ++idim) {
+            x_IndexType[idim] = x_nodal_flag[idim];
+            y_IndexType[idim] = y_nodal_flag[idim];
+            z_IndexType[idim] = z_nodal_flag[idim];
+        }
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (MFIter mfi(*Bfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        {
+            const amrex::Box& tbx = mfi.tilebox(x_nodal_flag);
+            const amrex::Box& tby = mfi.tilebox(y_nodal_flag);
+            const amrex::Box& tbz = mfi.tilebox(z_nodal_flag);
+            amrex::Array4<amrex::Real> const& Bx_arr = Bfield[0]->array(mfi);
+            amrex::Array4<amrex::Real> const& By_arr = Bfield[1]->array(mfi);
+            amrex::Array4<amrex::Real> const& Bz_arr = Bfield[2]->array(mfi);
+            // loop over cells and set Efield for r < dipoleB_max_radius
+            amrex::ParallelFor(tbx, tby, tbz,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    if (r <= enforceDipoleB) {
+                        ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                               Fr, Ftheta, Fphi);
+                        ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, Bx_arr(i,j,k));
+                    }
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    if (r <= enforceDipoleB) {
+                        ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                               Fr, Ftheta, Fphi);
+                        ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, By_arr(i,j,k));
+                    }
+                },
+                [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    amrex::Real x, y, z;
+                    amrex::Real r, theta, phi;
+                    amrex::Real Fr, Ftheta, Fphi;
+                    Fr = 0.; Ftheta = 0.; Fphi = 0.;
+                    // compute cell coordinates
+                    ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
+                    if (r <= enforceDipoleB) {
+                        ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                               Fr, Ftheta, Fphi);
+                        ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, Bz_arr(i,j,k));
+                    }
+                }
+            );
+        }
+
     }
 }

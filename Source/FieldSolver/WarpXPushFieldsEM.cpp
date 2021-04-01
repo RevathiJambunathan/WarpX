@@ -16,6 +16,10 @@
 #   include <AMReX_AmrMeshInSituBridge.H>
 #endif
 
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
+
 #include <AMReX.H>
 #include <AMReX_Math.H>
 #include <limits>
@@ -208,6 +212,12 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt)
         }
     }
 
+#ifdef PULSAR
+    if (PulsarParm::enforceDipoleB == 1) {
+        PulsarParm::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+    }
+#endif    
+
 }
 
 void
@@ -265,6 +275,11 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
                 a_dt, pml_has_particles );
         }
     }
+#ifdef PULSAR
+    if (PulsarParm::enforceCorotatingE == 1) {
+        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+#endif    
 }
 
 
