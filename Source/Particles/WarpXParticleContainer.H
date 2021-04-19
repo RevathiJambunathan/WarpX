@@ -337,7 +337,6 @@ public:
      * called because resample() is only called for PhysicalParticleContainers.
      */
     virtual void resample (const int /*timestep*/) {}
-
 protected:
     amrex::Array<amrex::Real,3> m_v_galilean = {{0}};
     std::map<std::string, int> particle_comps;
@@ -409,6 +408,7 @@ public:
                                        TmpIdx::nattribs>;
     using TmpParticles = amrex::Vector<std::map<PairIndex, TmpParticleTile> >;
 
+    TmpParticles getTmpParticleData () const noexcept {return tmp_particle_data;}
 protected:
     TmpParticles tmp_particle_data;
 

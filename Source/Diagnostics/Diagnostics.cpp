@@ -4,6 +4,7 @@
 #include "ComputeDiagFunctors/PartPerGridFunctor.H"
 #include "ComputeDiagFunctors/DivBFunctor.H"
 #include "ComputeDiagFunctors/DivEFunctor.H"
+#include "ComputeDiagFunctors/BackTransformParticleFunctor.H"
 #include "FlushFormats/FlushFormatPlotfile.H"
 #include "FlushFormats/FlushFormatCheckpoint.H"
 #include "FlushFormats/FlushFormatAscent.H"
@@ -116,6 +117,8 @@ Diagnostics::BaseReadParameters ()
 
     // Names of species to write to output
     bool species_specified = pp_diag_name.queryarr("species", m_output_species_names);
+    amrex::Print() << " species specified : " << species_specified << "\n";
+    amrex::Print() << " m output species anmse size : " << m_output_species_names.size() << "\n";
 
     // Names of all species in the simulation
     m_all_species_names = warpx.GetPartContainer().GetSpeciesNames();
@@ -183,6 +186,7 @@ Diagnostics::InitData ()
     }
     // When particle buffers, m_particle_buffers are included, they will be initialized here
     InitializeParticleBuffer();
+    InitializeParticleFunctors();
 
     amrex::ParmParse pp_diag_name(m_diag_name);
     amrex::Vector <amrex::Real> dummy_val(AMREX_SPACEDIM);
@@ -272,6 +276,7 @@ Diagnostics::InitBaseData ()
     for (int i = 0; i < m_num_buffers; ++i) {
         m_geom_output[i].resize( nmax_lev );
     }
+
 }
 
 void
@@ -279,6 +284,7 @@ Diagnostics::ComputeAndPack ()
 {
     // prepare the field-data necessary to compute output data
     PrepareFieldDataForOutput();
+    PrepareParticleDataForOutput();
 
     auto & warpx = WarpX::GetInstance();
 
@@ -302,6 +308,14 @@ Diagnostics::ComputeAndPack ()
                 m_mf_output[i_buffer][lev].FillBoundary(warpx.Geom(lev).periodicity());
             }
         }
+        // Call Particle functor
+        for (int isp = 0; isp < m_all_particle_functors.size(); ++isp) {
+            amrex::Print() << " call particle functor for buffer " << i_buffer << " sp : " << m_output_species_names[isp] << "\n";
+            m_all_particle_functors[isp]->operator()(*m_particles_buffer[i_buffer][isp], i_buffer);
+//            m_all_particle_functors[isp]->operator()();
+        }
+        
+        
     }
 }
 
