@@ -120,6 +120,7 @@ WarpX::Evolve (int numsteps)
 
 #ifdef PULSAR
         mypc->PulsarParticleInjection();
+        mypc->Redistribute();
 #endif
         // At the beginning, we have B^{n} and E^{n}.
         // Particles have p^{n} and x^{n}.
