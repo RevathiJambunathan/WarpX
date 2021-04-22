@@ -143,3 +143,5 @@ pulsar.corotatingE_maxradius = 12032  # default is Rstar
 pulsar.enforceDipoleB_maxradius = 12032 # default is Rstar
 pulsar.enforceCorotatingE = 1        # default 1
 pulsar.enforceDipoleB = 1        # default 1
+pulsar.singleParticleTest = 0    # default 0, if 1, then a particle pair will be introduced.
+                                 # Single particle position/momentum will need to be specified
