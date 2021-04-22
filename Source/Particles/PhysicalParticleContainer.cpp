@@ -207,12 +207,14 @@ void PhysicalParticleContainer::InitData ()
     // Init ionization module here instead of in the PhysicalParticleContainer
     // constructor because dt is required
     if (do_field_ionization) {InitIonizationModule();}
-// temp for test
-    AddParticles(0); // Note - add on level 0
-    Redistribute();  // We then redistribute
 #ifndef PULSAR
     AddParticles(0); // Note - add on level 0
     Redistribute();  // We then redistribute
+#else
+    if (PulsarParm::singleParticleTest == 1) {
+        AddParticles(0); // Note - add on level 0
+        Redistribute();  // We then redistribute
+    }
 #endif
 }
 
@@ -2167,11 +2169,12 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 #ifdef PULSAR
 void PhysicalParticleContainer::PulsarParticleInjection() {
 
-    // temp change for singe particle test
-    // AddPlasma( 0 );
-    
-    AddParticles(0); // Note - add on level 0
-    Redistribute();  // We then redistribute
+    if (PulsarParm::singleParticleTest == 1) { 
+        AddParticles(0); // Note - add on level 0
+        Redistribute();  // We then redistribute
+    } else {
+        AddPlasma( 0 );
+    }
 }
 
 void PhysicalParticleContainer::PulsarParticleRemoval() {

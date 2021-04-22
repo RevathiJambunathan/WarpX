@@ -41,6 +41,7 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Efield;
     AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
     AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
+    AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -123,6 +124,8 @@ namespace PulsarParm
         enforceDipoleB = 1;
         pp.query("enforceCorotatingE", enforceCorotatingE);
         pp.query("enforceDipoleB", enforceDipoleB);
+        singleParticleTest = 0;
+        pp.query("singleParticleTest", singleParticleTest);
     }
 
     /** To initialize the grid with dipole magnetic field everywhere and corotating vacuum
