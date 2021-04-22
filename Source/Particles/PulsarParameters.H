@@ -46,6 +46,7 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Efield;
     extern AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
     extern AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
+    extern AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
 
     void ReadParameters();
     void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
