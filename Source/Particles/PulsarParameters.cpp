@@ -281,7 +281,7 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceCorotatingE) {
+                    if (r <= corotatingE_maxradius) {
                         CorotatingEfieldSpherical(r, theta, phi, cur_time,
                                                   Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
@@ -297,7 +297,7 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceCorotatingE) {
+                    if (r <= corotatingE_maxradius) {
                         CorotatingEfieldSpherical(r, theta, phi, cur_time,
                                                   Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
@@ -313,7 +313,7 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceCorotatingE) {
+                    if (r <= corotatingE_maxradius) {
                         CorotatingEfieldSpherical(r, theta, phi, cur_time,
                                                   Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
@@ -369,7 +369,7 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceDipoleB) {
+                    if (r <= enforceDipoleB_maxradius) {
                         ExternalBFieldSpherical(r, theta, phi, cur_time,
                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
@@ -385,7 +385,7 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceDipoleB) {
+                    if (r <= enforceDipoleB_maxradius) {
                         ExternalBFieldSpherical(r, theta, phi, cur_time,
                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
@@ -401,7 +401,7 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceDipoleB) {
+                    if (r <= enforceDipoleB_maxradius) {
                         ExternalBFieldSpherical(r, theta, phi, cur_time,
                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
