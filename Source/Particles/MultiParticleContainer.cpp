@@ -119,8 +119,8 @@ MultiParticleContainer::ReadParameters ()
         // is cartesian (default) or spherical
         // For pulsar it is easier to provide (r,theta,phi) components
         // and let the code do the conversion to cartesian
-        pp.query("E_ext_particle_coord", m_E_ext_particle_coord);
-        pp.query("B_ext_particle_coord", m_B_ext_particle_coord);
+        pp_particles.query("E_ext_particle_coord", m_E_ext_particle_coord);
+        pp_particles.query("B_ext_particle_coord", m_B_ext_particle_coord);
 #endif
 
         // if the input string for B_external on particles is "constant"

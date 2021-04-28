@@ -214,6 +214,7 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt)
 
 #ifdef PULSAR
     if (PulsarParm::enforceDipoleB == 1) {
+        amrex::Print() << " calling apply dipole Bfield BC\n";
         PulsarParm::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
     }
 #endif    
@@ -277,6 +278,7 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
     }
 #ifdef PULSAR
     if (PulsarParm::enforceCorotatingE == 1) {
+        amrex::Print() << " calling apply corotating efield BC\n";
         PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
 #endif    
