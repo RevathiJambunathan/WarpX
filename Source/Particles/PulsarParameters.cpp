@@ -42,6 +42,9 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
     AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
     AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
+    AMREX_GPU_DEVICE_MANAGED int removeParticlesInSelectedThetaRegion = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real min_theta_particle_removal = 90.;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real max_theta_particle_removal = 0.;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -126,6 +129,11 @@ namespace PulsarParm
         pp.query("enforceDipoleB", enforceDipoleB);
         singleParticleTest = 0;
         pp.query("singleParticleTest", singleParticleTest);
+        pp.query("removeParticlesInSelectedThetaRegion", removeParticlesInSelectedThetaRegion);
+        if (removeParticlesInSelectedThetaRegion == 1) {
+            pp.get("min_theta_particle_removal", min_theta_particle_removal);
+            pp.get("max_theta_particle_removal", max_theta_particle_removal);
+        }
     }
 
     /** To initialize the grid with dipole magnetic field everywhere and corotating vacuum

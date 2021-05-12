@@ -47,6 +47,9 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
     extern AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
     extern AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
+    extern AMREX_GPU_DEVICE_MANAGED int removeParticlesInSelectedThetaRegion;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real min_theta_particle_removal;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_theta_particle_removal;
 
     void ReadParameters();
     void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,

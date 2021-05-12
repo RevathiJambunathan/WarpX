@@ -925,8 +925,20 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     if (!inj_pos->insidePulsarBounds(rad,PulsarParm::particle_inject_rmin,
                                                          PulsarParm::particle_inject_rmax)) {
                          p.id() = -1;
-                       continue;
+                         continue;
                     }
+                    if (PulsarParm::removeParticlesInSelectedThetaRegion == 1) {
+                        amrex::Real theta_p = std::acos( std::abs((z0-zc))/rad);
+                        amrex::Real theta_min = PulsarParm::min_theta_particle_removal
+                                                * MathConst::pi / 180.;
+                        amrex::Real theta_max = PulsarParm::max_theta_particle_removal
+                                                * MathConst::pi / 180.;
+                        if (theta_p >= theta_min and theta_p <= theta_max) {
+                            p.id() = -1;
+                            continue;
+                        }
+                    }
+                    
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
