@@ -43,9 +43,7 @@ my_constants.c = 299792458.
 my_constants.B_star = 8.0323e-6                  # magnetic field of NS (T)
 my_constants.dR = 1400
 my_constants.to = 2.e-4
-interpolation.nox = 3
-interpolation.noy = 3
-interpolation.noz = 3
+algo.particle_shape = 3
 
 
 #################################
@@ -89,7 +87,7 @@ plasma_p.density_min = 1E0
 diagnostics.diags_names = plt chk
 plt.diag_type = Full
 plt.intervals = 1
-plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
+plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE Er Etheta Ephi Br Btheta Bphi EdotB Sx Sy Sz
 
 chk.format = checkpoint
 chk.diag_type = Full
