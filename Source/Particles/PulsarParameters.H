@@ -236,6 +236,33 @@ namespace PulsarParm
         F_z = F_r * std::cos(theta) - F_theta * std::sin(theta);
     }
 
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalRComponent (amrex::Real const F_x,
+            amrex::Real const F_y, amrex::Real const F_z,
+            amrex::Real const theta, amrex::Real const phi, amrex::Real & F_r)
+    {
+        F_r = F_x * std::sin(theta) * std::cos(phi)
+            + F_y * std::sin(theta) * std::sin(phi)
+            + F_z * std::cos(theta);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalThetaComponent (amrex::Real const F_x,
+            amrex::Real const F_y, amrex::Real const F_z,
+            amrex::Real const theta, amrex::Real const phi, amrex::Real & F_theta)
+    {
+        F_theta = F_x * std::cos(theta) * std::cos(phi)
+                + F_y * std::cos(theta) * std::sin(phi)
+                - F_z * std::sin(theta);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalPhiComponent (amrex::Real const F_x,
+            amrex::Real const F_y, amrex::Real const F_z,
+            amrex::Real const theta, amrex::Real const phi, amrex::Real &F_phi)
+    {
+        F_phi = - F_x * sin(phi) + F_y * std::cos(phi);
+    }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     void DampField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, amrex::GpuArray<int, 3> const mf_ixtype)
