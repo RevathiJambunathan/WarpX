@@ -42,6 +42,8 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
     AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
     AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real Bdamping_scale = 10;
+    AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing = 0;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -126,6 +128,8 @@ namespace PulsarParm
         pp.query("enforceDipoleB", enforceDipoleB);
         singleParticleTest = 0;
         pp.query("singleParticleTest", singleParticleTest);
+        pp.query("DampBDipoleInRing", DampBDipoleInRing);
+        if (DampBDipoleInRing == 1) pp.query("Bdamping_scale", Bdamping_scale);
     }
 
     /** To initialize the grid with dipole magnetic field everywhere and corotating vacuum
@@ -375,6 +379,26 @@ namespace PulsarParm
                         ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Bx_arr(i,j,k));
                     }
+                    else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
+                        if (DampBDipoleInRing == 1) {
+                            // from inner ring to outer ring
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                   Fr, Ftheta, Fphi);
+                            amrex::Real Bx_dipole;
+                            ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Bx_dipole);
+                            // Damping Function : Fd = tanh(dampingscale * (1-r/Rinner))
+                            // where Rinner = enforceDipoleB_maxradius
+                            //                is the range where Bdipole is imposed
+                            // Fd(Rinner) ~ 1
+                            // Fd(R_domainboundary) ~ 0
+                            amrex::Real Fd = 1._rt
+                                           + std::tanh( Bdamping_scale
+                                                      * (1._rt - r/enforceDipoleB_maxradius)
+                                                      );
+                            Bx_arr(i,j,k) += Fd * Bx_dipole;
+                        }
+                    }
                 },
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                     amrex::Real x, y, z;
@@ -390,6 +414,20 @@ namespace PulsarParm
                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, By_arr(i,j,k));
+                    } else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
+                        if (DampBDipoleInRing == 1) {
+                            // from inner ring to outer ring
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                   Fr, Ftheta, Fphi);
+                            amrex::Real By_dipole;
+                            ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, By_dipole);
+                            amrex::Real Fd = 1._rt
+                                           + std::tanh( Bdamping_scale
+                                                      * (1._rt - r/enforceDipoleB_maxradius)
+                                                      );
+                            By_arr(i,j,k) += Fd * By_dipole;
+                        }
                     }
                 },
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -406,6 +444,20 @@ namespace PulsarParm
                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Bz_arr(i,j,k));
+                    } else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
+                        if (DampBDipoleInRing == 1) {
+                            // from inner ring to outer ring
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                   Fr, Ftheta, Fphi);
+                            amrex::Real Bz_dipole;
+                            ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Bz_dipole);
+                            amrex::Real Fd = 1._rt
+                                           + std::tanh( Bdamping_scale
+                                                      * (1._rt - r/enforceDipoleB_maxradius)
+                                                      );
+                            Bz_arr(i,j,k) += Fd * Bz_dipole;
+                        }
                     }
                 }
             );
