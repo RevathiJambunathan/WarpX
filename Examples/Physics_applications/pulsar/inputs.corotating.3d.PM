@@ -143,3 +143,5 @@ pulsar.enforceCorotatingE = 1        # default 1
 pulsar.enforceDipoleB = 1        # default 1
 pulsar.singleParticleTest = 0    # default 0, if 1, then a particle pair will be introduced.
                                  # Single particle position/momentum will need to be specified
+pulsar.DampBDipoleInRing = 1
+pulsar.Bdamping_scale = 10000
