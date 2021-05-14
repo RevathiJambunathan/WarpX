@@ -7,4 +7,7 @@ target_sources(WarpX
     PartPerCellFunctor.cpp
     PartPerGridFunctor.cpp
     BackTransformFunctor.cpp
+    SphericalComponentFunctor.cpp
+    EdotBFunctor.cpp
+    PoyntingVectorFunctor.cpp
 )
