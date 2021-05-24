@@ -447,42 +447,42 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
                                               warpx.get_pointer_Efield_aux(lev, 0),
                                               warpx.get_pointer_Efield_aux(lev, 1),
                                               warpx.get_pointer_Efield_aux(lev, 2),
-                                              lev, m_crse_ratio, rcomp);
+                                              lev, m_crse_ratio, rcomp, true);
         } else if ( m_varnames[comp] == "Etheta") {
             int thetacomp = 1;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Efield_aux(lev, 0),
                                               warpx.get_pointer_Efield_aux(lev, 1),
                                               warpx.get_pointer_Efield_aux(lev, 2),
-                                              lev, m_crse_ratio, thetacomp);
+                                              lev, m_crse_ratio, thetacomp, true);
         } else if ( m_varnames[comp] == "Ephi" ) {
             int phicomp = 2;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Efield_aux(lev, 0),
                                               warpx.get_pointer_Efield_aux(lev, 1),
                                               warpx.get_pointer_Efield_aux(lev, 2),
-                                              lev, m_crse_ratio, phicomp);
+                                              lev, m_crse_ratio, phicomp, true);
         } else if ( m_varnames[comp] == "Br" ) {
             int rcomp = 0;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Bfield_aux(lev, 0),
                                               warpx.get_pointer_Bfield_aux(lev, 1),
                                               warpx.get_pointer_Bfield_aux(lev, 2),
-                                              lev, m_crse_ratio, rcomp);
+                                              lev, m_crse_ratio, rcomp, false);
         } else if ( m_varnames[comp] == "Btheta" ) {
             int thetacomp = 1;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Bfield_aux(lev, 0),
                                               warpx.get_pointer_Bfield_aux(lev, 1),
                                               warpx.get_pointer_Bfield_aux(lev, 2),
-                                              lev, m_crse_ratio, thetacomp);
+                                              lev, m_crse_ratio, thetacomp, false);
         } else if ( m_varnames[comp] == "Bphi" ) {
             int phicomp = 2;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Bfield_aux(lev, 0),
                                               warpx.get_pointer_Bfield_aux(lev, 1),
                                               warpx.get_pointer_Bfield_aux(lev, 2),
-                                              lev, m_crse_ratio, phicomp);
+                                              lev, m_crse_ratio, phicomp, false);
         } else if (m_varnames[comp] == "EdotB") {
             m_all_field_functors[lev][comp] = std::make_unique<EdotBFunctor>(
                                               warpx.get_pointer_Efield_aux(lev,0),
