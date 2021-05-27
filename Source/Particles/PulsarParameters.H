@@ -107,7 +107,8 @@ namespace PulsarParm
         amrex::Real s_phi   = std::sin(phi);
         amrex::Real r_ratio = R_star/r;
         // inside pulsar
-        if ( r <= max_EBcorotating_radius ) {
+        //if ( r <= max_EBcorotating_radius ) {
+        if (r <= corotatingE_maxradius) {
             amrex::Real r2 = r_ratio * r_ratio;
             // Michel and Li -- eq 14 , 15
             Er     =  B_star * omega * r2 * R_star * s_theta * s_theta;
@@ -116,7 +117,8 @@ namespace PulsarParm
         }
 
         // outside pulsar
-        if ( r > max_EBcorotating_radius ) {
+        //if ( r > max_EBcorotating_radius ) {
+        if (r > corotatingE_maxradius) {
             amrex::Real r4 = r_ratio*r_ratio*r_ratio*r_ratio;
             // Taking derivative of phi given in eq 30 of Michel and Li
             Er = B_star * omega * R_star * r4 * (1.0-3.0*c_theta*c_theta);

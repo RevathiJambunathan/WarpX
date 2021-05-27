@@ -27,6 +27,9 @@ void UpdateMomentumBoris(
     ux += econst*Ex;
     uy += econst*Ey;
     uz += econst*Ez;
+#ifdef PULSAR
+    amrex::AllPrintToFile("PulsarParticle") << "half acceleration Ex : " << econst*Ex << " " << " Ey : " << econst*Ey << " Ez " << econst*Ez << "\n";
+#endif
     // Compute temporary gamma factor
     constexpr amrex::Real inv_c2 = 1._rt/(PhysConst::c*PhysConst::c);
     const amrex::Real inv_gamma = 1._rt/std::sqrt(1._rt + (ux*ux + uy*uy + uz*uz)*inv_c2);
@@ -46,10 +49,20 @@ void UpdateMomentumBoris(
     ux += uy_p*sz - uz_p*sy;
     uy += uz_p*sx - ux_p*sz;
     uz += ux_p*sy - uy_p*sx;
+    amrex::Real tmp_ux = uy_p*sz - uz_p*sy;
+    amrex::Real tmp_uy = uz_p*sx - ux_p*sz;
+    amrex::Real tmp_uz = ux_p*sy - uy_p*sx;
+#ifdef PULSAR
+    amrex::AllPrintToFile("PulsarParticle") << " Momentum after rotation : " << ux << " " << " uy : " << uy << " uz " << uz << " rot ux : " << tmp_ux << " rot uy " << tmp_uy << " rot uz "  << tmp_uz<< "\n";
+#endif
     // Second half-push for E
     ux += econst*Ex;
     uy += econst*Ey;
     uz += econst*Ez;
+#ifdef PULSAR
+    amrex::AllPrintToFile("PulsarParticle") << "half acceleration Ex : " << econst*Ex << " " << " Ey : " << econst*Ey << " Ez " << econst*Ez << "\n";
+    amrex::AllPrintToFile("PulsarParticle") << " Final ux : " << ux << " " << " uy : " << uy << " uz " << uz << "\n";
+#endif
 }
 
 #endif // WARPX_PARTICLES_PUSHER_UPDATEMOMENTUM_BORIS_H_
