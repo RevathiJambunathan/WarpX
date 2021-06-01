@@ -1608,7 +1608,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
 #ifdef PULSAR
-                auto& p = particles[ip];
+//                auto& p = particles[ip];
 //                amrex::AllPrintToFile("PulsarParticle") << " part id : " << p.id() << " ip: " << ip << " q: " << q << " xp : " << xp << " yp " << yp << " zp " << zp  << "\n";
                 amrex::Real r_p, theta_p, phi_p;
                 PulsarParm::ConvertCartesianToSphericalCoord( xp, yp, zp, problo, probhi, r_p, theta_p, phi_p);
@@ -2143,7 +2143,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         getPosition(ip, xp, yp, zp);
 
 #ifdef PULSAR
-        auto& p = particles[ip];
+//        auto& p = particles[ip];
 //        amrex::AllPrintToFile("PulsarParticle") << " part id : " << p.id() << " ip :" << ip << " q: " << q << " xp : " << xp << " yp " << yp << " zp " << zp  << "\n";
         amrex::Real r_p, theta_p, phi_p;
         PulsarParm::ConvertCartesianToSphericalCoord( xp, yp, zp, problo, probhi, r_p, theta_p, phi_p);
