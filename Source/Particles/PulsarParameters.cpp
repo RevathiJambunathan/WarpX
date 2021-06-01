@@ -44,6 +44,8 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
     AMREX_GPU_DEVICE_MANAGED amrex::Real Bdamping_scale = 10;
     AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real injection_time = 0;
+    AMREX_GPU_DEVICE_MANAGED int continuous_injection = 1;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -130,6 +132,8 @@ namespace PulsarParm
         pp.query("singleParticleTest", singleParticleTest);
         pp.query("DampBDipoleInRing", DampBDipoleInRing);
         if (DampBDipoleInRing == 1) pp.query("Bdamping_scale", Bdamping_scale);
+        pp.query("injection_time", injection_time);
+        pp.query("continuous_injection", continuous_injection);
     }
 
     /** To initialize the grid with dipole magnetic field everywhere and corotating vacuum

@@ -49,6 +49,8 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real Bdamping_scale;
     extern AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real injection_time;
+    extern AMREX_GPU_DEVICE_MANAGED int continuous_injection;
 
     void ReadParameters();
     void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
@@ -265,7 +267,7 @@ namespace PulsarParm
             amrex::Real const F_y, amrex::Real const F_z,
             amrex::Real const theta, amrex::Real const phi, amrex::Real &F_phi)
     {
-        F_phi = - F_x * sin(phi) + F_y * std::cos(phi);
+        F_phi = - F_x * std::sin(phi) + F_y * std::cos(phi);
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE

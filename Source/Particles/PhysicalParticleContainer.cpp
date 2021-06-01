@@ -211,10 +211,10 @@ void PhysicalParticleContainer::InitData ()
     AddParticles(0); // Note - add on level 0
     Redistribute();  // We then redistribute
 #else
-    if (PulsarParm::singleParticleTest == 1) {
-        AddParticles(0); // Note - add on level 0
-        Redistribute();  // We then redistribute
-    }
+    //if (PulsarParm::singleParticleTest == 1) {
+    //    AddParticles(0); // Note - add on level 0
+    //    Redistribute();  // We then redistribute
+    //}
 #endif
 }
 
