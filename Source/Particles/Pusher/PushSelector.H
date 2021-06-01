@@ -63,6 +63,10 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                     const int do_sync,
                     const amrex::Real t_chi_max,
 #endif
+#ifdef PULSAR
+                    amrex::Real *PulsarDiag,
+                    const int compute_from_theory,
+#endif
                     const amrex::Real dt)
 {
     if (do_copy) copyAttribs(i);
@@ -111,7 +115,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
         if (ion_lev) { qp *= ion_lev; }
         UpdateMomentumBoris( ux, uy, uz,
                              Ex, Ey, Ez, Bx,
-                             By, Bz, qp, m, dt);
+                             By, Bz, qp, m, dt, PulsarDiag, i, compute_from_theory);
         amrex::ParticleReal x, y, z;
         GetPosition(i, x, y, z);
         UpdatePosition(x, y, z, ux, uy, uz, dt );
