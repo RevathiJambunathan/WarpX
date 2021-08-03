@@ -51,6 +51,15 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real injection_time;
     extern AMREX_GPU_DEVICE_MANAGED int continuous_injection;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_min;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_max;
+    extern AMREX_GPU_DEVICE_MANAGED int use_theoreticalEB;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real theory_max_rstar;
+    extern AMREX_GPU_DEVICE_MANAGED int LimitDipoleBInit;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real DipoleB_init_maxradius;
+    extern AMREX_GPU_DEVICE_MANAGED int AddExternalMonopoleOnly;
+    extern AMREX_GPU_DEVICE_MANAGED int AddMonopoleInsideRstarOnGrid;
+    extern AMREX_GPU_DEVICE_MANAGED int EnforceTheoreticalEBInGrid;
 
     void ReadParameters();
     void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
@@ -93,6 +102,9 @@ namespace PulsarParm
         amrex::Real r2 = r_ratio * r_ratio;
         // Michel and Li -- eq 14 , 15
         Er     =  B_star * omega * r2 * R_star * s_theta * s_theta;
+        if (PulsarParm::AddMonopoleInsideRstarOnGrid == 1) {
+            Er += (2.0/3.0) * omega * B_star * R_star * r_ratio * r_ratio;
+        }
         Etheta = -B_star * omega * r2 * R_star * 2.0 * s_theta * c_theta;
         Ephi   = 0.0; // aligned magnetic and rotation axis
     }
@@ -130,6 +142,24 @@ namespace PulsarParm
             Etheta = (-1.0) * B_star * omega * R_star * r4 * (2.0*s_theta*c_theta);
             Ephi = 0.0;
         }
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ExternalEMonopoleSpherical (amrex::Real const r, amrex::Real const theta,
+                                     amrex::Real const phi, amrex::Real const time,
+                                     amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
+    {
+        amrex::Real omega = Omega(time);
+        amrex::Real c_theta = std::cos(theta);
+        amrex::Real s_theta = std::sin(theta);
+        amrex::Real c_phi   = std::cos(phi);
+        amrex::Real s_phi   = std::sin(phi);
+        amrex::Real r_ratio = R_star/r;
+
+        Er = (2.0/3.0) * omega * B_star * R_star * r_ratio * r_ratio;
+        Etheta = 0.;
+        Ephi = 0.;
+
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE

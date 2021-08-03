@@ -177,6 +177,16 @@ WarpX::PushPSATD (int lev, amrex::Real /* dt */) {
             DampFieldsInGuards(Efield_avg_fp[lev], Bfield_avg_fp[lev]);
         }
     }
+#ifdef PULSAR
+    amrex::Real a_dt = 0._rt;
+    if (PulsarParm::enforceDipoleB == 1) {
+        PulsarParm::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+    }
+    if (PulsarParm::enforceCorotatingE == 1) {
+        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+
+#endif    
 #endif
 }
 
@@ -433,6 +443,11 @@ WarpX::MacroscopicEvolveE (int lev, PatchType patch_type, amrex::Real a_dt) {
                 a_dt, pml_has_particles );
         }
     }
+#ifdef PULSAR
+    if (PulsarParm::enforceCorotatingE == 1) {
+        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+#endif    
 }
 
 void

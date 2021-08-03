@@ -12,7 +12,7 @@ SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mf
                                                       int lev,
                                                       amrex::IntVect crse_ratio,
                                                       int sphericalcomp,
-                                                      const bool Efield,
+                                                      const int Efield,
                                                       int ncomp)
     : ComputeDiagFunctor(ncomp, crse_ratio), m_mfx_src(mfx_src),
       m_mfy_src(mfy_src), m_mfz_src(mfz_src), m_lev(lev), m_sphericalcomp(sphericalcomp),
@@ -46,7 +46,7 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
     }
     const int sphericalcomp = m_sphericalcomp;
     amrex::Real cur_time = warpx.gett_new(0);
-    bool Efield = m_Efield;
+    int Efield = m_Efield;
 #ifdef PULSAR
 
 #ifdef AMREX_USE_OMP
@@ -79,7 +79,7 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
                                                              r, theta, phi);
                 // compute theoretical E and B field
                 amrex::Real Fr_theory, Ftheta_theory, Fphi_theory;
-                if (Efield == true) {
+                if (Efield == 1) {
                     PulsarParm::CorotatingEfieldSpherical(r, theta, phi, cur_time, Fr_theory,
                                              Ftheta_theory, Fphi_theory);
                 } else {
@@ -97,53 +97,6 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
                     PulsarParm::ConvertCartesianToSphericalPhiComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 }
-
-                // print difference at pole
-                amrex::Real theta_min, theta_max, phi_min, phi_max, r_min, r_max;
-                theta_min = 0; theta_max = 0.08;
-                phi_min = 1.48; phi_max = 1.6;
-                r_min = PulsarParm::R_star - PulsarParm::dR_star;
-                r_max = PulsarParm::R_star + PulsarParm::dR_star;
-
-                if (r >= r_min and r <= r_max) {
-                if (theta >= theta_min and theta <= theta_max) {
-                if (phi >= phi_min and phi <= phi_max) {
-                    if (sphericalcomp == 0) {
-                        amrex::Print() << " Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Fr_theory " << Fr_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Fr_theory << "\n";                      
-                    } else if (sphericalcomp == 1) {
-                        amrex::Print() << " Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Ftheta_theory " << Ftheta_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Ftheta_theory << "\n";                      
-                    } else if (sphericalcomp == 2) {
-                        amrex::Print() << " Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Fphi_theory " << Fphi_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Fphi_theory << "\n";                      
-                    }
-                }}}
-
-                // at the equator
-                theta_min = 1.48; theta_max = 1.6;
-                if (r >= r_min and r <= r_max) {
-                if (theta >= theta_min and theta <= theta_max) {
-                if (phi >= phi_min and phi <= phi_max) {
-                    if (sphericalcomp == 0) {
-                        amrex::Print() << " equator Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Fr_theory " << Fr_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Fr_theory << "\n";                      
-                    } else if (sphericalcomp == 1) {
-                        amrex::Print() << " equator Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Ftheta_theory " << Ftheta_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Ftheta_theory << "\n";                      
-                    } else if (sphericalcomp == 2) {
-                        amrex::Print() << " equator Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Fphi_theory " << Fphi_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Fphi_theory << "\n";                      
-                    }
-                }}}
-               
-                // at theta=55 
-                theta_min = 0.96; theta_max = 1.05;
-                if (r >= r_min and r <= r_max) {
-                if (theta >= theta_min and theta <= theta_max) {
-                if (phi >= phi_min and phi <= phi_max) {
-                    if (sphericalcomp == 0) {
-                        amrex::Print() << " theta55 Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Fr_theory " << Fr_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Fr_theory << "\n";                      
-                    } else if (sphericalcomp == 1) {
-                        amrex::Print() << " theta55 Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Ftheta_theory " << Ftheta_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Ftheta_theory << "\n";                      
-                    } else if (sphericalcomp == 2) {
-                        amrex::Print() << " theta55 Efield? " << Efield << " r " << r << " theta " << theta << " phi " << phi << " rcomp_sim : " << arr_dst(i,j,k,n+dcomp) << " Fphi_theory " << Fphi_theory << " diff : " << arr_dst(i,j,k,n+dcomp) - Fphi_theory << "\n";                      
-                    }
-                }}}
 
             });
     }
