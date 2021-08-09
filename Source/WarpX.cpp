@@ -32,6 +32,9 @@
 #include "Utils/WarpXAlgorithmSelection.H"
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXUtil.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #ifdef BL_USE_SENSEI_INSITU
 #   include <AMReX_AmrMeshInSituBridge.H>
@@ -1166,6 +1169,9 @@ WarpX::ReadParameters ()
        }
 
     }
+#ifdef PULSAR
+    PulsarParm::ReadParameters();
+#endif
 }
 
 void
@@ -1464,12 +1470,23 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     // Even components are the imaginary parts.
     ncomps = n_rz_azimuthal_modes*2 - 1;
 #endif
-
     // set human-readable tag for each MultiFab
     auto const tag = [lev]( std::string tagname ) {
         tagname.append("[l=").append(std::to_string(lev)).append("]");
         return MFInfo().SetTag(std::move(tagname));
     };
+        Ex_nodal_flag  = IntVect::TheCellVector();
+        Ey_nodal_flag  = IntVect::TheCellVector();
+        Ez_nodal_flag  = IntVect::TheCellVector();
+        Bx_nodal_flag  = IntVect::TheCellVector();
+        By_nodal_flag  = IntVect::TheCellVector();
+        Bz_nodal_flag  = IntVect::TheCellVector();
+        jx_nodal_flag  = IntVect::TheCellVector();
+        jy_nodal_flag  = IntVect::TheCellVector();
+        jz_nodal_flag  = IntVect::TheCellVector();
+        rho_nodal_flag = IntVect::TheCellVector();
+        F_nodal_flag = IntVect::TheCellVector();
+        G_nodal_flag = IntVect::TheCellVector();
 
     //
     // The fine patch

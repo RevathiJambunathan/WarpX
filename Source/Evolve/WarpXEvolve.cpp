@@ -69,281 +69,281 @@ WarpX::Evolve (int numsteps)
 
     static Real evolve_time = 0;
 
-    for (int step = istep[0]; step < numsteps_max && cur_time < stop_time; ++step)
-    {
-        Real evolve_time_beg_step = amrex::second();
-
-        multi_diags->NewIteration();
-
-        // Start loop on time steps
-        if (verbose) {
-            amrex::Print() << "\nSTEP " << step+1 << " starts ...\n";
-        }
-        if (warpx_py_beforestep) warpx_py_beforestep();
-
-        amrex::LayoutData<amrex::Real>* cost = WarpX::getCosts(0);
-        if (cost) {
-            if (step > 0 && load_balance_intervals.contains(step+1))
-            {
-                LoadBalance();
-
-                // Reset the costs to 0
-                ResetCosts();
-            }
-            for (int lev = 0; lev <= finest_level; ++lev)
-            {
-                cost = WarpX::getCosts(lev);
-                if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
-                {
-                    // Perform running average of the costs
-                    // (Giving more importance to most recent costs; only needed
-                    // for timers update, heuristic load balance considers the
-                    // instantaneous costs)
-                    for (int i : cost->IndexArray())
-                    {
-                        (*cost)[i] *= (1. - 2./load_balance_intervals.localPeriod(step+1));
-                    }
-                }
-            }
-        }
-
-        // At the beginning, we have B^{n} and E^{n}.
-        // Particles have p^{n} and x^{n}.
-        // is_synchronized is true.
-        if (is_synchronized) {
-            if (do_electrostatic == ElectrostaticSolverAlgo::None) {
-                // Not called at each iteration, so exchange all guard cells
-                FillBoundaryE(guard_cells.ng_alloc_EB);
-                FillBoundaryB(guard_cells.ng_alloc_EB);
-                UpdateAuxilaryData();
-                FillBoundaryAux(guard_cells.ng_UpdateAux);
-            }
-            // on first step, push p by -0.5*dt
-            for (int lev = 0; lev <= finest_level; ++lev)
-            {
-                mypc->PushP(lev, -0.5_rt*dt[lev],
-                            *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
-                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2]);
-            }
-            is_synchronized = false;
-        } else {
-            if (do_electrostatic == ElectrostaticSolverAlgo::None) {
-                // Beyond one step, we have E^{n} and B^{n}.
-                // Particles have p^{n-1/2} and x^{n}.
-
-                // E and B are up-to-date inside the domain only
-                FillBoundaryE(guard_cells.ng_FieldGather);
-                FillBoundaryB(guard_cells.ng_FieldGather);
-                // E and B: enough guard cells to update Aux or call Field Gather in fp and cp
-                // Need to update Aux on lower levels, to interpolate to higher levels.
-                if (fft_do_time_averaging)
-                {
-                    FillBoundaryE_avg(guard_cells.ng_FieldGather);
-                    FillBoundaryB_avg(guard_cells.ng_FieldGather);
-                }
-                // TODO Remove call to FillBoundaryAux before UpdateAuxilaryData?
-                if (WarpX::maxwell_solver_id != MaxwellSolverAlgo::PSATD)
-                    FillBoundaryAux(guard_cells.ng_UpdateAux);
-                UpdateAuxilaryData();
-                FillBoundaryAux(guard_cells.ng_UpdateAux);
-            }
-        }
-
-        // Run multi-physics modules:
-        // ionization, Coulomb collisions, QED Schwinger
-        doFieldIonization();
-        mypc->doCollisions( cur_time );
-#ifdef WARPX_QED
-        mypc->doQEDSchwinger();
-#endif
-
-        // Main PIC operation:
-        // gather fields, push particles, deposit sources, update fields
-
-        if (warpx_py_particleinjection) warpx_py_particleinjection();
-        // Electrostatic case: only gather fields and push particles,
-        // deposition and calculation of fields done further below
-        if (do_electrostatic != ElectrostaticSolverAlgo::None)
-        {
-            const bool skip_deposition = true;
-            PushParticlesandDepose(cur_time, skip_deposition);
-        }
-        // Electromagnetic case: multi-J algorithm
-        else if (do_multi_J)
-        {
-            OneStep_multiJ(cur_time);
-        }
-        // Electromagnetic case: no subcycling or no mesh refinement
-        else if (do_subcycling == 0 || finest_level == 0)
-        {
-            OneStep_nosub(cur_time);
-            // E: guard cells are up-to-date
-            // B: guard cells are NOT up-to-date
-            // F: guard cells are NOT up-to-date
-        }
-        // Electromagnetic case: subcycling with one level of mesh refinement
-        else if (do_subcycling == 1 && finest_level == 1)
-        {
-            OneStep_sub1(cur_time);
-        }
-        else
-        {
-            amrex::Print() << "Error: do_subcycling = " << do_subcycling << std::endl;
-            amrex::Abort("Unsupported do_subcycling type");
-        }
-
-        // Run remaining QED modules
-#ifdef WARPX_QED
-        doQEDEvents();
-#endif
-
-        // Resample particles
-        // +1 is necessary here because value of step seen by user (first step is 1) is different than
-        // value of step in code (first step is 0)
-        mypc->doResampling(istep[0]+1);
-
-        if (num_mirrors>0){
-            applyMirrors(cur_time);
-            // E : guard cells are NOT up-to-date
-            // B : guard cells are NOT up-to-date
-        }
-
-        if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
-            // At the end of last step, push p by 0.5*dt to synchronize
-            FillBoundaryE(guard_cells.ng_FieldGather);
-            FillBoundaryB(guard_cells.ng_FieldGather);
-            if (fft_do_time_averaging)
-            {
-                FillBoundaryE_avg(guard_cells.ng_FieldGather);
-                FillBoundaryB_avg(guard_cells.ng_FieldGather);
-            }
-            UpdateAuxilaryData();
-            FillBoundaryAux(guard_cells.ng_UpdateAux);
-            for (int lev = 0; lev <= finest_level; ++lev) {
-                mypc->PushP(lev, 0.5_rt*dt[lev],
-                            *Efield_aux[lev][0],*Efield_aux[lev][1],
-                            *Efield_aux[lev][2],
-                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],
-                            *Bfield_aux[lev][2]);
-            }
-            is_synchronized = true;
-        }
-
-        for (int lev = 0; lev <= max_level; ++lev) {
-            ++istep[lev];
-        }
-
-        cur_time += dt[0];
-
-        ShiftGalileanBoundary();
-
-        if (do_back_transformed_diagnostics) {
-            std::unique_ptr<MultiFab> cell_centered_data = nullptr;
-            if (WarpX::do_back_transformed_fields) {
-                cell_centered_data = GetCellCenteredData();
-            }
-            myBFD->writeLabFrameData(cell_centered_data.get(), *mypc, geom[0], cur_time, dt[0]);
-        }
-
-        bool move_j = is_synchronized;
-        // If is_synchronized we need to shift j too so that next step we can evolve E by dt/2.
-        // We might need to move j because we are going to make a plotfile.
-
-        int num_moved = MoveWindow(step+1, move_j);
-
-        mypc->ContinuousFluxInjection(dt[0]);
-
-        mypc->ApplyBoundaryConditions();
-
-        // Electrostatic solver: particles can move by an arbitrary number of cells
-        if( do_electrostatic != ElectrostaticSolverAlgo::None )
-        {
-            mypc->Redistribute();
-        } else
-        {
-            // Electromagnetic solver: due to CFL condition, particles can
-            // only move by one or two cells per time step
-            if (max_level == 0) {
-                int num_redistribute_ghost = num_moved;
-                if ((m_v_galilean[0]!=0) or (m_v_galilean[1]!=0) or (m_v_galilean[2]!=0)) {
-                    // Galilean algorithm ; particles can move by up to 2 cells
-                    num_redistribute_ghost += 2;
-                } else {
-                    // Standard algorithm ; particles can move by up to 1 cell
-                    num_redistribute_ghost += 1;
-                }
-                mypc->RedistributeLocal(num_redistribute_ghost);
-            }
-            else {
-                mypc->Redistribute();
-            }
-        }
-
-        // interact with particles with EB walls (if present)
-#ifdef AMREX_USE_EB
-        AMREX_ALWAYS_ASSERT(maxLevel() == 0);
-        mypc->ScrapeParticles(amrex::GetVecOfConstPtrs(m_distance_to_eb));
-#endif
-        if (sort_intervals.contains(step+1)) {
-            amrex::Print() << "re-sorting particles \n";
-            mypc->SortParticlesByBin(sort_bin_size);
-        }
-
-        if( do_electrostatic != ElectrostaticSolverAlgo::None ) {
-            // Electrostatic solver:
-            // For each species: deposit charge and add the associated space-charge
-            // E and B field to the grid ; this is done at the end of the PIC
-            // loop (i.e. immediately after a `Redistribute` and before particle
-            // positions are next pushed) so that the particles do not deposit out of bounds
-            // and so that the fields are at the correct time in the output.
-            bool const reset_fields = true;
-            ComputeSpaceChargeField( reset_fields );
-        }
-
-        Real evolve_time_end_step = amrex::second();
-        evolve_time += evolve_time_end_step - evolve_time_beg_step;
-
-        if (verbose) {
-            amrex::Print()<< "STEP " << step+1 << " ends." << " TIME = " << cur_time
-                        << " DT = " << dt[0] << "\n";
-            amrex::Print()<< "Evolve time = " << evolve_time
-                      << " s; This step = " << evolve_time_end_step-evolve_time_beg_step
-                      << " s; Avg. per step = " << evolve_time/(step+1) << " s\n";
-        }
-        // sync up time
-        for (int i = 0; i <= max_level; ++i) {
-            t_new[i] = cur_time;
-        }
-
-        /// reduced diags
-        if (reduced_diags->m_plot_rd != 0)
-        {
-            reduced_diags->ComputeDiags(step);
-            reduced_diags->WriteToFile(step);
-        }
-        multi_diags->FilterComputePackFlush( step );
-
-        if (cur_time >= stop_time - 1.e-3*dt[0]) {
-            break;
-        }
-
-        if (warpx_py_afterstep) warpx_py_afterstep();
-
-        // inputs: unused parameters (e.g. typos) check after step 1 has finished
-        if (!early_params_checked) {
-            amrex::Print() << "\n"; // better: conditional \n based on return value
-            amrex::ParmParse().QueryUnusedInputs();
-            early_params_checked = true;
-        }
-
-        // End loop on time steps
-    }
+//    for (int step = istep[0]; step < numsteps_max && cur_time < stop_time; ++step)
+//    {
+//        Real evolve_time_beg_step = amrex::second();
+//
+//        multi_diags->NewIteration();
+//
+//        // Start loop on time steps
+//        if (verbose) {
+//            amrex::Print() << "\nSTEP " << step+1 << " starts ...\n";
+//        }
+//        if (warpx_py_beforestep) warpx_py_beforestep();
+//
+//        amrex::LayoutData<amrex::Real>* cost = WarpX::getCosts(0);
+//        if (cost) {
+//            if (step > 0 && load_balance_intervals.contains(step+1))
+//            {
+//                LoadBalance();
+//
+//                // Reset the costs to 0
+//                ResetCosts();
+//            }
+//            for (int lev = 0; lev <= finest_level; ++lev)
+//            {
+//                cost = WarpX::getCosts(lev);
+//                if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
+//                {
+//                    // Perform running average of the costs
+//                    // (Giving more importance to most recent costs; only needed
+//                    // for timers update, heuristic load balance considers the
+//                    // instantaneous costs)
+//                    for (int i : cost->IndexArray())
+//                    {
+//                        (*cost)[i] *= (1. - 2./load_balance_intervals.localPeriod(step+1));
+//                    }
+//                }
+//            }
+//        }
+//
+//        // At the beginning, we have B^{n} and E^{n}.
+//        // Particles have p^{n} and x^{n}.
+//        // is_synchronized is true.
+//        if (is_synchronized) {
+//            if (do_electrostatic == ElectrostaticSolverAlgo::None) {
+//                // Not called at each iteration, so exchange all guard cells
+//                FillBoundaryE(guard_cells.ng_alloc_EB);
+//                FillBoundaryB(guard_cells.ng_alloc_EB);
+//                UpdateAuxilaryData();
+//                FillBoundaryAux(guard_cells.ng_UpdateAux);
+//            }
+//            // on first step, push p by -0.5*dt
+//            for (int lev = 0; lev <= finest_level; ++lev)
+//            {
+//                mypc->PushP(lev, -0.5_rt*dt[lev],
+//                            *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
+//                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2]);
+//            }
+//            is_synchronized = false;
+//        } else {
+//            if (do_electrostatic == ElectrostaticSolverAlgo::None) {
+//                // Beyond one step, we have E^{n} and B^{n}.
+//                // Particles have p^{n-1/2} and x^{n}.
+//
+//                // E and B are up-to-date inside the domain only
+//                FillBoundaryE(guard_cells.ng_FieldGather);
+//                FillBoundaryB(guard_cells.ng_FieldGather);
+//                // E and B: enough guard cells to update Aux or call Field Gather in fp and cp
+//                // Need to update Aux on lower levels, to interpolate to higher levels.
+//                if (fft_do_time_averaging)
+//                {
+//                    FillBoundaryE_avg(guard_cells.ng_FieldGather);
+//                    FillBoundaryB_avg(guard_cells.ng_FieldGather);
+//                }
+//                // TODO Remove call to FillBoundaryAux before UpdateAuxilaryData?
+//                if (WarpX::maxwell_solver_id != MaxwellSolverAlgo::PSATD)
+//                    FillBoundaryAux(guard_cells.ng_UpdateAux);
+//                UpdateAuxilaryData();
+//                FillBoundaryAux(guard_cells.ng_UpdateAux);
+//            }
+//        }
+//
+//        // Run multi-physics modules:
+//        // ionization, Coulomb collisions, QED Schwinger
+//        doFieldIonization();
+//        mypc->doCollisions( cur_time );
+//#ifdef WARPX_QED
+//        mypc->doQEDSchwinger();
+//#endif
+//
+//        // Main PIC operation:
+//        // gather fields, push particles, deposit sources, update fields
+//
+//        if (warpx_py_particleinjection) warpx_py_particleinjection();
+//        // Electrostatic case: only gather fields and push particles,
+//        // deposition and calculation of fields done further below
+//        if (do_electrostatic != ElectrostaticSolverAlgo::None)
+//        {
+//            const bool skip_deposition = true;
+//            PushParticlesandDepose(cur_time, skip_deposition);
+//        }
+//        // Electromagnetic case: multi-J algorithm
+//        else if (do_multi_J)
+//        {
+//            OneStep_multiJ(cur_time);
+//        }
+//        // Electromagnetic case: no subcycling or no mesh refinement
+//        else if (do_subcycling == 0 || finest_level == 0)
+//        {
+//            OneStep_nosub(cur_time);
+//            // E: guard cells are up-to-date
+//            // B: guard cells are NOT up-to-date
+//            // F: guard cells are NOT up-to-date
+//        }
+//        // Electromagnetic case: subcycling with one level of mesh refinement
+//        else if (do_subcycling == 1 && finest_level == 1)
+//        {
+//            OneStep_sub1(cur_time);
+//        }
+//        else
+//        {
+//            amrex::Print() << "Error: do_subcycling = " << do_subcycling << std::endl;
+//            amrex::Abort("Unsupported do_subcycling type");
+//        }
+//
+//        // Run remaining QED modules
+//#ifdef WARPX_QED
+//        doQEDEvents();
+//#endif
+//
+//        // Resample particles
+//        // +1 is necessary here because value of step seen by user (first step is 1) is different than
+//        // value of step in code (first step is 0)
+//        mypc->doResampling(istep[0]+1);
+//
+//        if (num_mirrors>0){
+//            applyMirrors(cur_time);
+//            // E : guard cells are NOT up-to-date
+//            // B : guard cells are NOT up-to-date
+//        }
+//
+//        if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
+//            // At the end of last step, push p by 0.5*dt to synchronize
+//            FillBoundaryE(guard_cells.ng_FieldGather);
+//            FillBoundaryB(guard_cells.ng_FieldGather);
+//            if (fft_do_time_averaging)
+//            {
+//                FillBoundaryE_avg(guard_cells.ng_FieldGather);
+//                FillBoundaryB_avg(guard_cells.ng_FieldGather);
+//            }
+//            UpdateAuxilaryData();
+//            FillBoundaryAux(guard_cells.ng_UpdateAux);
+//            for (int lev = 0; lev <= finest_level; ++lev) {
+//                mypc->PushP(lev, 0.5_rt*dt[lev],
+//                            *Efield_aux[lev][0],*Efield_aux[lev][1],
+//                            *Efield_aux[lev][2],
+//                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],
+//                            *Bfield_aux[lev][2]);
+//            }
+//            is_synchronized = true;
+//        }
+//
+//        for (int lev = 0; lev <= max_level; ++lev) {
+//            ++istep[lev];
+//        }
+//
+//        cur_time += dt[0];
+//
+//        ShiftGalileanBoundary();
+//
+//        if (do_back_transformed_diagnostics) {
+//            std::unique_ptr<MultiFab> cell_centered_data = nullptr;
+//            if (WarpX::do_back_transformed_fields) {
+//                cell_centered_data = GetCellCenteredData();
+//            }
+//            myBFD->writeLabFrameData(cell_centered_data.get(), *mypc, geom[0], cur_time, dt[0]);
+//        }
+//
+//        bool move_j = is_synchronized;
+//        // If is_synchronized we need to shift j too so that next step we can evolve E by dt/2.
+//        // We might need to move j because we are going to make a plotfile.
+//
+//        int num_moved = MoveWindow(step+1, move_j);
+//
+//        mypc->ContinuousFluxInjection(dt[0]);
+//
+//        mypc->ApplyBoundaryConditions();
+//
+//        // Electrostatic solver: particles can move by an arbitrary number of cells
+//        if( do_electrostatic != ElectrostaticSolverAlgo::None )
+//        {
+//            mypc->Redistribute();
+//        } else
+//        {
+//            // Electromagnetic solver: due to CFL condition, particles can
+//            // only move by one or two cells per time step
+//            if (max_level == 0) {
+//                int num_redistribute_ghost = num_moved;
+//                if ((m_v_galilean[0]!=0) or (m_v_galilean[1]!=0) or (m_v_galilean[2]!=0)) {
+//                    // Galilean algorithm ; particles can move by up to 2 cells
+//                    num_redistribute_ghost += 2;
+//                } else {
+//                    // Standard algorithm ; particles can move by up to 1 cell
+//                    num_redistribute_ghost += 1;
+//                }
+//                mypc->RedistributeLocal(num_redistribute_ghost);
+//            }
+//            else {
+//                mypc->Redistribute();
+//            }
+//        }
+//
+//        // interact with particles with EB walls (if present)
+//#ifdef AMREX_USE_EB
+//        AMREX_ALWAYS_ASSERT(maxLevel() == 0);
+//        mypc->ScrapeParticles(amrex::GetVecOfConstPtrs(m_distance_to_eb));
+//#endif
+//        if (sort_intervals.contains(step+1)) {
+//            amrex::Print() << "re-sorting particles \n";
+//            mypc->SortParticlesByBin(sort_bin_size);
+//        }
+//
+//        if( do_electrostatic != ElectrostaticSolverAlgo::None ) {
+//            // Electrostatic solver:
+//            // For each species: deposit charge and add the associated space-charge
+//            // E and B field to the grid ; this is done at the end of the PIC
+//            // loop (i.e. immediately after a `Redistribute` and before particle
+//            // positions are next pushed) so that the particles do not deposit out of bounds
+//            // and so that the fields are at the correct time in the output.
+//            bool const reset_fields = true;
+//            ComputeSpaceChargeField( reset_fields );
+//        }
+//
+//        Real evolve_time_end_step = amrex::second();
+//        evolve_time += evolve_time_end_step - evolve_time_beg_step;
+//
+//        if (verbose) {
+//            amrex::Print()<< "STEP " << step+1 << " ends." << " TIME = " << cur_time
+//                        << " DT = " << dt[0] << "\n";
+//            amrex::Print()<< "Evolve time = " << evolve_time
+//                      << " s; This step = " << evolve_time_end_step-evolve_time_beg_step
+//                      << " s; Avg. per step = " << evolve_time/(step+1) << " s\n";
+//        }
+//        // sync up time
+//        for (int i = 0; i <= max_level; ++i) {
+//            t_new[i] = cur_time;
+//        }
+//
+//        /// reduced diags
+//        if (reduced_diags->m_plot_rd != 0)
+//        {
+//            reduced_diags->ComputeDiags(step);
+//            reduced_diags->WriteToFile(step);
+//        }
+//        multi_diags->FilterComputePackFlush( step );
+//
+//        if (cur_time >= stop_time - 1.e-3*dt[0]) {
+//            break;
+//        }
+//
+//        if (warpx_py_afterstep) warpx_py_afterstep();
+//
+//        // inputs: unused parameters (e.g. typos) check after step 1 has finished
+//        if (!early_params_checked) {
+//            amrex::Print() << "\n"; // better: conditional \n based on return value
+//            amrex::ParmParse().QueryUnusedInputs();
+//            early_params_checked = true;
+//        }
+//
+//        // End loop on time steps
+//    }
 
     multi_diags->FilterComputePackFlushLastTimestep( istep[0] );
 
-    if (do_back_transformed_diagnostics) {
-        myBFD->Flush(geom[0]);
-    }
+//    if (do_back_transformed_diagnostics) {
+//        myBFD->Flush(geom[0]);
+//    }
 }
 
 /* /brief Perform one PIC iteration, without subcycling

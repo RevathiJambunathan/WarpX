@@ -22,6 +22,9 @@
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/WarpXUtil.H"
+#ifdef PULSAR
+#    include"Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_AmrCore.H>
@@ -61,6 +64,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+
 
 
 using namespace amrex;
@@ -588,6 +592,25 @@ WarpX::InitLevelData (int lev, Real /*time*/)
                                                     lev);
        }
     }
+#ifdef PULSAR
+    amrex::Print() << " init grid with EB \n";
+    if (PulsarParm::InitializeGrid_with_Pulsar_Efield == 1) {
+        amrex::Print() << " init grid with E \n";
+        bool Init_Bfield = false;
+        PulsarParm::InitializeExternalPulsarFieldsOnGrid(Efield_fp[lev][0].get(),
+                                                        Efield_fp[lev][1].get(),
+                                                        Efield_fp[lev][2].get(),
+                                                        lev, Init_Bfield);
+    }
+    if (PulsarParm::InitializeGrid_with_Pulsar_Bfield == 1) {
+        amrex::Print() << " init grid with B \n";
+        bool Init_Bfield = true;
+        PulsarParm::InitializeExternalPulsarFieldsOnGrid(Bfield_fp[lev][0].get(),
+                                                        Bfield_fp[lev][1].get(),
+                                                        Bfield_fp[lev][2].get(),
+                                                        lev, Init_Bfield);
+    }
+#endif
 
     if (F_fp[lev]) {
         F_fp[lev]->setVal(0.0);

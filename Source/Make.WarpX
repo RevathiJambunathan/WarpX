@@ -65,6 +65,9 @@ else
   DEFINES += -DWARPX_DIM_XZ
 endif
 endif
+ifeq ($(PULSAR),TRUE)
+  DEFINES += -DPULSAR
+endif
 
 -include Make.package
 include $(WARPX_HOME)/Source/Make.package
@@ -218,6 +221,7 @@ CEXE_sources += AMReX_buildInfo.cpp
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Tools/C_scripts
 
 ifeq ($(USE_PYTHON_MAIN),TRUE)
+
 
 ifeq ($(shell uname),Darwin)
   SHARED_OPTION = -dynamiclib
