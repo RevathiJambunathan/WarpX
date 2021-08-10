@@ -185,7 +185,7 @@ BTDiagnostics::InitializeFieldBufferData ( int i_buffer , int lev)
 {
     auto & warpx = WarpX::GetInstance();
     // Lab-frame time for the i^th snapshot
-    m_t_lab.at(i_buffer) = i_buffer * m_dt_snapshots_lab;
+    m_t_lab.at(i_buffer) = i_buffer * m_dt_snapshots_lab + 0.1*m_dt_snapshots_lab;
 
 
     // Compute lab-frame co-ordinates that correspond to the simulation domain
@@ -199,6 +199,13 @@ BTDiagnostics::InitializeFieldBufferData ( int i_buffer , int lev)
                                                warpx.moving_window_v * m_t_lab[i_buffer] );
     m_prob_domain_lab[i_buffer].setHi(m_moving_window_dir, zmax_prob_domain_lab +
                                                warpx.moving_window_v * m_t_lab[i_buffer] );
+    amrex::Print() << " i_buffer: " << i_buffer << " ";
+    amrex::Print() << " mtlab : " << m_t_lab[i_buffer] << " "; 
+    amrex::Print() << " moving window v : " << warpx.moving_window_v << " "; 
+    amrex::Print() << " zmin prob domain lab : " << zmin_prob_domain_lab << " ";
+    amrex::Print() << " zmaz prob domain lab : " << zmax_prob_domain_lab << " ";
+    amrex::Print() << " prob domain lab lo z " << m_prob_domain_lab[i_buffer].lo(1);
+    amrex::Print() << " prob domain lab hi z " << m_prob_domain_lab[i_buffer].lo(2) << "\n";
 
     // Define buffer domain in boosted frame at level, lev, with user-defined lo and hi
     amrex::RealBox diag_dom;
@@ -271,13 +278,14 @@ BTDiagnostics::InitializeFieldBufferData ( int i_buffer , int lev)
     // boosted-frame and lab-frame
     m_buffer_flush_counter[i_buffer] = 0;
     m_buffer_counter[i_buffer] = 0;
-    m_current_z_lab[i_buffer] = 0._rt;
+    m_current_z_lab[i_buffer] = m_prob_domain_lab[i_buffer].hi(m_moving_window_dir);
     m_current_z_boost[i_buffer] = 0._rt;
     // Now Update Current Z Positions
     m_current_z_boost[i_buffer] = UpdateCurrentZBoostCoordinate(m_t_lab[i_buffer],
                                                               warpx.gett_new(lev) );
     m_current_z_lab[i_buffer] = UpdateCurrentZLabCoordinate(m_t_lab[i_buffer],
                                                               warpx.gett_new(lev) );
+    if (i_buffer == 0) amrex::Print() << " buffer 0 zlab " << m_current_z_lab[i_buffer] << "\n";
 
     // Compute number of cells in lab-frame required for writing Header file
     // and potentially to generate Back-Transform geometry to ensure
@@ -311,6 +319,8 @@ BTDiagnostics::InitializeFieldBufferData ( int i_buffer , int lev)
     m_snapshot_ncells_lab[i_buffer] = {Nx_lab, Ny_lab, Nz_lab};
 #else
     m_snapshot_ncells_lab[i_buffer] = {Nx_lab, Nz_lab};
+    amrex::Print() << " ibuffer " << i_buffer << " Nx lab " << Nx_lab << " nz lab " << Nz_lab << "\n";
+    amrex::Print() << " zmin lab " << zmin_buffer_lab << " zmax : "<< zmax_buffer_lab << "\n";
 #endif
 }
 
@@ -425,8 +435,10 @@ BTDiagnostics::PrepareFieldDataForOutput ()
                 // Update z-boost and z-lab positions
                 m_current_z_boost[i_buffer] = UpdateCurrentZBoostCoordinate(m_t_lab[i_buffer],
                                                                       warpx.gett_new(lev) );
+                if (i_buffer == 0) amrex::Print() << " calling zlab for ibuffer 0 " << m_t_lab[i_buffer] << " " << warpx.gett_new(lev) << "\n";
                 m_current_z_lab[i_buffer] = UpdateCurrentZLabCoordinate(m_t_lab[i_buffer],
                                                                       warpx.gett_new(lev) );
+                if (i_buffer == 0) amrex::Print() << " buffer 0 zlab update " << m_current_z_lab[i_buffer] << "\n";
                 // Check if the zslice is in domain
                 bool ZSliceInDomain = GetZSliceInDomainFlag (i_buffer, lev);
                 // Initialize and define field buffer multifab if buffer is empty
@@ -435,6 +447,7 @@ BTDiagnostics::PrepareFieldDataForOutput ()
                         if ( m_buffer_flush_counter[i_buffer] == 0) {
                             // Compute the geometry, snapshot lab-domain extent
                             // and box-indices
+                            amrex::Print() << " ibuffer empty - creating snapshot " << i_buffer << "\n";
                             DefineSnapshotGeometry(i_buffer, lev);
                         }
                         DefineFieldBufferMultiFab(i_buffer, lev);
@@ -472,6 +485,17 @@ BTDiagnostics::k_index_zlab (int i_buffer, int lev)
                             - (prob_domain_zmin_lab + 0.5*dz_lab(warpx.getdt(lev), ref_ratio[m_moving_window_dir]) ) )
                           / dz_lab( warpx.getdt(lev), ref_ratio[m_moving_window_dir] )
                       ) );
+    if (i_buffer == 0 || i_buffer == 1 || i_buffer == 5) {
+        amrex::Print() << " ibuffer " << i_buffer << " : prob domain zminlab " << prob_domain_zmin_lab << " ";
+        amrex::Print() << " : prob domain zmaxlab " << m_prob_domain_lab[i_buffer].hi( m_moving_window_dir ) << "\n";
+        amrex::Print() << " current zlab " << m_current_z_lab[i_buffer] ;
+        amrex::Print() << " klab is : " << k_lab<< "\n";
+//        amrex::Print() << " ibuffer " << i_buffer << " : half dzlab " << 0.5*dz_lab(warpx.getdt(lev), ref_ratio[m_moving_window_dir]) << "\n";
+//        amrex::Print() << " i_buffer " << i_buffer << " dt : " << warpx.getdt(lev) << " dz_lab : " << dz_lab(warpx.getdt(lev), ref_ratio[m_moving_window_dir]);
+//        amrex::Print() << " current zlab : " << m_current_z_lab[i_buffer];
+//        amrex::Print() << " minus : " << (prob_domain_zmin_lab + 0.5*dz_lab(warpx.getdt(lev), ref_ratio[m_moving_window_dir]) );
+//        amrex::Print() << "\n";
+    }
     return k_lab;
 }
 
@@ -545,6 +569,7 @@ BTDiagnostics::DefineSnapshotGeometry (const int i_buffer, const int lev)
         // for the ith snapshot
         // estimating the maximum number of buffer multifabs needed to obtain the
         // full lab-frame snapshot
+        amrex::Print() << " ibuffer " << i_buffer << "k lab " << k_lab << "\n";
         m_max_buffer_multifabs[i_buffer] = static_cast<int>( ceil (
             amrex::Real(m_snapshot_ncells_lab[i_buffer][m_moving_window_dir]) /
             amrex::Real(m_buffer_size) ) );
