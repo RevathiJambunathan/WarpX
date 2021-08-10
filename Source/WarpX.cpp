@@ -1475,18 +1475,6 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
         tagname.append("[l=").append(std::to_string(lev)).append("]");
         return MFInfo().SetTag(std::move(tagname));
     };
-        Ex_nodal_flag  = IntVect::TheCellVector();
-        Ey_nodal_flag  = IntVect::TheCellVector();
-        Ez_nodal_flag  = IntVect::TheCellVector();
-        Bx_nodal_flag  = IntVect::TheCellVector();
-        By_nodal_flag  = IntVect::TheCellVector();
-        Bz_nodal_flag  = IntVect::TheCellVector();
-        jx_nodal_flag  = IntVect::TheCellVector();
-        jy_nodal_flag  = IntVect::TheCellVector();
-        jz_nodal_flag  = IntVect::TheCellVector();
-        rho_nodal_flag = IntVect::TheCellVector();
-        F_nodal_flag = IntVect::TheCellVector();
-        G_nodal_flag = IntVect::TheCellVector();
 
     //
     // The fine patch
