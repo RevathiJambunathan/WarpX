@@ -185,8 +185,6 @@ BTDiagnostics::InitializeFieldBufferData ( int i_buffer , int lev)
 {
     auto & warpx = WarpX::GetInstance();
     // Lab-frame time for the i^th snapshot
-    m_t_lab.at(i_buffer) = i_buffer * m_dt_snapshots_lab + 0.1*m_dt_snapshots_lab;
-
 
     // Compute lab-frame co-ordinates that correspond to the simulation domain
     // at level, lev, and time, m_t_lab[i_buffer] for each ith buffer.
@@ -195,6 +193,12 @@ BTDiagnostics::InitializeFieldBufferData ( int i_buffer , int lev)
                                       / ( (1.0_rt + m_beta_boost) * m_gamma_boost);
     amrex::Real zmax_prob_domain_lab = m_prob_domain_lab[i_buffer].hi(m_moving_window_dir)
                                       / ( (1.0_rt + m_beta_boost) * m_gamma_boost);
+
+    amrex::Real min_tlab = ( (warpx.getdt(lev)/m_gamma_boost)*(PhysConst::c/m_beta_boost) + zmax_prob_domain_lab ) / (PhysConst::c/m_beta_boost - warpx.moving_window_v);
+    amrex::Print() << " dt : " << warpx.getdt(lev) << " " << m_gamma_boost << " " << m_beta_boost; 
+    amrex::Print() << " v : " << warpx.moving_window_v << " mintlab : " << min_tlab << "\n";
+    m_t_lab.at(i_buffer) = i_buffer * m_dt_snapshots_lab + min_tlab;
+
     m_prob_domain_lab[i_buffer].setLo(m_moving_window_dir, zmin_prob_domain_lab +
                                                warpx.moving_window_v * m_t_lab[i_buffer] );
     m_prob_domain_lab[i_buffer].setHi(m_moving_window_dir, zmax_prob_domain_lab +
@@ -621,6 +625,11 @@ BTDiagnostics::GetZSliceInDomainFlag (const int i_buffer, const int lev)
          ( m_current_z_lab[i_buffer] < buffer_zmin_lab ) or
          ( m_current_z_lab[i_buffer] > buffer_zmax_lab ) )
     {
+        amrex::Print() << " ibuffer : " << i_buffer << " " << m_current_z_boost[i_buffer];
+        amrex::Print() << " " << boost_domain.lo(m_moving_window_dir);
+        amrex::Print() << " " << boost_domain.hi(m_moving_window_dir);
+        amrex::Print() << " zlab : " << m_current_z_lab[i_buffer] << " ";
+        amrex::Print() << " " << buffer_zmin_lab << " " << buffer_zmax_lab << "\n";
         // the slice is not in the boosted domain or lab-frame domain
         return false;
     }
