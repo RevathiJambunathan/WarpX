@@ -194,9 +194,16 @@ BTDiagnostics::InitializeFieldBufferData ( int i_buffer , int lev)
     amrex::Real zmax_prob_domain_lab = m_prob_domain_lab[i_buffer].hi(m_moving_window_dir)
                                       / ( (1.0_rt + m_beta_boost) * m_gamma_boost);
 
-    amrex::Real min_tlab = ( (warpx.getdt(lev)/m_gamma_boost)*(PhysConst::c/m_beta_boost) + zmax_prob_domain_lab ) / (PhysConst::c/m_beta_boost - warpx.moving_window_v);
+    // Computing min_tlab so that the first and subsequent snapshots are filled completely
+    amrex::Real min_tlab = ( ( warpx.getdt(lev)/m_gamma_boost)
+                             * (PhysConst::c/m_beta_boost)
+                             + zmax_prob_domain_lab 
+                           )
+                           / (PhysConst::c/m_beta_boost - warpx.moving_window_v);
     amrex::Print() << " dt : " << warpx.getdt(lev) << " " << m_gamma_boost << " " << m_beta_boost; 
     amrex::Print() << " v : " << warpx.moving_window_v << " mintlab : " << min_tlab << "\n";
+
+    // Shifting tlab for all buffers by min_tlab
     m_t_lab.at(i_buffer) = i_buffer * m_dt_snapshots_lab + min_tlab;
 
     m_prob_domain_lab[i_buffer].setLo(m_moving_window_dir, zmin_prob_domain_lab +
