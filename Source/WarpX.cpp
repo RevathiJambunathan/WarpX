@@ -1381,10 +1381,14 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
         deposit_charge = do_dive_cleaning || (plot_rho && do_back_transformed_diagnostics)
                          || update_with_rho || current_correction;
     }
+#ifndef PULSAR
     if (deposit_charge)
     {
         rho_fp[lev] = std::make_unique<MultiFab>(amrex::convert(ba,rho_nodal_flag),dm,2*ncomps,ngRho,tag("rho_fp"));
     }
+#else
+    rho_fp[lev] = std::make_unique<MultiFab>(amrex::convert(ba,rho_nodal_flag),dm,2*ncomps,ngRho,tag("rho_fp"));
+#endif
 
     if (do_electrostatic == ElectrostaticSolverAlgo::LabFrame)
     {

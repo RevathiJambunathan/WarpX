@@ -31,6 +31,39 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
     const IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
     const IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
     const IntVect stag_dst = mf_dst.ixType().toIntVect();
+
+    // convert boxarray of source MultiFab to staggering of dst Multifab
+    // and coarsen it
+    amrex::BoxArray ba_tmp = amrex::convert( m_mfx_src->boxArray(), stag_dst);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE (ba_tmp.coarsenable (m_crse_ratio),
+        "source Multifab converted to staggering of dst Multifab is not coarsenable");
+    ba_tmp.coarsen(m_crse_ratio);
+
+    if (ba_tmp == mf_dst.boxArray() and m_mfx_src->DistributionMap() == mf_dst.DistributionMap()) {
+        ComputeSphericalFieldComponent(mf_dst, dcomp);
+    } else {
+        const int ncomp = 1;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_mfx_src->DistributionMap() == m_mfy_src->DistributionMap() and m_mfy_src->DistributionMap() == m_mfz_src->DistributionMap(), 
+            " all sources must have the same Distribution map");
+        amrex::MultiFab mf_tmp( ba_tmp, m_mfx_src->DistributionMap(), ncomp, 0);
+        const int dcomp_tmp = 0;
+        ComputeSphericalFieldComponent(mf_tmp, dcomp_tmp);
+        mf_dst.copy( mf_tmp, 0, dcomp, ncomp);
+    }
+}
+
+void
+SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_dst, int dcomp) const
+{
+    auto & warpx = WarpX::GetInstance();
+    const auto dx = warpx.Geom(m_lev).CellSizeArray();
+    const auto problo = warpx.Geom(m_lev).ProbLoArray();
+    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
+    const IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
+    const IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
+    const IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
+    const IntVect stag_dst = mf_dst.ixType().toIntVect();
+
     GpuArray<int,3> sfx; // staggering of source xfield
     GpuArray<int,3> sfy; // staggering of source yfield
     GpuArray<int,3> sfz; // staggering of source zfield

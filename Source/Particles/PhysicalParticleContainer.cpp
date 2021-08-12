@@ -2733,6 +2733,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
             auto&  wp = attribs[PIdx::w];
             int* pSum_d = sumParticles.dataPtr();
             amrex::Real* wSum_d = sumWeight.dataPtr();
+            amrex::Real* wp_d = wp.dataPtr();
 
             amrex::ParallelFor(pti.numParticles(),
                   [=] AMREX_GPU_DEVICE (long i) {
@@ -2746,11 +2747,9 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                           // atomic add
                           int const unity = 1;
                           amrex::Gpu::Atomic::AddNoRet(pSum_d,unity);
-                          amrex::Real weight = wSum_d[i];
-                          amrex::Gpu::Atomic::AddNoRet(wSum_d,weight);
+                          amrex::Gpu::Atomic::AddNoRet(wSum_d,wp_d[i]);
                       }
             });
-            amrex::Gpu::synchronize();
         }
    }
    amrex::Gpu::synchronize();

@@ -17,6 +17,9 @@ public:
                                 int ncomp=1);
 
     virtual void operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const override;
+
+    void ComputeSphericalFieldComponent( amrex::MultiFab& mf_dst, int dcomp) const;
+
 private:
     amrex::MultiFab const * const m_mfx_src = nullptr;
     amrex::MultiFab const * const m_mfy_src = nullptr;

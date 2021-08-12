@@ -17,6 +17,7 @@ public:
                    const amrex::IntVect crse_ratio,
                    int ncomp = 1);
     virtual void operator() (amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const override;    
+    void ComputeEdotB(amrex::MultiFab& mf_dst, int dcomp) const;
 private:
     amrex::MultiFab const * const m_Ex_src = nullptr;
     amrex::MultiFab const * const m_Ey_src = nullptr;
