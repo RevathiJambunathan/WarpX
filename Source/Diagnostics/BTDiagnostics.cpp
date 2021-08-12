@@ -631,6 +631,10 @@ BTDiagnostics::GetZSliceInDomainFlag (const int i_buffer, const int lev)
         amrex::Print() << " zlab : " << m_current_z_lab[i_buffer] << " ";
         amrex::Print() << " " << buffer_zmin_lab << " " << buffer_zmax_lab << "\n";
         // the slice is not in the boosted domain or lab-frame domain
+        if (m_current_z_boost[i_buffer] > boost_domain.hi(m_moving_window_dir) )
+            amrex::Print() << " zboost is greater than boost domain hi\n";
+        if (m_current_z_lab[i_buffer] > buffer_zmax_lab)
+            amrex::Print() << " zlab is greater than lab domain hi\n";
         return false;
     }
 
