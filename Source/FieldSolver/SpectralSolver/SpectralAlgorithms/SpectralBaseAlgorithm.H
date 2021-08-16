@@ -11,6 +11,7 @@
 #include "FieldSolver/SpectralSolver/SpectralFieldData.H"
 
 #include <AMReX.H>
+#include <AMReX_RealVect.H>
 
 #if WARPX_USE_PSATD
 

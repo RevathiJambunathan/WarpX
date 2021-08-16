@@ -13,15 +13,15 @@
 #################################
 ####### GENERAL PARAMETERS ######
 #################################
-max_step = 20000
-amr.n_cell = 256 256 256
+max_step = 1
+amr.n_cell = 128 128 128
 amr.max_grid_size = 128
 amr.blocking_factor = 128
 amr.max_level = 0
 geometry.coord_sys   = 0                  # 0: Cartesian
 geometry.is_periodic = 0 0 0     # Is periodic?
-geometry.prob_lo     = 0.0    0.0    0.0
-geometry.prob_hi     = 180000 180000 180000
+geometry.prob_lo     = 45000 45000 45000
+geometry.prob_hi     = 135000 135000 135000
 
 #################################
 ############ NUMERICS ###########
@@ -37,27 +37,25 @@ my_constants.dens  = 5.544e6
 my_constants.xc  = 90000
 my_constants.yc  = 90000
 my_constants.zc  = 90000
-my_constants.r_star  = 12000
+my_constants.r_star  = 12032
 my_constants.omega = 6245.676
 my_constants.c = 299792458.
 my_constants.B_star = 8.0323e-6                  # magnetic field of NS (T)
-my_constants.dR = 1400
+my_constants.dR = 703.125
 my_constants.to = 2.e-4
-interpolation.nox = 3
-interpolation.noy = 3
-interpolation.noz = 3
+algo.particle_shape = 2
 
 
 #################################
 ############ PLASMA #############
 #################################
-particles.nspecies = 2
+#particles.nspecies = 2
 particles.species_names = plasma_e plasma_p
 
 plasma_e.charge = -q_e
 plasma_e.mass = m_e
 plasma_e.injection_style = "singleparticle"
-plasma_e.single_particle_pos = 90000. 103000. 90000.
+plasma_e.single_particle_pos = 90000 90000 101328.875
 plasma_e.single_particle_vel = 0. 0. 0.
 plasma_e.single_particle_weight = 1.
 #plasma_e.profile = parse_density_function
@@ -76,7 +74,7 @@ plasma_e.single_particle_weight = 1.
 plasma_p.charge = q_e
 plasma_p.mass = m_e
 plasma_p.injection_style = "singleparticle"
-plasma_p.single_particle_pos = 90000. 103000. 90000.
+plasma_p.single_particle_pos = 90000 90000 101328.875
 plasma_p.single_particle_vel = 0. 0. 0.
 plasma_p.single_particle_weight = 1.
 #plasma_p.profile = parse_density_function
@@ -94,8 +92,8 @@ plasma_p.single_particle_weight = 1.
 
 diagnostics.diags_names = plt chk
 plt.diag_type = Full
-plt.intervals = 50
-plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE rho_plasma_e rho_plasma_p
+plt.intervals = 5
+plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE rho_plasma_e rho_plasma_p Er Etheta Ephi Br Btheta Bphi EdotB Sx Sy Sz
 
 chk.format = checkpoint
 chk.diag_type = Full
@@ -112,23 +110,23 @@ pulsar.ramp_omega_time = 0.0             # time over which to ramp up NS angular
 pulsar.center_star = 90000 90000 90000
 pulsar.R_star = 12032                  # radius of NS (m)
 pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
-pulsar.dR = 1400                       # thickness on the surface of the pulsar
+pulsar.dR = 703.125                       # thickness on the surface of the pulsar
                                        # consistency requires dR = my_constants.dR
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 0                 # [0/1]: to apply external E and B
-pulsar.E_external_monopole = 0                  # [0/1]
+pulsar.E_external_monopole = 1                  # [0/1]
 pulsar.EB_corotating_maxradius = 12032 # The radius where E-field changes from corotating
                                        # inside the star to quadrapole outside.
                                        # Default is R_star. (r<=cor_radius) i.e. the includes
                                        # the r specified in the input
 pulsar.max_ndens = 5.54e6              # max ndens == ndens used in initializing density
-pulsar.Ninj_fraction = 0.2            # fraction of sigma injected
+pulsar.Ninj_fraction = 1.0            # fraction of sigma injected
 pulsar.ModifyParticleWeight = 1       # (0/1) the fractional injection is achieved
                                       # by modifying particle weight if 1
                                       # by modifying num_ppc if 0
 pulsar.particle_inj_rmin = 10632      # default is Rstar-dR (consistent with density function above)
 pulsar.particle_inj_rmax = 12032      # default is Rstar (consistent with density function)
-pulsar.max_particle_absorption_radius = 12032   # Maximum radius within which particles are
+pulsar.max_particle_absorption_radius = 10632   # Maximum radius within which particles are
                                                 # deleted every timestep.
                                                 # Default is Rstar
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
@@ -145,7 +143,13 @@ pulsar.turnoff_plasmaEB_gather = 0    # (0/1) 0 is default. always gather
 pulsar.max_nogather_radius = 0.       # radius within which self-consistent field gather
 pulsar.init_dipoleBfield = 1          # default is 1
 pulsar.init_corotatingEfield = 1      # default
-pulsar.corotatingE_maxradius = 12032  # default is Rstar
+pulsar.corotatingE_maxradius = 14141.375  # default is Rstar
 pulsar.enforceDipoleB_maxradius = 12032 # default is Rstar
 pulsar.enforceCorotatingE = 1        # default 1
 pulsar.enforceDipoleB = 1        # default 1
+pulsar.singleParticleTest = 1
+pulsar.DampBDipoleInRing = 1
+pulsar.Bdamping_scale = 10000
+pulsar.injection_time = 0.0
+pulsar.continuous_injection = 0
+pulsar.EnforceTheoreticalEBInGrid = 1

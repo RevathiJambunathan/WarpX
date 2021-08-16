@@ -9,6 +9,7 @@
 
 #include "Utils/IntervalsParser.H"
 
+#include <AMReX_RealVect.H>
 #include <AMReX_ParmParse.H>
 
 /**

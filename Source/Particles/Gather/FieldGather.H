@@ -62,6 +62,7 @@ void doGatherShapeN (const amrex::ParticleReal xp,
                      const int n_rz_azimuthal_modes)
 {
     using namespace amrex;
+    amrex::Print() << " in gather : xp,yp,zp " << xp << " " << yp << " " << zp << "\n";
 
 #if defined(WARPX_DIM_XZ)
     amrex::ignore_unused(yp);
@@ -320,32 +321,58 @@ void doGatherShapeN (const amrex::ParticleReal xp,
 
 #else // (AMREX_SPACEDIM == 3)
     // Gather field on particle Exp from field on grid ex_arr
+    amrex::AllPrintToFile("InterpParticleEx") << xp << " " << yp << " " << zp ;
+    amrex::Print() << " gathering Ex \n";
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<=depos_order; iy++){
             for (int ix=0; ix<= depos_order - galerkin_interpolation; ix++){
+                amrex::Print() << " iz " << iz << " iy " << iy << " ix " << ix << "\n";
+                amrex::Print() << " ijk of field " << lo.x+j_ex+ix;
+                amrex::Print() << " " << lo.y+k_ex+iy << " " << lo.z+l_ex+iz << "\n";
+                amrex::Print() << " wt : " << sx_ex[ix]*sy_ex[iy]*sz_ex[iz];
+                amrex::Print() << " Ex(i,j,k) " << ex_arr(lo.x+j_ex+ix, lo.y+k_ex+iy, lo.z+l_ex+iz) << " wt*Ex(i,j,k) " << sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*ex_arr(lo.x+j_ex+ix, lo.y+k_ex+iy, lo.z+l_ex+iz) << "\n";
                 Exp += sx_ex[ix]*sy_ex[iy]*sz_ex[iz]*
                     ex_arr(lo.x+j_ex+ix, lo.y+k_ex+iy, lo.z+l_ex+iz);
             }
         }
     }
+    amrex::AllPrintToFile("InterpParticleEx") << " " << Exp << " ";
+    amrex::Print() << " gathered Exp : " << Exp << "\n";
     // Gather field on particle Eyp from field on grid ey_arr
+    amrex::Print() << " gathering Ey \n";
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<= depos_order - galerkin_interpolation; iy++){
             for (int ix=0; ix<=depos_order; ix++){
+                amrex::Print() << " iz " << iz << " iy " << iy << " ix " << ix << "\n";
+                amrex::Print() << " ijk of field " << lo.x+j_ey+ix;
+                amrex::Print() << " " << lo.y+k_ey+iy << " " << lo.z+l_ey+iz << "\n";
+                amrex::Print() << " wt : " << sx_ey[ix]*sy_ey[iy]*sz_ey[iz];
+                amrex::Print() << " Ey(i,j,k) " << ey_arr(lo.x+j_ey+ix, lo.y+k_ey+iy, lo.z+l_ey+iz) << " wt*Ey(i,j,k) " << ey_arr(lo.x+j_ey+ix, lo.y+k_ey+iy, lo.z+l_ey+iz) << "\n";
                 Eyp += sx_ey[ix]*sy_ey[iy]*sz_ey[iz]*
                     ey_arr(lo.x+j_ey+ix, lo.y+k_ey+iy, lo.z+l_ey+iz);
             }
         }
     }
+    amrex::Print() << " gathered Eyp : " << Eyp << "\n";
+    amrex::AllPrintToFile("InterpParticleEx") << " " << Eyp << " ";
     // Gather field on particle Ezp from field on grid ez_arr
+    amrex::Print() << " gathering Ez \n";
     for (int iz=0; iz<= depos_order - galerkin_interpolation; iz++){
         for (int iy=0; iy<=depos_order; iy++){
             for (int ix=0; ix<=depos_order; ix++){
+                amrex::Print() << " iz " << iz << " iy " << iy << " ix " << ix << "\n";
+                amrex::Print() << " ijk of field " <<lo.x+j_ez+ix ;
+                amrex::Print() << " " << lo.y+k_ez+iy << " " << lo.z+l_ez+iz << "\n";
+                amrex::Print() << " wt : " << sx_ez[ix]*sy_ez[iy]*sz_ez[iz];
+                amrex::Print() << " Ez(i,j,k) " << ez_arr(lo.x+j_ez+ix, lo.y+k_ez+iy, lo.z+l_ez+iz) << " wt*Ez(i,j,k) " << sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*
+                    ez_arr(lo.x+j_ez+ix, lo.y+k_ez+iy, lo.z+l_ez+iz) << "\n";
                 Ezp += sx_ez[ix]*sy_ez[iy]*sz_ez[iz]*
                     ez_arr(lo.x+j_ez+ix, lo.y+k_ez+iy, lo.z+l_ez+iz);
             }
         }
     }
+    amrex::Print() << " gathered Ezp : " << Ezp << "\n";
+    amrex::AllPrintToFile("InterpParticleEx") << " " << Ezp << " ";
     // Gather field on particle Bzp from field on grid bz_arr
     for (int iz=0; iz<=depos_order; iz++){
         for (int iy=0; iy<= depos_order - galerkin_interpolation; iy++){

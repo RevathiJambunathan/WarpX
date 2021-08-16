@@ -115,13 +115,13 @@ WarpX::Evolve (int numsteps)
                 UpdateAuxilaryData();
                 FillBoundaryAux(guard_cells.ng_UpdateAux);
             }
-            // on first step, push p by -0.5*dt
-            for (int lev = 0; lev <= finest_level; ++lev)
-            {
-                mypc->PushP(lev, -0.5_rt*dt[lev],
-                            *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
-                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2]);
-            }
+//temp            // on first step, push p by -0.5*dt
+//temp            for (int lev = 0; lev <= finest_level; ++lev)
+//temp            {
+//temp                mypc->PushP(lev, -0.5_rt*dt[lev],
+//temp                            *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
+//temp                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2]);
+//temp            }
             is_synchronized = false;
         } else {
             if (do_electrostatic == ElectrostaticSolverAlgo::None) {
@@ -275,19 +275,19 @@ WarpX::Evolve (int numsteps)
         FillBoundaryB(guard_cells.ng_FieldSolver);
 #endif
 
-        if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
-            // At the end of last step, push p by 0.5*dt to synchronize
-            UpdateAuxilaryData();
-            FillBoundaryAux(guard_cells.ng_UpdateAux);
-            for (int lev = 0; lev <= finest_level; ++lev) {
-                mypc->PushP(lev, 0.5_rt*dt[lev],
-                            *Efield_aux[lev][0],*Efield_aux[lev][1],
-                            *Efield_aux[lev][2],
-                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],
-                            *Bfield_aux[lev][2]);
-            }
-            is_synchronized = true;
-        }
+//temp        if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
+//temp            // At the end of last step, push p by 0.5*dt to synchronize
+//temp            UpdateAuxilaryData();
+//temp            FillBoundaryAux(guard_cells.ng_UpdateAux);
+//temp            for (int lev = 0; lev <= finest_level; ++lev) {
+//temp                mypc->PushP(lev, 0.5_rt*dt[lev],
+//temp                            *Efield_aux[lev][0],*Efield_aux[lev][1],
+//temp                            *Efield_aux[lev][2],
+//temp                            *Bfield_aux[lev][0],*Bfield_aux[lev][1],
+//temp                            *Bfield_aux[lev][2]);
+//temp            }
+//temp            is_synchronized = true;
+//temp        }
 
         for (int lev = 0; lev <= max_level; ++lev) {
             ++istep[lev];

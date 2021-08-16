@@ -10,6 +10,7 @@
 
 #include "Utils/WarpX_Complex.H"
 
+#include <AMReX_RealVect.H>
 #include <AMReX_BoxArray.H>
 #include <AMReX_LayoutData.H>
 

@@ -1715,8 +1715,6 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                                             theta_p, phi_p, uphi_p);
                     amrex::Real Exp_theory, Eyp_theory, Ezp_theory;
                     amrex::Real Bxp_theory, Byp_theory, Bzp_theory;
-                    if (PulsarParm::use_theoreticalEB == 1) {
-                        if (r_p < ( PulsarParm::theory_max_rstar) ) {
                             PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                                                 Erp, Ethetap, Ephip);
                             PulsarParm::ExternalBFieldSpherical(r_p, theta_p, phi_p, cur_time,
@@ -1734,6 +1732,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                                                   theta_p, phi_p, Byp_theory);
                             PulsarParm::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
                                                                   theta_p, phi_p, Bzp_theory);
+                    if (PulsarParm::use_theoreticalEB == 1) {
+                        if (r_p < ( PulsarParm::theory_max_rstar) ) {
                             Exp = Exp_theory;
                             Eyp = Eyp_theory;
                             Ezp = Ezp_theory;
@@ -1742,6 +1742,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                             Bzp = Bzp_theory;
                         }
                     }
+                    amrex::Print() << " printing theory \n";
                     PulsarParm::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
                                                             theta_p, phi_p, Er_comp);
                     PulsarParm::ConvertCartesianToSphericalThetaComponent( Exp, Eyp, Ezp,
@@ -2310,8 +2311,6 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         //                                        theta_p, phi_p, uphi_p);
         amrex::Real Exp_theory, Eyp_theory, Ezp_theory;
         amrex::Real Bxp_theory, Byp_theory, Bzp_theory;
-        if (PulsarParm::use_theoreticalEB == 1) {
-            if (r_p < PulsarParm::theory_max_rstar) {
                 PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                                     Erp, Ethetap, Ephip);
                 PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
@@ -2329,6 +2328,10 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                                       theta_p, phi_p, Byp_theory);
                 PulsarParm::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
                                                       theta_p, phi_p, Bzp_theory);            
+        amrex::Print() << " Exptheory : " << Exp_theory << " " << Eyp_theory << " " << Eyp_theory << "\n";
+                    amrex::AllPrintToFile("InterpParticleEx") << " " << Exp_theory << " " << Eyp_theory << " " << Ezp_theory << " ";
+        if (PulsarParm::use_theoreticalEB == 1) {
+            if (r_p < PulsarParm::theory_max_rstar) {
                 Exp = Exp_theory;
                 Eyp = Eyp_theory;
                 Ezp = Ezp_theory;
@@ -2351,6 +2354,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                                 theta_p, phi_p, Btheta_comp);
         PulsarParm::ConvertCartesianToSphericalPhiComponent( Bxp, Byp, Bzp,
                                                 theta_p, phi_p, Bphi_comp);
+        amrex::AllPrintToFile("InterpParticleEx") << " " << Er_comp << " " << Etheta_comp << " " << Ephi_comp << " ";
+        amrex::AllPrintToFile("InterpParticleEx") << " " << Erp << " " << Ethetap << " " << Ephip << " \n";
         amrex::Real ur_p, utheta_p, uphi_p;
         PulsarParm::ConvertCartesianToSphericalRComponent( ux[ip+offset], uy[ip+offset], uz[ip+offset],
                                                 theta_p, phi_p, ur_p);
