@@ -23,7 +23,7 @@ GetExternalEField::GetExternalEField (const WarpXParIter& a_pti, int a_offset) n
     }
     else if (mypc.m_E_ext_particle_s=="parse_e_ext_particle_function")
     {
-        m_type = Parser;
+        m_type = ExternalFieldInitType::Parser;
         m_time = warpx.gett_new(a_pti.GetLevel());
         m_get_position = GetParticlePosition(a_pti, a_offset);
         m_xfield_partparser = mypc.m_Ex_particle_parser->compile<4>();
@@ -65,7 +65,7 @@ GetExternalBField::GetExternalBField (const WarpXParIter& a_pti, int a_offset) n
     }
     else if (mypc.m_B_ext_particle_s=="parse_b_ext_particle_function")
     {
-        m_type = Parser;
+        m_type = ExternalFieldInitType::Parser;
         m_time = warpx.gett_new(a_pti.GetLevel());
         m_get_position = GetParticlePosition(a_pti, a_offset);
         m_xfield_partparser = mypc.m_Bx_particle_parser->compile<4>();

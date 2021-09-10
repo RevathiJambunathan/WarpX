@@ -296,8 +296,8 @@ WarpX::Evolve (int numsteps)
                 }
             }
         }
-        FillBoundaryE(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
-        FillBoundaryB(guard_cells.ng_FieldSolver, IntVect::TheZeroVector());
+        FillBoundaryE(guard_cells.ng_FieldSolver);
+        FillBoundaryB(guard_cells.ng_FieldSolver);
 #endif
 
         if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
