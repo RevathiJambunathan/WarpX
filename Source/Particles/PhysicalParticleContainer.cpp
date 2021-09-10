@@ -1270,6 +1270,9 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
     bool radially_weighted = plasma_injector->radially_weighted;
 #endif
 
+    int Nmax_particles = 0;
+    int valid_particles_beforeAdd = TotalNumberOfParticles();    
+
     MFItInfo info;
     if (do_tiling && Gpu::notInLaunchRegion()) {
         info.EnableTiling(tile_size);
@@ -1389,6 +1392,7 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
         // Max number of new particles. All of them are created,
         // and invalid ones are then discarded
         int max_new_particles = Scan::ExclusiveSum(counts.size(), counts.data(), offset.data());
+        Nmax_particles += max_new_particles;
 
         // Update NextID to include particles created in this function
         Long pid;
