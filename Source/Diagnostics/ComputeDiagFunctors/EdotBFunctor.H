@@ -2,6 +2,7 @@
 #define WARPX_EDOTBFUNCTOR_H_
 
 #include "ComputeDiagFunctor.H"
+#include <AMReX_IntVect.H>
 
 class
 EdotBFunctor final : public ComputeDiagFunctor

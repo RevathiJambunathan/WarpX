@@ -2,6 +2,7 @@
 #define WARPX_SPHERICALCOMPONENTFUNCTOR_H_
 
 #include "ComputeDiagFunctor.H"
+#include <AMReX_BaseFwd.H>
 
 class
 SphericalComponentFunctor final : public ComputeDiagFunctor
