@@ -12,6 +12,9 @@
 #include "Particles/Pusher/GetAndSetPosition.H"
 #include "Particles/ShapeFactors.H"
 #include "Utils/WarpX_Complex.H"
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 
