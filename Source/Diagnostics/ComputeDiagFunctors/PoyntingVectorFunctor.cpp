@@ -1,8 +1,10 @@
 #include "PoyntingVectorFunctor.H"
 #include "Utils/CoarsenIO.H"
+#include "WarpX.H"
 #include "Utils/WarpXConst.H"
 
 #include <AMReX.H>
+using namespace amrex;
 
 PoyntingVectorFunctor::PoyntingVectorFunctor (
                            amrex::MultiFab const * Ex_src, amrex::MultiFab const * Ey_src,
@@ -23,13 +25,13 @@ PoyntingVectorFunctor::operator ()(amrex::MultiFab& mf_dst,
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const auto probhi = warpx.Geom(m_lev).ProbHiArray();
-    const IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
-    const IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
-    const IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();
-    const IntVect stag_Bxsrc = m_Bx_src->ixType().toIntVect();
-    const IntVect stag_Bysrc = m_By_src->ixType().toIntVect();
-    const IntVect stag_Bzsrc = m_Bz_src->ixType().toIntVect();
-    const IntVect stag_dst = mf_dst.ixType().toIntVect();
+    const amrex::IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
+    const amrex::IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
+    const amrex::IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bxsrc = m_Bx_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bysrc = m_By_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bzsrc = m_Bz_src->ixType().toIntVect();
+    const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     // convert boxarray of source MultiFab to staggering of dst Multifab
     // and coarsen it
@@ -61,13 +63,13 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const auto probhi = warpx.Geom(m_lev).ProbHiArray();
-    const IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
-    const IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
-    const IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();
-    const IntVect stag_Bxsrc = m_Bx_src->ixType().toIntVect();
-    const IntVect stag_Bysrc = m_By_src->ixType().toIntVect();
-    const IntVect stag_Bzsrc = m_Bz_src->ixType().toIntVect();
-    const IntVect stag_dst = mf_dst.ixType().toIntVect();
+    const amrex::IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
+    const amrex::IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
+    const amrex::IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bxsrc = m_Bx_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bysrc = m_By_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bzsrc = m_Bz_src->ixType().toIntVect();
+    const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     GpuArray<int,3> sf_Ex; // staggering of source xfield
     GpuArray<int,3> sf_Ey; // staggering of source yfield
