@@ -6,6 +6,9 @@
 #include "ComputeDiagFunctors/PartPerCellFunctor.H"
 #include "ComputeDiagFunctors/PartPerGridFunctor.H"
 #include "ComputeDiagFunctors/RhoFunctor.H"
+#include "ComputeDiagFunctors/SphericalComponentFunctor.H"
+#include "ComputeDiagFunctors/EdotBFunctor.H"
+#include "ComputeDiagFunctors/PoyntingVectorFunctor.H"
 #include "Diagnostics/Diagnostics.H"
 #include "Diagnostics/ParticleDiag/ParticleDiag.H"
 #include "ComputeDiagFunctors/SphericalComponentFunctor.H"
@@ -452,42 +455,42 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
                                               warpx.get_pointer_Efield_aux(lev, 0),
                                               warpx.get_pointer_Efield_aux(lev, 1),
                                               warpx.get_pointer_Efield_aux(lev, 2),
-                                              lev, m_crse_ratio, rcomp);
+                                              lev, m_crse_ratio, rcomp, 1);
         } else if ( m_varnames[comp] == "Etheta") {
             int thetacomp = 1;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Efield_aux(lev, 0),
                                               warpx.get_pointer_Efield_aux(lev, 1),
                                               warpx.get_pointer_Efield_aux(lev, 2),
-                                              lev, m_crse_ratio, thetacomp);
+                                              lev, m_crse_ratio, thetacomp, 1);
         } else if ( m_varnames[comp] == "Ephi" ) {
             int phicomp = 2;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Efield_aux(lev, 0),
                                               warpx.get_pointer_Efield_aux(lev, 1),
                                               warpx.get_pointer_Efield_aux(lev, 2),
-                                              lev, m_crse_ratio, phicomp);
+                                              lev, m_crse_ratio, phicomp, 1);
         } else if ( m_varnames[comp] == "Br" ) {
             int rcomp = 0;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Bfield_aux(lev, 0),
                                               warpx.get_pointer_Bfield_aux(lev, 1),
                                               warpx.get_pointer_Bfield_aux(lev, 2),
-                                              lev, m_crse_ratio, rcomp);
+                                              lev, m_crse_ratio, rcomp, 0);
         } else if ( m_varnames[comp] == "Btheta" ) {
             int thetacomp = 1;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Bfield_aux(lev, 0),
                                               warpx.get_pointer_Bfield_aux(lev, 1),
                                               warpx.get_pointer_Bfield_aux(lev, 2),
-                                              lev, m_crse_ratio, thetacomp);
+                                              lev, m_crse_ratio, thetacomp, 0);
         } else if ( m_varnames[comp] == "Bphi" ) {
             int phicomp = 2;
             m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
                                               warpx.get_pointer_Bfield_aux(lev, 0),
                                               warpx.get_pointer_Bfield_aux(lev, 1),
                                               warpx.get_pointer_Bfield_aux(lev, 2),
-                                              lev, m_crse_ratio, phicomp);
+                                              lev, m_crse_ratio, phicomp, 0);
         } else if (m_varnames[comp] == "EdotB") {
             m_all_field_functors[lev][comp] = std::make_unique<EdotBFunctor>(
                                               warpx.get_pointer_Efield_aux(lev,0),

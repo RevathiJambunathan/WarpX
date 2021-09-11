@@ -31,6 +31,11 @@
 #ifdef AMREX_USE_SENSEI_INSITU
 #   include <AMReX_AmrMeshInSituBridge.H>
 #endif
+
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
+
 #include <AMReX_Array.H>
 #include <AMReX_Array4.H>
 #include <AMReX_BLassert.H>

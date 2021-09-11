@@ -1,14 +1,15 @@
 #include "PoyntingVectorFunctor.H"
 #include "Utils/CoarsenIO.H"
+#include "WarpX.H"
 #include "Utils/WarpXConst.H"
 #include "WarpX.H"
 #include <AMReX_IntVect.H>
-#include <AMReX.H>
 #include <AMReX_GpuControl.H>
 #include <AMReX_GpuDevice.H>
 #include <AMReX_GpuLaunch.H>
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX.H>
+using namespace amrex;
 
 PoyntingVectorFunctor::PoyntingVectorFunctor (
                            amrex::MultiFab const * Ex_src, amrex::MultiFab const * Ey_src,
@@ -26,6 +27,37 @@ PoyntingVectorFunctor::operator ()(amrex::MultiFab& mf_dst,
                                    int dcomp, const int /*i_buffer=0*/) const
 {
     using namespace amrex;
+    auto & warpx = WarpX::GetInstance();
+    const auto dx = warpx.Geom(m_lev).CellSizeArray();
+    const auto problo = warpx.Geom(m_lev).ProbLoArray();
+    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
+
+    // convert boxarray of source MultiFab to staggering of dst Multifab
+    // and coarsen it
+    amrex::BoxArray ba_tmp = amrex::convert( m_Ex_src->boxArray(), stag_dst);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE (ba_tmp.coarsenable (m_crse_ratio),
+        "source Multifab converted to staggering of dst Multifab is not coarsenable");
+    ba_tmp.coarsen(m_crse_ratio);
+
+    if (ba_tmp == mf_dst.boxArray() and m_Ex_src->DistributionMap() == mf_dst.DistributionMap()) {
+        ComputePoyntingVector(mf_dst, dcomp);
+    } else {
+        const int ncomp = 1;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Ex_src->DistributionMap() == m_Ey_src->DistributionMap() and m_Ey_src->DistributionMap() == m_Ez_src->DistributionMap(), 
+            " all sources must have the same Distribution map");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Bx_src->DistributionMap() == m_By_src->DistributionMap() and m_By_src->DistributionMap() == m_Bz_src->DistributionMap(), 
+            " all sources must have the same Distribution map");
+        amrex::MultiFab mf_tmp( ba_tmp, m_Ex_src->DistributionMap(), ncomp, 0 );
+        const int dcomp_tmp = 0;
+        ComputePoyntingVector(mf_tmp, dcomp_tmp);
+        mf_dst.copy( mf_tmp, 0, dcomp, ncomp);
+    }
+
+}
+
+void
+PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp) const
+{
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();

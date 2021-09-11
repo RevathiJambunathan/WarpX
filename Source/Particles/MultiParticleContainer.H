@@ -25,6 +25,11 @@
 #include "WarpXParticleContainer.H"
 #include "ParticleBoundaries.H"
 
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+
+#include <AMReX_Particles.H>
 #include <AMReX_BLassert.H>
 #include <AMReX_Box.H>
 #include <AMReX_Config.H>

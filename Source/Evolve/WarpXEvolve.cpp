@@ -34,6 +34,11 @@
     #include "Particles/PulsarParameters.H"
 #endif
 
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+#include <cmath>
+#include <limits>
 #include <AMReX.H>
 #include <AMReX_Array.H>
 #include <AMReX_BLassert.H>
@@ -119,8 +124,23 @@ WarpX::Evolve (int numsteps)
         }
 
 #ifdef PULSAR
-        mypc->PulsarParticleInjection();
-        mypc->Redistribute();
+        if (PulsarParm::singleParticleTest == 1) {
+            if (PulsarParm::continuous_injection == 0) {
+                if (PulsarParm::injection_time - dt[0]*0.5_rt <= cur_time &&
+                    cur_time <= PulsarParm::injection_time) {
+                        mypc->PulsarParticleInjection();
+                        mypc->Redistribute();
+                }
+            } else {
+                if ( cur_time > PulsarParm::injection_time) {
+                    mypc->PulsarParticleInjection();
+                    mypc->Redistribute();
+                }
+            }
+        } else {
+            mypc->PulsarParticleInjection();
+            mypc->Redistribute();
+        }
 #endif
         // At the beginning, we have B^{n} and E^{n}.
         // Particles have p^{n} and x^{n}.

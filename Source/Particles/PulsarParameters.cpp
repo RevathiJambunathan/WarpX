@@ -10,7 +10,7 @@ namespace PulsarParm
 {
     std::string pulsar_type;
 
-    AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real PulsarParm::omega_star;
     AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time = -1.0;
     AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
     AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
@@ -44,6 +44,17 @@ namespace PulsarParm
     AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
     AMREX_GPU_DEVICE_MANAGED amrex::Real Bdamping_scale = 10;
     AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real injection_time = 0;
+    AMREX_GPU_DEVICE_MANAGED int continuous_injection = 1;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_min = 90.;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_max = 0.;
+    AMREX_GPU_DEVICE_MANAGED int use_theoreticalEB = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real theory_max_rstar = 0.;
+    AMREX_GPU_DEVICE_MANAGED int LimitDipoleBInit = 0;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real DipoleB_init_maxradius;
+    AMREX_GPU_DEVICE_MANAGED int AddExternalMonopoleOnly = 0;
+    AMREX_GPU_DEVICE_MANAGED int AddMonopoleInsideRstarOnGrid = 0;
+    AMREX_GPU_DEVICE_MANAGED int EnforceTheoreticalEBInGrid = 0;
 
     void ReadParameters() {
         amrex::ParmParse pp("pulsar");
@@ -130,6 +141,21 @@ namespace PulsarParm
         pp.query("singleParticleTest", singleParticleTest);
         pp.query("DampBDipoleInRing", DampBDipoleInRing);
         if (DampBDipoleInRing == 1) pp.query("Bdamping_scale", Bdamping_scale);
+        pp.query("injection_time", injection_time);
+        pp.query("continuous_injection", continuous_injection);
+        pp.query("removeparticle_theta_min",removeparticle_theta_min);
+        pp.query("removeparticle_theta_max",removeparticle_theta_max);
+        pp.query("use_theoreticalEB",use_theoreticalEB);
+        amrex::Print() << "use theory EB " << use_theoreticalEB << "\n"; 
+        pp.query("theory_max_rstar",theory_max_rstar);
+        amrex::Print() << " theory max rstar : " << theory_max_rstar << "\n";
+        pp.query("LimitDipoleBInit", LimitDipoleBInit);
+        if (LimitDipoleBInit == 1) {
+           pp.query("DipoleB_init_maxradius", DipoleB_init_maxradius);
+        }
+        pp.query("AddExternalMonopoleOnly", AddExternalMonopoleOnly);
+        pp.query("AddMonopoleInsideRstarOnGrid", AddMonopoleInsideRstarOnGrid);
+        pp.query("EnforceTheoreticalEBInGrid", EnforceTheoreticalEBInGrid);
     }
 
     /** To initialize the grid with dipole magnetic field everywhere and corotating vacuum
@@ -179,8 +205,17 @@ namespace PulsarParm
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
                     // Initialize with Bfield in spherical coordinates
-                    if (init_Bfield == 1) ExternalBFieldSpherical( r, theta, phi, cur_time,
-                                                                   Fr, Ftheta, Fphi);
+                    if (init_Bfield == 1) {
+                        if (LimitDipoleBInit == 1) {
+                            if (r < DipoleB_init_maxradius) {
+                                ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                        Fr, Ftheta, Fphi);
+                            }
+                        } else {
+                            ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                    Fr, Ftheta, Fphi);
+                        }
+                    }
                     // Initialize corotating EField in r < corotating 
                     if (init_Bfield == 0) {
                         if (r <= corotatingE_maxradius) {
@@ -202,8 +237,17 @@ namespace PulsarParm
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
                     // Initialize with Bfield in spherical coordinates                    
-                    if (init_Bfield == 1) ExternalBFieldSpherical (r, theta, phi, cur_time,
-                                                                   Fr, Ftheta, Fphi);
+                    if (init_Bfield == 1) {
+                        if (LimitDipoleBInit == 1) {
+                            if (r < DipoleB_init_maxradius) {
+                                ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                        Fr, Ftheta, Fphi);
+                            }
+                        } else {
+                            ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                    Fr, Ftheta, Fphi);
+                        }
+                    }
                     // Initialize corotating Efield in r < corotating
                     if (init_Bfield == 0) {
                         if (r <= corotatingE_maxradius) {
@@ -225,8 +269,17 @@ namespace PulsarParm
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
                     // Initialize with Bfield in spherical coordinates
-                    if (init_Bfield == 1) ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                                  Fr, Ftheta, Fphi);
+                    if (init_Bfield == 1) {
+                        if (LimitDipoleBInit == 1) {
+                            if (r < DipoleB_init_maxradius) {
+                                ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                        Fr, Ftheta, Fphi);
+                            }
+                        } else {
+                            ExternalBFieldSpherical( r, theta, phi, cur_time,
+                                                    Fr, Ftheta, Fphi);
+                        }
+                    }
                     // Initialize corotating Efield in r < corotating
                     if (init_Bfield == 0) {
                         if (r <= corotatingE_maxradius) {
@@ -285,9 +338,15 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= corotatingE_maxradius) {
-                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
-                                                  Fr, Ftheta, Fphi);
+                    if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
+                        if (r <= corotatingE_maxradius) {
+                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Ex_arr(i,j,k));
+                        }
+                    } else {
+                        ExternalEFieldSpherical(r, theta, phi, cur_time, Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ex_arr(i,j,k));
                     }
@@ -301,9 +360,15 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= corotatingE_maxradius) {
-                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
-                                                  Fr, Ftheta, Fphi);
+                    if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
+                        if (r <= corotatingE_maxradius) {
+                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Ey_arr(i,j,k));
+                        }
+                    } else {
+                        ExternalEFieldSpherical(r, theta, phi, cur_time, Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ey_arr(i,j,k));
                     }
@@ -317,9 +382,15 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= corotatingE_maxradius) {
-                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
-                                                  Fr, Ftheta, Fphi);
+                    if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
+                        if (r <= corotatingE_maxradius) {
+                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Ez_arr(i,j,k));
+                        }
+                    } else {
+                        ExternalEFieldSpherical(r, theta, phi, cur_time, Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ez_arr(i,j,k));
                     }
@@ -373,31 +444,38 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceDipoleB_maxradius) {
+                    if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
+                        if (r <= enforceDipoleB_maxradius) {
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                   Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Bx_arr(i,j,k));
+                        }
+                        else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
+                            if (DampBDipoleInRing == 1) {
+                                // from inner ring to outer ring
+                                ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                       Fr, Ftheta, Fphi);
+                                amrex::Real Bx_dipole;
+                                ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                                       r, theta, phi, Bx_dipole);
+                                // Damping Function : Fd = tanh(dampingscale * (1-r/Rinner))
+                                // where Rinner = enforceDipoleB_maxradius
+                                //                is the range where Bdipole is imposed
+                                // Fd(Rinner) ~ 1
+                                // Fd(R_domainboundary) ~ 0
+                                amrex::Real Fd = 1._rt
+                                               + std::tanh( Bdamping_scale
+                                                          * (1._rt - r/enforceDipoleB_maxradius)
+                                                          );
+                                Bx_arr(i,j,k) += Fd * Bx_dipole;
+                            }
+                        }
+                    } else {
                         ExternalBFieldSpherical(r, theta, phi, cur_time,
                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Bx_arr(i,j,k));
-                    }
-                    else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
-                        if (DampBDipoleInRing == 1) {
-                            // from inner ring to outer ring
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                   Fr, Ftheta, Fphi);
-                            amrex::Real Bx_dipole;
-                            ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
-                                                                   r, theta, phi, Bx_dipole);
-                            // Damping Function : Fd = tanh(dampingscale * (1-r/Rinner))
-                            // where Rinner = enforceDipoleB_maxradius
-                            //                is the range where Bdipole is imposed
-                            // Fd(Rinner) ~ 1
-                            // Fd(R_domainboundary) ~ 0
-                            amrex::Real Fd = 1._rt
-                                           + std::tanh( Bdamping_scale
-                                                      * (1._rt - r/enforceDipoleB_maxradius)
-                                                      );
-                            Bx_arr(i,j,k) += Fd * Bx_dipole;
-                        }
                     }
                 },
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -409,25 +487,32 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceDipoleB_maxradius) {
+                    if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
+                        if (r <= enforceDipoleB_maxradius) {
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                   Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, By_arr(i,j,k));
+                        } else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
+                            if (DampBDipoleInRing == 1) {
+                                // from inner ring to outer ring
+                                ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                       Fr, Ftheta, Fphi);
+                                amrex::Real By_dipole;
+                                ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                                       r, theta, phi, By_dipole);
+                                amrex::Real Fd = 1._rt
+                                               + std::tanh( Bdamping_scale
+                                                          * (1._rt - r/enforceDipoleB_maxradius)
+                                                          );
+                                By_arr(i,j,k) += Fd * By_dipole;
+                            }
+                        }
+                    } else {
                         ExternalBFieldSpherical(r, theta, phi, cur_time,
                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, By_arr(i,j,k));
-                    } else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
-                        if (DampBDipoleInRing == 1) {
-                            // from inner ring to outer ring
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                   Fr, Ftheta, Fphi);
-                            amrex::Real By_dipole;
-                            ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
-                                                                   r, theta, phi, By_dipole);
-                            amrex::Real Fd = 1._rt
-                                           + std::tanh( Bdamping_scale
-                                                      * (1._rt - r/enforceDipoleB_maxradius)
-                                                      );
-                            By_arr(i,j,k) += Fd * By_dipole;
-                        }
                     }
                 },
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -439,25 +524,32 @@ namespace PulsarParm
                     ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
                     // convert cartesian to spherical coordinates
                     ConvertCartesianToSphericalCoord(x, y, z, problo, probhi, r, theta, phi);
-                    if (r <= enforceDipoleB_maxradius) {
+                    if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
+                        if (r <= enforceDipoleB_maxradius) {
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                   Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Bz_arr(i,j,k));
+                        } else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
+                            if (DampBDipoleInRing == 1) {
+                                // from inner ring to outer ring
+                                ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                       Fr, Ftheta, Fphi);
+                                amrex::Real Bz_dipole;
+                                ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                                       r, theta, phi, Bz_dipole);
+                                amrex::Real Fd = 1._rt
+                                               + std::tanh( Bdamping_scale
+                                                          * (1._rt - r/enforceDipoleB_maxradius)
+                                                          );
+                                Bz_arr(i,j,k) += Fd * Bz_dipole;
+                            }
+                        }
+                    } else {
                         ExternalBFieldSpherical(r, theta, phi, cur_time,
                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Bz_arr(i,j,k));
-                    } else if ( r > enforceDipoleB_maxradius && r <= corotatingE_maxradius) {
-                        if (DampBDipoleInRing == 1) {
-                            // from inner ring to outer ring
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                   Fr, Ftheta, Fphi);
-                            amrex::Real Bz_dipole;
-                            ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
-                                                                   r, theta, phi, Bz_dipole);
-                            amrex::Real Fd = 1._rt
-                                           + std::tanh( Bdamping_scale
-                                                      * (1._rt - r/enforceDipoleB_maxradius)
-                                                      );
-                            Bz_arr(i,j,k) += Fd * Bz_dipole;
-                        }
                     }
                 }
             );
