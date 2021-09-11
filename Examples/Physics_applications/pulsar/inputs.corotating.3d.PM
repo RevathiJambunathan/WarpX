@@ -83,10 +83,6 @@ plasma_p.momentum_function_ux(x,y,z) = "0.0"
 plasma_p.momentum_function_uy(x,y,z) = "0.0"
 ## uz is always 0 for the injection methods above
 plasma_p.momentum_function_uz(x,y,z) = "0.0"
-#plasma_p.momentum_distribution_type = "constant"
-#plasma_p.ux = 0.0
-#plasma_p.uy = 0.0
-#plasma_p.uz = 0.0
 plasma_p.do_continuous_injection = 0
 plasma_p.density_min = 1E0
 
