@@ -24,6 +24,9 @@
 #include "Utils/WarpXProfilerWrapper.H"
 #include "WarpXPushFieldsEM_K.H"
 #include "WarpX_FDTD.H"
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #ifdef AMREX_USE_SENSEI_INSITU
@@ -46,6 +49,9 @@
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX_IndexType.H>
 #include <AMReX_MFIter.H>
+
+
+#include <AMReX.H>
 #include <AMReX_Math.H>
 #include <AMReX_MultiFab.H>
 #include <AMReX_REAL.H>
@@ -503,6 +509,7 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt, DtType a_dt_typ
 #endif    
 
     ApplyBfieldBoundary(lev, patch_type, a_dt_type);
+
 }
 
 
@@ -564,8 +571,14 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
     }
 #endif    
 
-    ApplyEfieldBoundary(lev, patch_type);
 
+#ifdef PULSAR
+    if (PulsarParm::enforceCorotatingE == 1) {
+        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+#endif    
+
+    ApplyEfieldBoundary(lev, patch_type);
 }
 
 

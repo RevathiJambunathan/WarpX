@@ -42,6 +42,10 @@
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/WarpXUtil.H"
 #include "WarpX.H"
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+    #include "Particles/Gather/GatherExternalPulsarFieldOnGrid.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_Algorithm.H>
@@ -111,6 +115,8 @@ using namespace amrex;
 
 namespace
 {
+    using ParticleType = WarpXParticleContainer::ParticleType;
+
     // Since the user provides the density distribution
     // at t_lab=0 and in the lab-frame coordinates,
     // we need to find the lab-frame position of this
@@ -158,6 +164,53 @@ namespace
 #endif
 #endif
         return pos;
+    }
+
+    /**
+     * \brief This function is called in AddPlasma when we want a particle to be removed at the
+     * next call to redistribute. It initializes all the particle properties to zero (to be safe
+     * and avoid any possible undefined behavior before the next call to redistribute) and sets
+     * the particle id to -1 so that it can be effectively deleted.
+     *
+     * \param p particle aos data
+     * \param pa particle soa data
+     * \param ip index for soa data
+     * \param do_field_ionization whether species has ionization
+     * \param pi ionization level data
+     * \param has_quantum_sync whether species has quantum synchrotron
+     * \param p_optical_depth_QSR quantum synchrotron optical depth data
+     * \param has_breit_wheeler whether species has Breit-Wheeler
+     * \param p_optical_depth_BW Breit-Wheeler optical depth data
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void ZeroInitializeAndSetNegativeID (
+        ParticleType& p, const GpuArray<ParticleReal*,PIdx::nattribs>& pa, long& ip,
+        const bool& do_field_ionization, int* pi
+#ifdef WARPX_QED
+        ,const bool& has_quantum_sync, amrex::ParticleReal* p_optical_depth_QSR
+        ,const bool& has_breit_wheeler, amrex::ParticleReal* p_optical_depth_BW
+#endif
+        ) noexcept
+    {
+        p.pos(0) = 0._rt;
+        p.pos(1) = 0._rt;
+#if (AMREX_SPACEDIM == 3)
+        p.pos(2) = 0._rt;
+#endif
+        pa[PIdx::w ][ip] = 0._rt;
+        pa[PIdx::ux][ip] = 0._rt;
+        pa[PIdx::uy][ip] = 0._rt;
+        pa[PIdx::uz][ip] = 0._rt;
+#ifdef WARPX_DIM_RZ
+        pa[PIdx::theta][ip] = 0._rt;
+#endif
+        if (do_field_ionization) {pi[ip] = 0;}
+#ifdef WARPX_QED
+        if (has_quantum_sync) {p_optical_depth_QSR[ip] = 0._rt;}
+        if (has_breit_wheeler) {p_optical_depth_BW[ip] = 0._rt;}
+#endif
+
+        p.id() = -1;
     }
 }
 
@@ -293,10 +346,10 @@ void PhysicalParticleContainer::InitData ()
     AddParticles(0); // Note - add on level 0
     Redistribute();  // We then redistribute
 #else
-    //if (PulsarParm::singleParticleTest == 1) {
-    //    AddParticles(0); // Note - add on level 0
-    //    Redistribute();  // We then redistribute
-    //}
+    if (PulsarParm::singleParticleTest == 1) {
+        AddParticles(0); // Note - add on level 0
+        Redistribute();  // We then redistribute
+    }
 #endif
 }
 
@@ -816,7 +869,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
             z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
             // radius of the cell-center
-            amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));            
+            amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
             // Adding buffer-factor to ensure all cells that intersect the ring
             // inject particles
             amrex::Real buffer_factor = 0.5;
@@ -960,13 +1013,23 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 
 #if (AMREX_SPACEDIM == 3)
                 if (!tile_realbox.contains(XDim3{pos.x,pos.y,pos.z})) {
-                    p.id() = -1;
+                    ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
                     continue;
                 }
 #else
                 amrex::ignore_unused(k);
                 if (!tile_realbox.contains(XDim3{pos.x,pos.z,0.0_rt})) {
-                    p.id() = -1;
+                    ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
                     continue;
                 }
 #endif
@@ -1002,7 +1065,12 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     const amrex::Real z0 = applyBallisticCorrection(pos, inj_mom, gamma_boost,
                                                              beta_boost, t);
                     if (!inj_pos->insideBounds(xb, yb, z0)) {
-                        p.id() = -1;
+                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
                         continue;
                     }
 #ifdef PULSAR
@@ -1029,7 +1097,12 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     dens = inj_rho->getDensity(pos.x, pos.y, z0);
                     // Remove particle if density below threshold
                     if ( dens < density_min ){
-                        p.id() = -1;
+                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
                         continue;
                     }
                     // Cut density if above threshold
@@ -1042,14 +1115,24 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     // If the particle is not within the lab-frame zmin, zmax, etc.
                     // go to the next generated particle.
                     if (!inj_pos->insideBounds(xb, yb, z0_lab)) {
-                        p.id() = -1;
+                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
                         continue;
                     }
                     // call `getDensity` with lab-frame parameters
                     dens = inj_rho->getDensity(pos.x, pos.y, z0_lab);
                     // Remove particle if density below threshold
                     if ( dens < density_min ){
-                        p.id() = -1;
+                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
                         continue;
                     }
                     // Cut density if above threshold
@@ -1115,6 +1198,27 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             }
         });
 
+#ifdef PULSAR
+       if (PulsarParm::EB_external == 1) {
+          Real* const AMREX_RESTRICT xp_data = xp.dataPtr();
+          Real* const AMREX_RESTRICT yp_data = yp.dataPtr();
+          Real* const AMREX_RESTRICT zp_data = zp.dataPtr();
+          Real* const AMREX_RESTRICT Exp_data = Exp.dataPtr();
+          Real* const AMREX_RESTRICT Eyp_data = Eyp.dataPtr();
+          Real* const AMREX_RESTRICT Ezp_data = Ezp.dataPtr();
+          Real* const AMREX_RESTRICT Bxp_data = Bxp.dataPtr();
+          Real* const AMREX_RESTRICT Byp_data = Byp.dataPtr();
+          Real* const AMREX_RESTRICT Bzp_data = Bzp.dataPtr();
+          Real time = warpx.gett_new(lev);
+          amrex::ParallelFor(pti.numParticles(),
+                [=] AMREX_GPU_DEVICE (long i) {
+                // spherical r, theta, phi, and cylidrical r
+                PulsarParm::PulsarEBField(xp_data[i],yp_data[i],zp_data[i],
+                              Exp_data[i],Eyp_data[i],Ezp_data[i],
+                              Bxp_data[i],Byp_data[i],Bzp_data[i],time);
+          });  
+       }
+#endif
         amrex::Gpu::synchronize();
 
         if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
@@ -1176,6 +1280,9 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
     const int nmodes = WarpX::n_rz_azimuthal_modes;
     bool radially_weighted = plasma_injector->radially_weighted;
 #endif
+
+    int Nmax_particles = 0;
+    int valid_particles_beforeAdd = TotalNumberOfParticles();    
 
     MFItInfo info;
     if (do_tiling && Gpu::notInLaunchRegion()) {
@@ -1296,6 +1403,7 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
         // Max number of new particles. All of them are created,
         // and invalid ones are then discarded
         int max_new_particles = Scan::ExclusiveSum(counts.size(), counts.data(), offset.data());
+        Nmax_particles += max_new_particles;
 
         // Update NextID to include particles created in this function
         Long pid;
@@ -1504,7 +1612,7 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
             amrex::HostDevice::Atomic::Add( &(*cost)[mfi.index()], wt);
         }
     }
-
+    amrex::Print() << " newly added particles : " << TotalNumberOfParticles()-valid_particles_beforeAdd << " total max particles " << Nmax_particles<< "\n";
     // The function that calls this is responsible for redistributing particles.
 }
 
@@ -3210,7 +3318,6 @@ void PhysicalParticleContainer::PulsarParticleInjection() {
 
 void PhysicalParticleContainer::PulsarParticleRemoval() {
     int lev = 0;
-    Gpu::DeviceScalar<int> sumParticles(0);   
     Gpu::DeviceScalar<amrex::Real> sumWeight(0.0);   
     int sum_d ; 
     const amrex::Real q = this->charge;

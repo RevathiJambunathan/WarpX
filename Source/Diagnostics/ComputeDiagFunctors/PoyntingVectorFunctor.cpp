@@ -1,7 +1,12 @@
 #include "PoyntingVectorFunctor.H"
 #include "Utils/CoarsenIO.H"
 #include "Utils/WarpXConst.H"
-
+#include "WarpX.H"
+#include <AMReX_IntVect.H>
+#include <AMReX_GpuControl.H>
+#include <AMReX_GpuDevice.H>
+#include <AMReX_GpuLaunch.H>
+#include <AMReX_GpuQualifiers.H>
 #include <AMReX.H>
 
 PoyntingVectorFunctor::PoyntingVectorFunctor (
@@ -19,17 +24,11 @@ void
 PoyntingVectorFunctor::operator ()(amrex::MultiFab& mf_dst,
                                    int dcomp, const int /*i_buffer=0*/) const
 {
+    using namespace amrex;
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const auto probhi = warpx.Geom(m_lev).ProbHiArray();
-    const IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
-    const IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
-    const IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();
-    const IntVect stag_Bxsrc = m_Bx_src->ixType().toIntVect();
-    const IntVect stag_Bysrc = m_By_src->ixType().toIntVect();
-    const IntVect stag_Bzsrc = m_Bz_src->ixType().toIntVect();
-    const IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     // convert boxarray of source MultiFab to staggering of dst Multifab
     // and coarsen it
@@ -61,22 +60,21 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const auto probhi = warpx.Geom(m_lev).ProbHiArray();
-    const IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
-    const IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
-    const IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();
-    const IntVect stag_Bxsrc = m_Bx_src->ixType().toIntVect();
-    const IntVect stag_Bysrc = m_By_src->ixType().toIntVect();
-    const IntVect stag_Bzsrc = m_Bz_src->ixType().toIntVect();
-    const IntVect stag_dst = mf_dst.ixType().toIntVect();
-
-    GpuArray<int,3> sf_Ex; // staggering of source xfield
-    GpuArray<int,3> sf_Ey; // staggering of source yfield
-    GpuArray<int,3> sf_Ez; // staggering of source zfield
-    GpuArray<int,3> sf_Bx; // staggering of source xfield
-    GpuArray<int,3> sf_By; // staggering of source yfield
-    GpuArray<int,3> sf_Bz; // staggering of source zfield
-    GpuArray<int,3> s_dst;
-    GpuArray<int,3> cr;
+    const amrex::IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
+    const amrex::IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
+    const amrex::IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bxsrc = m_Bx_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bysrc = m_By_src->ixType().toIntVect();
+    const amrex::IntVect stag_Bzsrc = m_Bz_src->ixType().toIntVect();
+    const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
+    amrex::GpuArray<int,3> sf_Ex; // staggering of source xfield
+    amrex::GpuArray<int,3> sf_Ey; // staggering of source yfield
+    amrex::GpuArray<int,3> sf_Ez; // staggering of source zfield
+    amrex::GpuArray<int,3> sf_Bx; // staggering of source xfield
+    amrex::GpuArray<int,3> sf_By; // staggering of source yfield
+    amrex::GpuArray<int,3> sf_Bz; // staggering of source zfield
+    amrex::GpuArray<int,3> s_dst;
+    amrex::GpuArray<int,3> cr;
 
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         sf_Ex[i] = stag_Exsrc[i];
@@ -131,29 +129,4 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

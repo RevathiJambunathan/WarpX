@@ -39,6 +39,11 @@
 #include <AMReX_REAL.H>
 #include <AMReX_RealBox.H>
 #include <AMReX_Vector.H>
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+
+#include <AMReX_Particles.H>
 
 #include <AMReX_BaseFwd.H>
 #include <AMReX_AmrCoreFwd.H>

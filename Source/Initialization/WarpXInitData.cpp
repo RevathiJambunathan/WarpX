@@ -22,6 +22,9 @@
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/WarpXUtil.H"
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_AmrCore.H>
@@ -62,6 +65,8 @@
 #include <array>
 #include <cctype>
 #include <iostream>
+
+
 #include <memory>
 #include <string>
 #include <utility>

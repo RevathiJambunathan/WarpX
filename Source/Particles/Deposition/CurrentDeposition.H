@@ -15,6 +15,9 @@
 #ifdef WARPX_DIM_RZ
 #   include "Utils/WarpX_Complex.H"
 #endif
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_Arena.H>

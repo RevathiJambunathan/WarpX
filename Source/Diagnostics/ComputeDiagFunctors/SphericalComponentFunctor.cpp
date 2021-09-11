@@ -3,8 +3,13 @@
 #ifdef PULSAR
     #include "Particles/PulsarParameters.H"
 #endif
-
+#include "WarpX.H"
+#include <AMReX_IntVect.H>
 #include <AMReX.H>
+#include <AMReX_GpuControl.H>
+#include <AMReX_GpuDevice.H>
+#include <AMReX_GpuLaunch.H>
+#include <AMReX_GpuQualifiers.H>
 
 SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mfx_src,
                                                       amrex::MultiFab const * mfy_src, 
@@ -23,14 +28,15 @@ SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mf
 void 
 SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const
 {
+    using namespace amrex;
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const auto probhi = warpx.Geom(m_lev).ProbHiArray();
-    const IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
-    const IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
-    const IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
-    const IntVect stag_dst = mf_dst.ixType().toIntVect();
+    const amrex::IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
+    const amrex::IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
+    const amrex::IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
+    const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     // convert boxarray of source MultiFab to staggering of dst Multifab
     // and coarsen it
@@ -59,16 +65,16 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const auto probhi = warpx.Geom(m_lev).ProbHiArray();
-    const IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
-    const IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
-    const IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
-    const IntVect stag_dst = mf_dst.ixType().toIntVect();
+    const amrex::IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
+    const amrex::IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
+    const amrex::IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
+    const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
-    GpuArray<int,3> sfx; // staggering of source xfield
-    GpuArray<int,3> sfy; // staggering of source yfield
-    GpuArray<int,3> sfz; // staggering of source zfield
-    GpuArray<int,3> s_dst;
-    GpuArray<int,3> cr;
+    amrex::GpuArray<int,3> sfx; // staggering of source xfield
+    amrex::GpuArray<int,3> sfy; // staggering of source yfield
+    amrex::GpuArray<int,3> sfz; // staggering of source zfield
+    amrex::GpuArray<int,3> s_dst;
+    amrex::GpuArray<int,3> cr;
     
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         sfx[i] = stag_xsrc[i];
@@ -130,7 +136,6 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
                     PulsarParm::ConvertCartesianToSphericalPhiComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 }
-
             });
     }
 
