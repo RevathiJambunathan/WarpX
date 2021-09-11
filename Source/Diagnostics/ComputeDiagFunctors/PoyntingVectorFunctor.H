@@ -2,6 +2,7 @@
 #define WARPX_POYNTINGVECTORFUNCTOR_H_
 
 #include "ComputeDiagFunctor.H"
+#include <AMReX_BaseFwd.H>
 
 class
 PoyntingVectorFunctor final : public ComputeDiagFunctor

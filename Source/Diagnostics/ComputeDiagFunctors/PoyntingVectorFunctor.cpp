@@ -1,5 +1,6 @@
 #include "PoyntingVectorFunctor.H"
 #include "Utils/CoarsenIO.H"
+#include "WarpX.H"
 #include "Utils/WarpXConst.H"
 #include "WarpX.H"
 #include <AMReX_IntVect.H>
@@ -8,6 +9,7 @@
 #include <AMReX_GpuLaunch.H>
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX.H>
+using namespace amrex;
 
 PoyntingVectorFunctor::PoyntingVectorFunctor (
                            amrex::MultiFab const * Ex_src, amrex::MultiFab const * Ey_src,

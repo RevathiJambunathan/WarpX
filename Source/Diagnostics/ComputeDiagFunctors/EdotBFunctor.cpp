@@ -3,12 +3,43 @@
 #include "WarpX.H"
 #include <AMReX_IntVect.H>
 #include <AMReX.H>
+#include <AMReX_Array4.H>
+#include <AMReX_BLassert.H>
+#include <AMReX_Box.H>
+#include <AMReX_BoxArray.H>
+#include <AMReX_Dim3.H>
+#ifdef AMREX_USE_EB
+#   include <AMReX_EBFabFactory.H>
+#   include <AMReX_EBSupport.H>
+#endif
+#include <AMReX_FArrayBox.H>
+#include <AMReX_FabArray.H>
+#include <AMReX_FabFactory.H>
+#include <AMReX_Geometry.H>
 #include <AMReX_GpuControl.H>
 #include <AMReX_GpuDevice.H>
 #include <AMReX_GpuLaunch.H>
 #include <AMReX_GpuQualifiers.H>
+#include <AMReX_IArrayBox.H>
+#include <AMReX_LayoutData.H>
+#include <AMReX_MFIter.H>
+#include <AMReX_MakeType.H>
+#include <AMReX_MultiFab.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_ParmParse.H>
+#include <AMReX_Print.H>
+#include <AMReX_Random.H>
+#include <AMReX_SPACE.H>
+#include <AMReX_iMultiFab.H>
 
-#include <AMReX.H>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <random>
+#include <string>
+#include <utility>
+
+using namespace amrex;
 
 EdotBFunctor::EdotBFunctor (amrex::MultiFab const * Ex_src, amrex::MultiFab const * Ey_src,
                             amrex::MultiFab const * Ez_src, amrex::MultiFab const * Bx_src,
@@ -27,6 +58,7 @@ EdotBFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buff
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const auto probhi = warpx.Geom(m_lev).ProbHiArray();
+
     // convert boxarray of source MultiFab to staggering of dst Multifab
     // and coarsen it
     amrex::BoxArray ba_tmp = amrex::convert( m_Ex_src->boxArray(), stag_dst);

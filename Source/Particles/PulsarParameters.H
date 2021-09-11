@@ -8,58 +8,81 @@
 #include <AMReX_Array4.H>
 #include <AMReX_Array.H>
 #include <AMReX_MultiFab.H>
+#include <AMReX_Config.H>
+
+#include <AMReX_GpuQualifiers.H>
+#include <AMReX_GpuPrint.H>
+#include <AMReX_GpuAssert.H>
+#include <AMReX_Exception.H>
+#include <AMReX_Extension.H>
+#include <AMReX_FileSystem.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX.H>
+#include <AMReX_BaseFab.H>
+#include <AMReX_Box.H>
+#include <AMReX_BLProfiler.H>
+#include <AMReX_BLFort.H>
+#include <AMReX_Utility.H>
+#include <AMReX_Random.H>
+#include <AMReX_Print.H>
+#include <AMReX_Arena.H>
+#include <AMReX_BLBackTrace.H>
+#include <AMReX_MemPool.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_Gpu.H>
+
 
 using namespace amrex;
 
 namespace PulsarParm
 {
-    extern std::string pulsar_type;
+    extern AMREX_EXPORT std::string pulsar_type;
 
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real damping_scale;
-    extern AMREX_GPU_DEVICE_MANAGED int EB_external;
-    extern AMREX_GPU_DEVICE_MANAGED int E_external_monopole;
-    extern AMREX_GPU_DEVICE_MANAGED
-           amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
-    extern AMREX_GPU_DEVICE_MANAGED int ModifyParticleWtAtInjection;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
-    extern AMREX_GPU_DEVICE_MANAGED int damp_EB_internal;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBcorotating_radius;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBdamping_radius;
-    extern AMREX_GPU_DEVICE_MANAGED int turnoffdeposition;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_nodepos_radius;
-    extern AMREX_GPU_DEVICE_MANAGED int turnoff_plasmaEB_gather;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_nogather_radius;
-    extern AMREX_GPU_DEVICE_MANAGED int verbose;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real corotatingE_maxradius;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real enforceDipoleB_maxradius;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Bfield;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Efield;
-    extern AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
-    extern AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
-    extern AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real Bdamping_scale;
-    extern AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real injection_time;
-    extern AMREX_GPU_DEVICE_MANAGED int continuous_injection;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_min;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_max;
-    extern AMREX_GPU_DEVICE_MANAGED int use_theoreticalEB;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real theory_max_rstar;
-    extern AMREX_GPU_DEVICE_MANAGED int LimitDipoleBInit;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real DipoleB_init_maxradius;
-    extern AMREX_GPU_DEVICE_MANAGED int AddExternalMonopoleOnly;
-    extern AMREX_GPU_DEVICE_MANAGED int AddMonopoleInsideRstarOnGrid;
-    extern AMREX_GPU_DEVICE_MANAGED int EnforceTheoreticalEBInGrid;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real damping_scale;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int EB_external;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int E_external_monopole;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED
+                        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int ModifyParticleWtAtInjection;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int damp_EB_internal;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBcorotating_radius;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBdamping_radius;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int turnoffdeposition;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real max_nodepos_radius;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int turnoff_plasmaEB_gather;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real max_nogather_radius;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int verbose;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real corotatingE_maxradius;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real enforceDipoleB_maxradius;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Bfield;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Efield;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real Bdamping_scale;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real injection_time;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int continuous_injection;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_min;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_max;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int use_theoreticalEB;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real theory_max_rstar;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int LimitDipoleBInit;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED amrex::Real DipoleB_init_maxradius;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int AddExternalMonopoleOnly;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int AddMonopoleInsideRstarOnGrid;
+    extern AMREX_EXPORT AMREX_GPU_DEVICE_MANAGED int EnforceTheoreticalEBInGrid;
 
     void ReadParameters();
     void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,

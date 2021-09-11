@@ -10,7 +10,7 @@ namespace PulsarParm
 {
     std::string pulsar_type;
 
-    AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
+    AMREX_GPU_DEVICE_MANAGED amrex::Real PulsarParm::omega_star;
     AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time = -1.0;
     AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
     AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
