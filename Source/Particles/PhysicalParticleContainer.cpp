@@ -1087,8 +1087,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     // particle theta
                     amrex::Real theta_p = 0.0;
                     if (rad > 0.) theta_p = std::acos((z0-zc)/rad);
-                    if (theta_p > PulsarParm::removeparticle_theta_min*180./MathConst::pi and
-                        theta_p < PulsarParm::removeparticle_theta_max*180./MathConst::pi) {
+                    if (theta_p > PulsarParm::removeparticle_theta_min*MathConst::pi/180. and
+                        theta_p < PulsarParm::removeparticle_theta_max*MathConst::pi/180.) {
                         p.id() = -1;
                     }
 #endif
