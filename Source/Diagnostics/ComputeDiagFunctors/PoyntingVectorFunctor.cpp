@@ -100,28 +100,3 @@ PoyntingVectorFunctor::operator ()(amrex::MultiFab& mf_dst,
 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
