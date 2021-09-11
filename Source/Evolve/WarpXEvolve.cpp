@@ -364,19 +364,6 @@ WarpX::Evolve (int numsteps)
         }
         mypc->PulsarParticleRemoval();
 #endif
-
-#ifdef PULSAR
-        if (!rho_fp[0]) {
-           amrex::Print() << " no rho -- compute rho! \n";
-        }
-        else {
-           amrex::Print() << " rho is computed \n";
-        }
-        mypc->PulsarParticleRemoval(); 
-        mypc->PulsarParticleInjection();
-        mypc->Redistribute();
-#endif
-
         mypc->ApplyBoundaryConditions();
 
         // interact with particles with EB walls (if present)
