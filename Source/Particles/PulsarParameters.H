@@ -13,10 +13,10 @@ using namespace amrex;
 
 namespace PulsarParm
 {
-    extern std::string pulsar_type;
+    static std::string pulsar_type;
 
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
-    extern AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time;
+    static amrex::Real omega_star;
+    static amrex::Real ramp_omega_time;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
@@ -72,11 +72,11 @@ namespace PulsarParm
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    amrex::Real Omega(const amrex::Real time)
+    amrex::Real Omega(const amrex::Real omegastar, const amrex::Real cur_time, amrex::Real omega_ramp_time)
     {
-         amrex::Real omega = omega_star;
-         if (ramp_omega_time > 0.0 && time < ramp_omega_time) {
-             omega = omega_star * time / ramp_omega_time;
+         amrex::Real omega = omegastar;
+         if (omega_ramp_time > 0.0 && cur_time < omega_ramp_time) {
+             omega = omegastar * cur_time / omega_ramp_time;
          }
 
          return omega;
@@ -86,9 +86,11 @@ namespace PulsarParm
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     void CorotatingEfieldSpherical (amrex::Real const r, amrex::Real const theta,
                                     amrex::Real const phi, amrex::Real const time,
+                                    amrex::Real const omega_star_data,
+                                    amrex::Real const ramp_omega_time_data,
                                     amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
-        amrex::Real omega = Omega(time);
+        amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
         amrex::Real c_phi   = std::cos(phi);
@@ -102,9 +104,6 @@ namespace PulsarParm
         amrex::Real r2 = r_ratio * r_ratio;
         // Michel and Li -- eq 14 , 15
         Er     =  B_star * omega * r2 * R_star * s_theta * s_theta;
-        if (PulsarParm::AddMonopoleInsideRstarOnGrid == 1) {
-            Er += (2.0/3.0) * omega * B_star * R_star * r_ratio * r_ratio;
-        }
         Etheta = -B_star * omega * r2 * R_star * 2.0 * s_theta * c_theta;
         Ephi   = 0.0; // aligned magnetic and rotation axis
     }
@@ -112,9 +111,11 @@ namespace PulsarParm
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     void ExternalEFieldSpherical (amrex::Real const r, amrex::Real const theta,
                                   amrex::Real const phi, amrex::Real const time,
+                                  amrex::Real const omega_star_data,
+                                  amrex::Real const ramp_omega_time_data,
                                   amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
-        amrex::Real omega = Omega(time);
+        amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
         amrex::Real c_phi   = std::cos(phi);
@@ -147,9 +148,11 @@ namespace PulsarParm
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     void ExternalEMonopoleSpherical (amrex::Real const r, amrex::Real const theta,
                                      amrex::Real const phi, amrex::Real const time,
+                                     amrex::Real const omega_star_data,
+                                     amrex::Real const ramp_omega_time_data,
                                      amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
-        amrex::Real omega = Omega(time);
+        amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
         amrex::Real c_phi   = std::cos(phi);
@@ -167,7 +170,6 @@ namespace PulsarParm
                                   amrex::Real const phi, amrex::Real const time,
                                   amrex::Real &Br, amrex::Real &Btheta, amrex::Real &Bphi)
     {
-        amrex::Real omega = Omega(time);
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
         amrex::Real r_ratio;

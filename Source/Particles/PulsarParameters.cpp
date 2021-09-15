@@ -8,10 +8,6 @@
 
 namespace PulsarParm
 {
-    std::string pulsar_type;
-
-    AMREX_GPU_DEVICE_MANAGED amrex::Real omega_star;
-    AMREX_GPU_DEVICE_MANAGED amrex::Real ramp_omega_time = -1.0;
     AMREX_GPU_DEVICE_MANAGED amrex::Real B_star;
     AMREX_GPU_DEVICE_MANAGED amrex::Real R_star;
     AMREX_GPU_DEVICE_MANAGED amrex::Real dR_star;
@@ -71,6 +67,7 @@ namespace PulsarParm
         pp.query("E_external_monopole",E_external_monopole);
         pp.query("damp_EB_internal",damp_EB_internal);
         pp.query("damping_scale",damping_scale);
+        ramp_omega_time = -1.0;
         pp.query("ramp_omega_time",ramp_omega_time);
         amrex::Print() << " Pulsar center: " << center_star[0] << " " << center_star[1] << " " << center_star[2] << "\n";
         amrex::Print() << " Pulsar omega: " << omega_star << "\n";
@@ -181,6 +178,8 @@ namespace PulsarParm
             y_IndexType[idim] = y_nodal_flag[idim];
             z_IndexType[idim] = z_nodal_flag[idim];
         }
+        amrex::Real omega_star_data = omega_star;
+        amrex::Real ramp_omega_time_data = ramp_omega_time;
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -220,6 +219,8 @@ namespace PulsarParm
                     if (init_Bfield == 0) {
                         if (r <= corotatingE_maxradius) {
                             CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      omega_star_data,
+                                                      ramp_omega_time_data,
                                                       Fr, Ftheta, Fphi);
                         }
                     }
@@ -252,6 +253,8 @@ namespace PulsarParm
                     if (init_Bfield == 0) {
                         if (r <= corotatingE_maxradius) {
                             CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      omega_star_data,
+                                                      ramp_omega_time_data,
                                                       Fr, Ftheta, Fphi);
                         }
                     }
@@ -284,6 +287,8 @@ namespace PulsarParm
                     if (init_Bfield == 0) {
                         if (r <= corotatingE_maxradius) {
                             CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      omega_star_data,
+                                                      ramp_omega_time_data,
                                                       Fr, Ftheta, Fphi);
                         }
                     }
@@ -316,6 +321,8 @@ namespace PulsarParm
             y_IndexType[idim] = y_nodal_flag[idim];
             z_IndexType[idim] = z_nodal_flag[idim];
         }
+        amrex::Real omega_star_data = omega_star;
+        amrex::Real ramp_omega_time_data = ramp_omega_time;
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -341,12 +348,17 @@ namespace PulsarParm
                     if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
                         if (r <= corotatingE_maxradius) {
                             CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      omega_star_data,
+                                                      ramp_omega_time_data,
                                                       Fr, Ftheta, Fphi);
                             ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Ex_arr(i,j,k));
                         }
                     } else {
-                        ExternalEFieldSpherical(r, theta, phi, cur_time, Fr, Ftheta, Fphi);
+                        ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                omega_star_data,
+                                                ramp_omega_time_data,
+                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ex_arr(i,j,k));
                     }
@@ -363,12 +375,17 @@ namespace PulsarParm
                     if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
                         if (r <= corotatingE_maxradius) {
                             CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      omega_star_data,
+                                                      ramp_omega_time_data,
                                                       Fr, Ftheta, Fphi);
                             ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Ey_arr(i,j,k));
                         }
                     } else {
-                        ExternalEFieldSpherical(r, theta, phi, cur_time, Fr, Ftheta, Fphi);
+                        ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                omega_star_data,
+                                                ramp_omega_time_data,
+                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ey_arr(i,j,k));
                     }
@@ -385,12 +402,17 @@ namespace PulsarParm
                     if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
                         if (r <= corotatingE_maxradius) {
                             CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                                                      omega_star_data,
+                                                      ramp_omega_time_data,
                                                       Fr, Ftheta, Fphi);
                             ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Ez_arr(i,j,k));
                         }
                     } else {
-                        ExternalEFieldSpherical(r, theta, phi, cur_time, Fr, Ftheta, Fphi);
+                        ExternalEFieldSpherical(r, theta, phi, cur_time,
+                                                omega_star_data,
+                                                ramp_omega_time_data,
+                                                Fr, Ftheta, Fphi);
                         ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ez_arr(i,j,k));
                     }
@@ -447,7 +469,7 @@ namespace PulsarParm
                     if (PulsarParm::EnforceTheoreticalEBInGrid == 0) {
                         if (r <= enforceDipoleB_maxradius) {
                             ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                   Fr, Ftheta, Fphi);
+                                                    Fr, Ftheta, Fphi);
                             ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Bx_arr(i,j,k));
                         }

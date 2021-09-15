@@ -2110,6 +2110,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
     amrex::Real cur_time = WarpX::GetInstance().gett_new(lev);
     auto &warpx = WarpX::GetInstance();
+    amrex::Real omega_star_data = PulsarParm::omega_star;
+    amrex::Real ramp_omega_time_data = PulsarParm::ramp_omega_time;
 //    amrex::AllPrintToFile("PulsarParticle") << " step : " << warpx.getistep(0) << " time : " << cur_time << "\n";
 #endif
 
@@ -2222,6 +2224,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                                                       theta_p, phi_p);
                         if (r_p > PulsarParm::corotatingE_maxradius) {
                             PulsarParm::ExternalEMonopoleSpherical(r_p, theta_p, phi_p, cur_time,
+                                                                   omega_star_data,
+                                                                   ramp_omega_time_data,
                                                                    Erp, Ethetap, Ephip);
                             amrex::Real Ex_monopole, Ey_monopole, Ez_monopole;
                             PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
@@ -2260,6 +2264,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 
                     amrex::Real Erp, Ethetap, Ephip;
                     PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                        omega_star_data,
+                                                        ramp_omega_time_data,
                                                         Erp, Ethetap, Ephip);
                     amrex::Real Er_comp, Etheta_comp, Ephi_comp;
                     PulsarParm::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
@@ -2294,6 +2300,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                     if (PulsarParm::use_theoreticalEB == 1) {
                         if (r_p < ( PulsarParm::theory_max_rstar) ) {
                             PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                                omega_star_data,
+                                                                ramp_omega_time_data,
                                                                 Erp, Ethetap, Ephip);
                             PulsarParm::ExternalBFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                                                 Brp, Bthetap, Bphip);
@@ -2744,6 +2752,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Gpu::synchronize();
     amrex::Gpu::ManagedVector<amrex::Real> PulsarParticleDiag(55,0.0);
     amrex::Real * PulsarParticleDiagData = PulsarParticleDiag.data();
+    amrex::Real omega_star_data = PulsarParm::omega_star;
+    amrex::Real ramp_omega_time_data = PulsarParm::ramp_omega_time;
 #endif
 
     bool galerkin_interpolation = WarpX::galerkin_interpolation;
@@ -2863,6 +2873,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                                                theta_p, phi_p);
                  if (r_p > PulsarParm::corotatingE_maxradius) {
                      PulsarParm::ExternalEMonopoleSpherical(r_p, theta_p, phi_p, cur_time,
+                                                            omega_star_data,
+                                                            ramp_omega_time_data,
                                                             Erp, Ethetap, Ephip);
                      amrex::Real Ex_monopole, Ey_monopole, Ez_monopole;
                      PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
@@ -2892,6 +2904,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         
         amrex::Real Erp, Ethetap, Ephip;
         PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                            omega_star_data,
+                                            ramp_omega_time_data,
                                             Erp, Ethetap, Ephip);
         amrex::Real Brp, Bthetap, Bphip;
         PulsarParm::ExternalBFieldSpherical (r_p, theta_p, phi_p, cur_time,
@@ -2922,6 +2936,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         if (PulsarParm::use_theoreticalEB == 1) {
             if (r_p < PulsarParm::theory_max_rstar) {
                 PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
                                                     Erp, Ethetap, Ephip);
                 PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
                                                       Ephip, r_p, theta_p,
