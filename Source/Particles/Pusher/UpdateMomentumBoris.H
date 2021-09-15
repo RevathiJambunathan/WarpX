@@ -22,20 +22,20 @@ void UpdateMomentumBoris(
     using namespace amrex::literals;
 
     const amrex::Real econst = 0.5_rt*q*dt/m;
-    amrex::Real ux_theory = ux;
-    amrex::Real uy_theory = uy;
-    amrex::Real uz_theory = uz;
+//    amrex::Real ux_theory = ux;
+//    amrex::Real uy_theory = uy;
+//    amrex::Real uz_theory = uz;
 
     // First half-push for E
-    if (compute_from_theory == 0) {
+//    if (compute_from_theory == 0) {
         ux += econst*Ex;
         uy += econst*Ey;
         uz += econst*Ez;
-    } else {
-        ux_theory += econst*Ex;
-        uy_theory += econst*Ey;
-        uz_theory += econst*Ez;
-    }
+//    } else {
+//        ux_theory += econst*Ex;
+//        uy_theory += econst*Ey;
+//        uz_theory += econst*Ez;
+//    }
 #ifdef PULSAR
 //    amrex::AllPrintToFile("PulsarParticle") << "half acceleration Ex : " << econst*Ex << " " << " Ey : " << econst*Ey << " Ez " << econst*Ez << "\n";
     if (i == 0) {
@@ -80,15 +80,15 @@ void UpdateMomentumBoris(
             PulsarDiag[35] = tmp_uy;
             PulsarDiag[36] = tmp_uz;
         } else {
-            const amrex::Real ux_p_theory = ux_theory + uy_theory*tz - uz_theory*ty;
-            const amrex::Real uy_p_theory = uy_theory + uz_theory*tx - ux_theory*tz;
-            const amrex::Real uz_p_theory = uz_theory + ux_theory*ty - uy_theory*tx;
-            amrex::Real tmp_ux_theory = uy_p_theory*sz - uz_p_theory*sy;
-            amrex::Real tmp_uy_theory = uz_p_theory*sx - ux_p_theory*sz;
-            amrex::Real tmp_uz_theory = ux_p_theory*sy - uy_p_theory*sx;
-            PulsarDiag[46] = tmp_ux_theory;
-            PulsarDiag[47] = tmp_uy_theory;
-            PulsarDiag[48] = tmp_uz_theory;
+//            const amrex::Real ux_p_theory = ux_theory + uy_theory*tz - uz_theory*ty;
+//            const amrex::Real uy_p_theory = uy_theory + uz_theory*tx - ux_theory*tz;
+//            const amrex::Real uz_p_theory = uz_theory + ux_theory*ty - uy_theory*tx;
+//            amrex::Real tmp_ux_theory = uy_p_theory*sz - uz_p_theory*sy;
+//            amrex::Real tmp_uy_theory = uz_p_theory*sx - ux_p_theory*sz;
+//            amrex::Real tmp_uz_theory = ux_p_theory*sy - uy_p_theory*sx;
+            PulsarDiag[46] = tmp_ux;
+            PulsarDiag[47] = tmp_uy;
+            PulsarDiag[48] = tmp_uz;
         }
     }
 #endif

@@ -117,10 +117,12 @@ void doParticlePush(const GetParticlePosition& GetPosition,
         UpdateMomentumBoris( ux, uy, uz,
                              Ex, Ey, Ez, Bx,
                              By, Bz, qp, m, dt, PulsarDiag, i, compute_from_theory);
-        amrex::ParticleReal x, y, z;
-        GetPosition(i, x, y, z);
-        UpdatePosition(x, y, z, ux, uy, uz, dt );
-        SetPosition(i, x, y, z);
+        if (compute_from_theory == 0) {
+            amrex::ParticleReal x, y, z;
+            GetPosition(i, x, y, z);
+            UpdatePosition(x, y, z, ux, uy, uz, dt );
+            SetPosition(i, x, y, z);
+        }
     } else if (pusher_algo == ParticlePusherAlgo::Vay) {
         amrex::Real qp = q;
         if (ion_lev){ qp *= ion_lev; }

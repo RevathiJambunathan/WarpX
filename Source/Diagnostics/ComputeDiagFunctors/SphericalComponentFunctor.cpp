@@ -17,7 +17,7 @@ SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mf
                                                       int lev,
                                                       amrex::IntVect crse_ratio,
                                                       int sphericalcomp,
-                                                      const bool Efield,
+                                                      const int Efield,
                                                       int ncomp)
     : ComputeDiagFunctor(ncomp, crse_ratio), m_mfx_src(mfx_src),
       m_mfy_src(mfy_src), m_mfz_src(mfz_src), m_lev(lev), m_sphericalcomp(sphericalcomp),
@@ -33,10 +33,41 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const auto probhi = warpx.Geom(m_lev).ProbHiArray();
+    const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
+
+    // convert boxarray of source MultiFab to staggering of dst Multifab
+    // and coarsen it
+    amrex::BoxArray ba_tmp = amrex::convert( m_mfx_src->boxArray(), stag_dst);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE (ba_tmp.coarsenable (m_crse_ratio),
+        "source Multifab converted to staggering of dst Multifab is not coarsenable");
+    ba_tmp.coarsen(m_crse_ratio);
+
+    if (ba_tmp == mf_dst.boxArray() and m_mfx_src->DistributionMap() == mf_dst.DistributionMap()) {
+        ComputeSphericalFieldComponent(mf_dst, dcomp);
+    } else {
+        const int ncomp = 1;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_mfx_src->DistributionMap() == m_mfy_src->DistributionMap() and m_mfy_src->DistributionMap() == m_mfz_src->DistributionMap(), 
+            " all sources must have the same Distribution map");
+        amrex::MultiFab mf_tmp( ba_tmp, m_mfx_src->DistributionMap(), ncomp, 0);
+        const int dcomp_tmp = 0;
+        ComputeSphericalFieldComponent(mf_tmp, dcomp_tmp);
+        mf_dst.copy( mf_tmp, 0, dcomp, ncomp);
+    }
+}
+
+void
+SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_dst, int dcomp) const
+{
+    using namespace amrex;
+    auto & warpx = WarpX::GetInstance();
+    const auto dx = warpx.Geom(m_lev).CellSizeArray();
+    const auto problo = warpx.Geom(m_lev).ProbLoArray();
+    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
     const amrex::IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
     const amrex::IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
     const amrex::IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
     const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
+
     amrex::GpuArray<int,3> sfx; // staggering of source xfield
     amrex::GpuArray<int,3> sfy; // staggering of source yfield
     amrex::GpuArray<int,3> sfz; // staggering of source zfield
@@ -52,7 +83,7 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
     }
     const int sphericalcomp = m_sphericalcomp;
     amrex::Real cur_time = warpx.gett_new(0);
-    bool Efield = m_Efield;
+    int Efield = m_Efield;
 #ifdef PULSAR
 
 #ifdef AMREX_USE_OMP
