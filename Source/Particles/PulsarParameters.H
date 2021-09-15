@@ -7,6 +7,7 @@
 #include <AMReX_Geometry.H>
 #include <AMReX_Array4.H>
 #include <AMReX_Array.H>
+#include <AMReX_MultiFab.H>
 
 using namespace amrex;
 
@@ -39,8 +40,24 @@ namespace PulsarParm
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
     extern AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real corotatingE_maxradius;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real enforceDipoleB_maxradius;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Bfield;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Efield;
+    extern AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
+    extern AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
+    extern AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real Bdamping_scale;
+    extern AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing;
 
     void ReadParameters();
+    void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
+        amrex::MultiFab *mfy, amrex::MultiFab *mfz, const int lev, const bool init_Bfield);
+
+    void ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Efield,
+                                    const int lev, const amrex::Real a_dt);
+    void ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Bfield,
+                                    const int lev, const amrex::Real a_dt);
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -54,6 +71,29 @@ namespace PulsarParm
          return omega;
     }
 
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void CorotatingEfieldSpherical (amrex::Real const r, amrex::Real const theta,
+                                    amrex::Real const phi, amrex::Real const time,
+                                    amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
+    {
+        amrex::Real omega = Omega(time);
+        amrex::Real c_theta = std::cos(theta);
+        amrex::Real s_theta = std::sin(theta);
+        amrex::Real c_phi   = std::cos(phi);
+        amrex::Real s_phi   = std::sin(phi);
+        amrex::Real r_ratio;
+        if (r > 0) {
+            r_ratio = R_star/r;
+        } else {
+            r_ratio = R_star/(dR_star*0.5);
+        }       
+        amrex::Real r2 = r_ratio * r_ratio;
+        // Michel and Li -- eq 14 , 15
+        Er     =  B_star * omega * r2 * R_star * s_theta * s_theta;
+        Etheta = -B_star * omega * r2 * R_star * 2.0 * s_theta * c_theta;
+        Ephi   = 0.0; // aligned magnetic and rotation axis
+    }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     void ExternalEFieldSpherical (amrex::Real const r, amrex::Real const theta,
@@ -96,7 +136,12 @@ namespace PulsarParm
         amrex::Real omega = Omega(time);
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
-        amrex::Real r_ratio = R_star/r;
+        amrex::Real r_ratio;
+        if (r > 0) {
+            r_ratio = R_star/r;
+        } else {
+            r_ratio = R_star/(dR_star*0.5);
+        }
         amrex::Real r3 = r_ratio*r_ratio*r_ratio;
         // Michel and Li -- eq 14 and 15 from michel and li
         // dipole B field inside and outside the pulsar
@@ -193,6 +238,33 @@ namespace PulsarParm
         F_z = F_r * std::cos(theta) - F_theta * std::sin(theta);
     }
 
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalRComponent (amrex::Real const F_x,
+            amrex::Real const F_y, amrex::Real const F_z,
+            amrex::Real const theta, amrex::Real const phi, amrex::Real & F_r)
+    {
+        F_r = F_x * std::sin(theta) * std::cos(phi)
+            + F_y * std::sin(theta) * std::sin(phi)
+            + F_z * std::cos(theta);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalThetaComponent (amrex::Real const F_x,
+            amrex::Real const F_y, amrex::Real const F_z,
+            amrex::Real const theta, amrex::Real const phi, amrex::Real & F_theta)
+    {
+        F_theta = F_x * std::cos(theta) * std::cos(phi)
+                + F_y * std::cos(theta) * std::sin(phi)
+                - F_z * std::sin(theta);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    void ConvertCartesianToSphericalPhiComponent (amrex::Real const F_x,
+            amrex::Real const F_y, amrex::Real const F_z,
+            amrex::Real const theta, amrex::Real const phi, amrex::Real &F_phi)
+    {
+        F_phi = - F_x * sin(phi) + F_y * std::cos(phi);
+    }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     void DampField(int i, int j, int k, amrex::GeometryData const& geom, amrex::Array4<amrex::Real> const& Efield, amrex::GpuArray<int, 3> const mf_ixtype)
@@ -207,6 +279,7 @@ namespace PulsarParm
             Efield(i, j, k) = Efield(i, j, k) * Fd;
         }
     }
+
 }
 
 #endif

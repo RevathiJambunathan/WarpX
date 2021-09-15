@@ -56,6 +56,10 @@
 #include <cmath>
 #include <limits>
 
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+
 using namespace amrex;
 
 void
@@ -114,6 +118,10 @@ WarpX::Evolve (int numsteps)
             }
         }
 
+#ifdef PULSAR
+        mypc->PulsarParticleInjection();
+        mypc->Redistribute();
+#endif
         // At the beginning, we have B^{n} and E^{n}.
         // Particles have p^{n} and x^{n}.
         // is_synchronized is true.
@@ -355,9 +363,7 @@ WarpX::Evolve (int numsteps)
            amrex::Print() << " rho is computed \n";
         }
         mypc->PulsarParticleRemoval();
-        mypc->PulsarParticleInjection();
 #endif
-
         mypc->ApplyBoundaryConditions();
 
         // interact with particles with EB walls (if present)

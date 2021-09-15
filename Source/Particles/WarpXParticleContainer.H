@@ -345,6 +345,11 @@ public:
     virtual void PulsarParticleRemoval () {};
 #endif
 
+#ifdef PULSAR
+    virtual void PulsarParticleInjection () {};
+    virtual void PulsarParticleRemoval () {};
+#endif
+
     /**
      * \brief Virtual method to resample the species. Overriden by PhysicalParticleContainer only.
      * Empty body is here because making the method purely virtual would mean that we need to

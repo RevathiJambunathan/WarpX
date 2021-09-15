@@ -11,6 +11,7 @@
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX_Parser.H>
 #include <AMReX_REAL.H>
+#include <limits>
 
 enum ExternalFieldInitType { Constant, Parser, RepeatedPlasmaLens};
 

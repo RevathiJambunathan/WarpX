@@ -13,7 +13,7 @@
 #################################
 ####### GENERAL PARAMETERS ######
 #################################
-max_step = 50000
+max_step = 5
 amr.n_cell = 128 128 128
 amr.max_grid_size = 128
 amr.blocking_factor = 128
@@ -43,9 +43,7 @@ my_constants.c = 299792458.
 my_constants.B_star = 8.0323e-6                  # magnetic field of NS (T)
 my_constants.dR = 1400
 my_constants.to = 2.e-4
-interpolation.nox = 3
-interpolation.noy = 3
-interpolation.noz = 3
+algo.particle_shape = 3
 
 
 #################################
@@ -61,12 +59,15 @@ plasma_e.profile = parse_density_function
 plasma_e.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_e.num_particles_per_cell_each_dim = 4 4 4
 plasma_e.momentum_distribution_type = parse_momentum_function
-
 ## Inject stationary pairs
 plasma_e.momentum_function_ux(x,y,z) = "0.0"
 plasma_e.momentum_function_uy(x,y,z) = "0.0"
 ## uz is always 0 for the injection methods above
-plasma_e.momentum_function_uz(x,y,z) = "0.0"
+plasma_e.momentum_function_uy(x,y,z) = "0.0"
+#plasma_e.momentum_distribution_type = "constant"
+#plasma_e.ux = 0.0
+#plasma_e.uy = 0.0
+#plasma_e.uz = 0.0
 plasma_e.do_continuous_injection = 0
 plasma_e.density_min = 1E0
 
@@ -77,7 +78,6 @@ plasma_p.profile = parse_density_function
 plasma_p.density_function(x,y,z) = "( ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))<=(r_star)) * ((( (z-zc)*(z-zc) + (y-yc)*(y-yc) + (x-xc)*(x-xc) )^(0.5))>=(r_star-dR)) )*dens"
 plasma_p.num_particles_per_cell_each_dim = 4 4 4
 plasma_p.momentum_distribution_type = parse_momentum_function
-
 ## Inject stationary pairs
 plasma_p.momentum_function_ux(x,y,z) = "0.0"
 plasma_p.momentum_function_uy(x,y,z) = "0.0"
@@ -88,8 +88,8 @@ plasma_p.density_min = 1E0
 
 diagnostics.diags_names = plt chk
 plt.diag_type = Full
-plt.intervals = 20
-plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE
+plt.intervals = 1
+plt.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz part_per_cell rho divE Er Etheta Ephi Br Btheta Bphi EdotB Sx Sy Sz
 
 chk.format = checkpoint
 chk.diag_type = Full
@@ -109,7 +109,7 @@ pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
 pulsar.dR = 1400                       # thickness on the surface of the pulsar
                                        # consistency requires dR = my_constants.dR
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
-pulsar.EB_external = 1                 # [0/1]: to apply external E and B
+pulsar.EB_external = 0                 # [0/1]: to apply external E and B
 pulsar.E_external_monopole = 0                  # [0/1]
 pulsar.EB_corotating_maxradius = 12032 # The radius where E-field changes from corotating
                                        # inside the star to quadrapole outside.
@@ -126,7 +126,7 @@ pulsar.max_particle_absorption_radius = 12032   # Maximum radius within which pa
                                                 # deleted every timestep.
                                                 # Default is Rstar
 pulsar.rhoGJ_scale = 1e0              # scaling down of rho_GJ
-pulsar.damp_EB_internal = 1             # Damp internal electric field
+pulsar.damp_EB_internal = 0             # Damp internal electric field
 pulsar.damp_EB_radius = 12032         # The radius within which EB should be damped.
                                       # default is r_star (damping will include this radius)
 pulsar.damping_scale = 1000.0            # Damping scale factor for internal electric field
@@ -137,4 +137,13 @@ pulsar.max_nodepos_radius = 0.        # radius within which particle deposition 
 pulsar.turnoff_plasmaEB_gather = 0    # (0/1) 0 is default. always gather
                                       # 1 for no gather of self-consistent fields
 pulsar.max_nogather_radius = 0.       # radius within which self-consistent field gather
-                                      # is turned off
+pulsar.init_dipoleBfield = 1          # default is 1
+pulsar.init_corotatingEfield = 1      # default
+pulsar.corotatingE_maxradius = 12032  # default is Rstar
+pulsar.enforceDipoleB_maxradius = 12032 # default is Rstar
+pulsar.enforceCorotatingE = 1        # default 1
+pulsar.enforceDipoleB = 1        # default 1
+pulsar.singleParticleTest = 0    # default 0, if 1, then a particle pair will be introduced.
+                                 # Single particle position/momentum will need to be specified
+pulsar.DampBDipoleInRing = 1
+pulsar.Bdamping_scale = 10000

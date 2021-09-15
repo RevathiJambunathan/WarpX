@@ -341,6 +341,11 @@ void PhysicalParticleContainer::InitData ()
 #ifndef PULSAR
     AddParticles(0); // Note - add on level 0
     Redistribute();  // We then redistribute
+#else
+    if (PulsarParm::singleParticleTest == 1) {
+        AddParticles(0); // Note - add on level 0
+        Redistribute();  // We then redistribute
+    }
 #endif
 }
 
@@ -1182,6 +1187,27 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             }
         });
 
+#ifdef PULSAR
+       if (PulsarParm::EB_external == 1) {
+          Real* const AMREX_RESTRICT xp_data = xp.dataPtr();
+          Real* const AMREX_RESTRICT yp_data = yp.dataPtr();
+          Real* const AMREX_RESTRICT zp_data = zp.dataPtr();
+          Real* const AMREX_RESTRICT Exp_data = Exp.dataPtr();
+          Real* const AMREX_RESTRICT Eyp_data = Eyp.dataPtr();
+          Real* const AMREX_RESTRICT Ezp_data = Ezp.dataPtr();
+          Real* const AMREX_RESTRICT Bxp_data = Bxp.dataPtr();
+          Real* const AMREX_RESTRICT Byp_data = Byp.dataPtr();
+          Real* const AMREX_RESTRICT Bzp_data = Bzp.dataPtr();
+          Real time = warpx.gett_new(lev);
+          amrex::ParallelFor(pti.numParticles(),
+                [=] AMREX_GPU_DEVICE (long i) {
+                // spherical r, theta, phi, and cylidrical r
+                PulsarParm::PulsarEBField(xp_data[i],yp_data[i],zp_data[i],
+                              Exp_data[i],Eyp_data[i],Ezp_data[i],
+                              Bxp_data[i],Byp_data[i],Bzp_data[i],time);
+          });  
+       }
+#endif
         amrex::Gpu::synchronize();
 
         if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
@@ -1243,6 +1269,9 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
     const int nmodes = WarpX::n_rz_azimuthal_modes;
     bool radially_weighted = plasma_injector->radially_weighted;
 #endif
+
+    int Nmax_particles = 0;
+    int valid_particles_beforeAdd = TotalNumberOfParticles();    
 
     MFItInfo info;
     if (do_tiling && Gpu::notInLaunchRegion()) {
@@ -1363,6 +1392,7 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
         // Max number of new particles. All of them are created,
         // and invalid ones are then discarded
         int max_new_particles = Scan::ExclusiveSum(counts.size(), counts.data(), offset.data());
+        Nmax_particles += max_new_particles;
 
         // Update NextID to include particles created in this function
         Long pid;
@@ -1571,7 +1601,7 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
             amrex::HostDevice::Atomic::Add( &(*cost)[mfi.index()], wt);
         }
     }
-
+    amrex::Print() << " newly added particles : " << TotalNumberOfParticles()-valid_particles_beforeAdd << " total max particles " << Nmax_particles<< "\n";
     // The function that calls this is responsible for redistributing particles.
 }
 
@@ -2155,11 +2185,11 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                    dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
                                    nox, galerkin_interpolation);
 #ifdef PULSAR
-                    doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
-                                   ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                                   ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                                   dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                                   nox, galerkin_interpolation, problo, probhi, cur_time);
+//                    doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+//                                   ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+//                                   ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
+//                                   dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+//                                   nox, galerkin_interpolation, problo, probhi, cur_time);
 #endif
                 }
                 // Externally applied E-field in Cartesian co-ordinates
@@ -2562,11 +2592,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                            dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
                            nox, galerkin_interpolation);
 #ifdef PULSAR
-            doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
-                           ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
-                           ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
-                           dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
-                           nox, galerkin_interpolation, problo, probhi, cur_time);
+//            doPulsarFieldGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
+//                           ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
+//                           ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
+//                           dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
+//                           nox, galerkin_interpolation, problo, probhi, cur_time);
 #endif
         }
         // Externally applied E-field in Cartesian co-ordinates
@@ -2763,7 +2793,12 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 #ifdef PULSAR
 void PhysicalParticleContainer::PulsarParticleInjection() {
 
-     AddPlasma( 0 );
+    if (PulsarParm::singleParticleTest == 1) { 
+        AddParticles(0); // Note - add on level 0
+        Redistribute();  // We then redistribute
+    } else {
+        AddPlasma( 0 );
+    }
 }
 
 void PhysicalParticleContainer::PulsarParticleRemoval() {
@@ -2795,6 +2830,49 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                       if (r <= (PulsarParm::max_particle_absorption_radius)) {
                           pp[i].id() = -1;
                       }
+            });
+        }
+   }
+}
+#endif
+
+#ifdef PULSAR
+void PhysicalParticleContainer::PulsarParticleInjection() {
+    
+     AddPlasma( 0 );
+}
+
+void PhysicalParticleContainer::PulsarParticleRemoval() {
+    int lev = 0;
+    // Remove Particles From inside sphere
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+    {
+#ifdef _OPENMP
+        int thread_num = omp_get_thread_num();
+#else
+        int thread_num = 0;
+#endif
+        for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
+        {
+            pti.GetPosition(m_xp[thread_num], m_yp[thread_num], m_zp[thread_num]);
+            Real* const AMREX_RESTRICT xp_data = m_xp[thread_num].dataPtr();
+            Real* const AMREX_RESTRICT yp_data = m_yp[thread_num].dataPtr();
+            Real* const AMREX_RESTRICT zp_data = m_zp[thread_num].dataPtr();
+            Real xc = PulsarParm::center_star[0];
+            Real yc = PulsarParm::center_star[1];
+            Real zc = PulsarParm::center_star[2];
+            ParticleType* pp = pti.GetArrayOfStructs()().data();
+            amrex::ParallelFor(pti.numParticles(),
+                  [=] AMREX_GPU_DEVICE (long i) {
+                    
+                  Real r = std::sqrt((xp_data[i]-xc)*(xp_data[i]-xc)
+                                   + (yp_data[i]-yc)*(yp_data[i]-yc)
+                                   + (zp_data[i]-zc)*(zp_data[i]-zc));
+                  if (r<=PulsarParm::R_star - PulsarParm::dR_star) {
+                      pp[i].id() = -1;
+                  }
             });
         }
    }
