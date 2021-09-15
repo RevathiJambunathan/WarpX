@@ -6,18 +6,65 @@
  *
  * License: BSD-3-Clause-LBNL
  */
-#include "WarpX.H"
-#include "Utils/WarpXConst.H"
-#include "Utils/WarpX_Complex.H"
-#include "Particles/MultiParticleContainer.H"
+#include "LaserParticleContainer.H"
+
+#include "Evolve/WarpXDtType.H"
+#include "Laser/LaserProfiles.H"
+#include "Particles/LaserParticleContainer.H"
 #include "Particles/Pusher/GetAndSetPosition.H"
+#include "Particles/WarpXParticleContainer.H"
+#include "Utils/WarpXAlgorithmSelection.H"
+#include "Utils/WarpXConst.H"
+#include "Utils/WarpXProfilerWrapper.H"
+#include "Utils/WarpXUtil.H"
+#include "WarpX.H"
 
 #include <AMReX.H>
+#include <AMReX_BLassert.H>
+#include <AMReX_Box.H>
+#include <AMReX_BoxArray.H>
+#include <AMReX_Config.H>
+#include <AMReX_DistributionMapping.H>
+#include <AMReX_Extension.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_GpuAtomic.H>
+#include <AMReX_GpuContainers.H>
+#include <AMReX_GpuControl.H>
+#include <AMReX_GpuDevice.H>
+#include <AMReX_GpuLaunch.H>
+#include <AMReX_GpuQualifiers.H>
+#include <AMReX_IntVect.H>
+#include <AMReX_LayoutData.H>
+#include <AMReX_PODVector.H>
+#include <AMReX_ParIter.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_ParmParse.H>
+#include <AMReX_Particles.H>
+#include <AMReX_Print.H>
+#include <AMReX_REAL.H>
+#include <AMReX_RealBox.H>
+#include <AMReX_StructOfArrays.H>
+#include <AMReX_TinyProfiler.H>
+#include <AMReX_Utility.H>
+#include <AMReX_Vector.H>
 
-#include <limits>
-#include <cmath>
+#ifdef AMREX_USE_OMP
+#   include <omp.h>
+#endif
+
 #include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdlib>
+#include <ctype.h>
+#include <functional>
+#include <limits>
+#include <map>
+#include <memory>
 #include <numeric>
+#include <string>
+#include <vector>
+#include <type_traits>
 
 using namespace amrex;
 using namespace WarpXLaserProfiles;
@@ -46,9 +93,9 @@ LaserParticleContainer::LaserParticleContainer (AmrCore* amr_core, int ispecies,
     std::transform(laser_type_s.begin(), laser_type_s.end(), laser_type_s.begin(), ::tolower);
 
     // Parse the properties of the antenna
-    pp_laser_name.getarr("position", m_position);
-    pp_laser_name.getarr("direction", m_nvec);
-    pp_laser_name.getarr("polarization", m_p_X);
+    getArrWithParser(pp_laser_name, "position", m_position);
+    getArrWithParser(pp_laser_name, "direction", m_nvec);
+    getArrWithParser(pp_laser_name, "polarization", m_p_X);
 
     pp_laser_name.query("pusher_algo", m_pusher_algo);
     getWithParser(pp_laser_name, "wavelength", m_wavelength);
@@ -71,6 +118,7 @@ LaserParticleContainer::LaserParticleContainer (AmrCore* amr_core, int ispecies,
 
     if (m_e_max == amrex::Real(0.)){
         amrex::Print() << m_laser_name << " with zero amplitude disabled.\n";
+        m_enabled = false;
         return; // Disable laser if amplitude is 0
     }
 
@@ -127,10 +175,10 @@ LaserParticleContainer::LaserParticleContainer (AmrCore* amr_core, int ispecies,
     m_laser_injection_box= Geom(0).ProbDomain();
     {
         Vector<Real> lo, hi;
-        if (pp_laser_name.queryarr("prob_lo", lo)) {
+        if (queryArrWithParser(pp_laser_name, "prob_lo", lo, 0, AMREX_SPACEDIM)) {
             m_laser_injection_box.setLo(lo);
         }
-        if (pp_laser_name.queryarr("prob_hi", hi)) {
+        if (queryArrWithParser(pp_laser_name, "prob_hi", hi, 0, AMREX_SPACEDIM)) {
             m_laser_injection_box.setHi(hi);
         }
     }
@@ -164,8 +212,8 @@ LaserParticleContainer::LaserParticleContainer (AmrCore* amr_core, int ispecies,
 
     //Init laser profile
 
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_e_max > 0.,
-        "Laser amplitude (e_max) must be positive.");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_e_max >= 0.,
+        "Laser amplitude (e_max) must be >= 0.");
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_wavelength > 0.,
         "Laser wavelength must be positive.");
@@ -184,12 +232,12 @@ LaserParticleContainer::LaserParticleContainer (AmrCore* amr_core, int ispecies,
 void
 LaserParticleContainer::ContinuousInjection (const RealBox& injection_box)
 {
+    if (!m_enabled) return;
+
     // Input parameter injection_box contains small box where injection
     // should occur.
     // So far, LaserParticleContainer::laser_injection_box contains the
     // outdated full problem domain at t=0.
-
-    if (m_e_max == amrex::Real(0.)) return; // Disable laser if amplitude is 0
 
     // Convert updated_position to Real* to use RealBox::contains().
 #if (AMREX_SPACEDIM == 3)
@@ -214,7 +262,7 @@ LaserParticleContainer::ContinuousInjection (const RealBox& injection_box)
 void
 LaserParticleContainer::UpdateContinuousInjectionPosition (Real dt)
 {
-    if (m_e_max == amrex::Real(0.)) return; // Disable laser if amplitude is 0
+    if (!m_enabled) return;
 
     int dir = WarpX::moving_window_dir;
     if (do_continuous_injection and (WarpX::gamma_boost > 1)){
@@ -236,15 +284,22 @@ LaserParticleContainer::UpdateContinuousInjectionPosition (Real dt)
 void
 LaserParticleContainer::InitData ()
 {
+    if (!m_enabled) return;
+
     // Call InitData on max level to inject one laser particle per
     // finest cell.
     InitData(maxLevel());
+
+    if(!do_continuous_injection && (TotalNumberOfParticles() == 0)){
+        amrex::Print() << "WARNING: laser antenna is completely out of the simulation box !!!\n";
+        m_enabled = false; // Disable laser if antenna is completely out of the simulation box
+    }
 }
 
 void
 LaserParticleContainer::InitData (int lev)
 {
-    if (m_e_max == amrex::Real(0.)) return; // Disable laser if amplitude is 0
+    if (!m_enabled) return;
 
     // spacing of laser particles in the laser plane.
     // has to be done after geometry is set up.
@@ -350,7 +405,7 @@ LaserParticleContainer::InitData (int lev)
     BoxArray plane_ba { Box {IntVect(plane_lo[0],0), IntVect(plane_hi[0],0)} };
 #endif
 
-    RealVector particle_x, particle_y, particle_z, particle_w;
+    amrex::Vector<amrex::Real> particle_x, particle_y, particle_z, particle_w;
 
     const DistributionMapping plane_dm {plane_ba, nprocs};
     const Vector<int>& procmap = plane_dm.ProcessorMap();
@@ -397,9 +452,9 @@ LaserParticleContainer::InitData (int lev)
         }
     }
     const int np = particle_z.size();
-    RealVector particle_ux(np, 0.0);
-    RealVector particle_uy(np, 0.0);
-    RealVector particle_uz(np, 0.0);
+    amrex::Vector<amrex::Real> particle_ux(np, 0.0);
+    amrex::Vector<amrex::Real> particle_uy(np, 0.0);
+    amrex::Vector<amrex::Real> particle_uz(np, 0.0);
 
     if (Verbose()) amrex::Print() << "Adding laser particles\n";
     // Add particles on level 0. They will be redistributed afterwards
@@ -423,7 +478,7 @@ LaserParticleContainer::Evolve (int lev,
     WARPX_PROFILE("LaserParticleContainer::Evolve()");
     WARPX_PROFILE_VAR_NS("LaserParticleContainer::Evolve::ParticlePush", blp_pp);
 
-    if (m_e_max == amrex::Real(0.)) return; // Disable laser if amplitude is 0
+    if (!m_enabled) return;
 
     Real t_lab = t;
     if (WarpX::gamma_boost > 1) {
@@ -550,7 +605,8 @@ LaserParticleContainer::Evolve (int lev,
 void
 LaserParticleContainer::PostRestart ()
 {
-    if (m_e_max == amrex::Real(0.)) return; // Disable laser if amplitude is 0
+    if (!m_enabled) return;
+
     Real Sx, Sy;
     const int lev = finestLevel();
     ComputeSpacing(lev, Sx, Sy);
@@ -563,7 +619,12 @@ LaserParticleContainer::ComputeSpacing (int lev, Real& Sx, Real& Sy) const
     const std::array<Real,3>& dx = WarpX::CellSize(lev);
 
 #if !(defined WARPX_DIM_RZ)
-    const Real eps = static_cast<Real>(dx[0]*1.e-50);
+    constexpr float small_float_coeff = 1.e-25f;
+    constexpr double small_double_coeff = 1.e-50;
+    constexpr Real small_coeff = std::is_same<Real,float>::value ?
+        static_cast<Real>(small_float_coeff) :
+        static_cast<Real>(small_double_coeff);
+    const auto eps = static_cast<Real>(dx[0]*small_coeff);
 #endif
 #if (AMREX_SPACEDIM == 3)
     Sx = std::min(std::min(dx[0]/(std::abs(m_u_X[0])+eps),

@@ -49,12 +49,14 @@ ln -s ${tmp_dir} test_dir
 cd test_dir
 echo "cd $PWD"
 
-# Clone PICSAR and AMReX
+# Clone PICSAR, AMReX and warpx-data
 git clone https://github.com/AMReX-Codes/amrex.git
-cd amrex && git checkout fb0c16e34b9340e68ee63013e64570240e436815 && cd -
+cd amrex && git checkout 69b69c2b281c6f1b7b9b78a5aa81effebf0e3f2f && cd -
 # Use QED brach for QED tests
 git clone https://github.com/ECP-WarpX/picsar.git
-cd picsar && git checkout c16b642e3dcf860480dd1dd21cefa3874f395773 && cd -
+cd picsar && git checkout 7ec0d7b58e4ba8f721d985f4153100cb8d57d842 && cd -
+# warpx-data contains various required data sets
+git clone --depth 1 https://github.com/ECP-WarpX/warpx-data.git
 
 # Clone the AMReX regression test utility
 git clone https://github.com/ECP-WarpX/regression_testing.git
@@ -63,8 +65,8 @@ git clone https://github.com/ECP-WarpX/regression_testing.git
 mkdir -p rt-WarpX/WarpX-benchmarks
 cd warpx/Regression
 echo "cd $PWD"
-python prepare_file_travis.py
-cp travis-tests.ini ../../rt-WarpX
+python prepare_file_ci.py
+cp ci-tests.ini ../../rt-WarpX
 cp -r Checksum ../../regression_testing/
 
 # Run tests
@@ -72,8 +74,8 @@ cd ../../regression_testing/
 echo "cd $PWD"
 # run only tests specified in variable tests_arg (single test or multiple tests)
 if [[ ! -z "${tests_arg}" ]]; then
-  python regtest.py ../rt-WarpX/travis-tests.ini --no_update all "${tests_run}"
+  python regtest.py ../rt-WarpX/ci-tests.ini --no_update all "${tests_run}"
 # run all tests (variables tests_arg and tests_run are empty)
 else
-  python regtest.py ../rt-WarpX/travis-tests.ini --no_update all
+  python regtest.py ../rt-WarpX/ci-tests.ini --no_update all
 fi

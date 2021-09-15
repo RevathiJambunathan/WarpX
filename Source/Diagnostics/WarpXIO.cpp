@@ -7,24 +7,35 @@
  *
  * License: BSD-3-Clause-LBNL
  */
-#include "WarpX.H"
+#include "BoundaryConditions/PML.H"
 #include "FieldIO.H"
-#include "SliceDiagnostic.H"
+#include "Particles/MultiParticleContainer.H"
 #include "Utils/CoarsenIO.H"
+#include "Utils/WarpXProfilerWrapper.H"
+#include "WarpX.H"
 
-#ifdef WARPX_USE_OPENPMD
-#   include "Diagnostics/WarpXOpenPMD.H"
-#endif
-
-#include <AMReX_MultiFabUtil.H>
-#include <AMReX_PlotFileUtil.H>
-#include <AMReX_buildInfo.H>
-
-#ifdef BL_USE_SENSEI_INSITU
+#ifdef AMREX_USE_SENSEI_INSITU
 #   include <AMReX_AmrMeshInSituBridge.H>
 #endif
+#include <AMReX_BoxArray.H>
+#include <AMReX_Config.H>
+#include <AMReX_DistributionMapping.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_IntVect.H>
+#include <AMReX_MultiFab.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_PlotFileUtil.H>
+#include <AMReX_Print.H>
+#include <AMReX_REAL.H>
+#include <AMReX_RealBox.H>
+#include <AMReX_Vector.H>
+#include <AMReX_VisMF.H>
 
+#include <array>
+#include <istream>
 #include <memory>
+#include <string>
+#include <utility>
 
 using namespace amrex;
 
@@ -38,6 +49,38 @@ WarpX::GotoNextLine (std::istream& is)
 {
     constexpr std::streamsize bl_ignore_max { 100000 };
     is.ignore(bl_ignore_max, '\n');
+}
+
+amrex::DistributionMapping
+WarpX::GetRestartDMap (const std::string& chkfile, const amrex::BoxArray& ba, int lev) const {
+    std::string DMFileName = chkfile;
+    if (!DMFileName.empty() && DMFileName[DMFileName.size()-1] != '/') {DMFileName += '/';}
+    DMFileName = amrex::Concatenate(DMFileName + "Level_", lev, 1);
+    DMFileName += "/DM";
+
+    if (!amrex::FileExists(DMFileName)) {
+        return amrex::DistributionMapping{ba, ParallelDescriptor::NProcs()};
+    }
+
+    Vector<char> fileCharPtr;
+    ParallelDescriptor::ReadAndBcastFile(DMFileName, fileCharPtr);
+    std::string fileCharPtrString(fileCharPtr.dataPtr());
+    std::istringstream DMFile(fileCharPtrString, std::istringstream::in);
+    if ( ! DMFile.good()) amrex::FileOpenFailed(DMFileName);
+
+    int nprocs_in_checkpoint;
+    DMFile >> nprocs_in_checkpoint;
+    if (nprocs_in_checkpoint != ParallelDescriptor::NProcs()) {
+        return amrex::DistributionMapping{ba, ParallelDescriptor::NProcs()};
+    }
+
+    amrex::DistributionMapping dm;
+    dm.readFrom(DMFile);
+    if (dm.size() != ba.size()) {
+        return amrex::DistributionMapping{ba, ParallelDescriptor::NProcs()};
+    }
+
+    return dm;
 }
 
 void
@@ -112,7 +155,8 @@ WarpX::InitFromCheckpoint ()
             }
         }
 
-        is >> moving_window_x;
+        amrex::Real moving_window_x_checkpoint;
+        is >> moving_window_x_checkpoint;
         GotoNextLine(is);
 
         is >> is_synchronized;
@@ -144,7 +188,7 @@ WarpX::InitFromCheckpoint ()
             BoxArray ba;
             ba.readFrom(is);
             GotoNextLine(is);
-            DistributionMapping dm { ba, ParallelDescriptor::NProcs() };
+            DistributionMapping dm = GetRestartDMap(restart_chkfile, ba, lev);
             SetBoxArray(lev, ba);
             SetDistributionMap(lev, dm);
             AllocLevelData(lev, ba, dm);
@@ -152,6 +196,17 @@ WarpX::InitFromCheckpoint ()
 
         mypc->ReadHeader(is);
         is >> current_injection_position;
+        GotoNextLine(is);
+
+        int do_moving_window_before_restart;
+        is >> do_moving_window_before_restart;
+        GotoNextLine(is);
+
+        if (do_moving_window_before_restart) {
+            moving_window_x = moving_window_x_checkpoint;
+        }
+
+        is >> time_of_last_gal_shift;
         GotoNextLine(is);
     }
 
@@ -235,7 +290,7 @@ WarpX::InitFromCheckpoint ()
         }
     }
 
-    // Initilize particles
+    // Initialize particles
     mypc->AllocData();
     mypc->Restart(restart_chkfile);
 

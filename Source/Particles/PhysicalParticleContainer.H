@@ -10,24 +10,29 @@
 #ifndef WARPX_PhysicalParticleContainer_H_
 #define WARPX_PhysicalParticleContainer_H_
 
+#include "Evolve/WarpXDtType.H"
 #include "Initialization/PlasmaInjector.H"
-#include "WarpXParticleContainer.H"
-#include "Filter/NCIGodfreyFilter.H"
 #include "Particles/ElementaryProcess/Ionization.H"
-#include "Particles/Gather/ScaleFields.H"
-
 #ifdef WARPX_QED
-#    include "Particles/ElementaryProcess/QEDInternals/QuantumSyncEngineWrapper.H"
-#    include "Particles/ElementaryProcess/QEDInternals/BreitWheelerEngineWrapper.H"
-#    include "Particles/ElementaryProcess/QEDInternals/QedChiFunctions.H"
-
 #    include "Particles/ElementaryProcess/QEDPairGeneration.H"
 #    include "Particles/ElementaryProcess/QEDPhotonEmission.H"
+#    include "Particles/ElementaryProcess/QEDInternals/QuantumSyncEngineWrapper_fwd.H"
+#    include "Particles/ElementaryProcess/QEDInternals/BreitWheelerEngineWrapper_fwd.H"
 #endif
+#include "Particles/Gather/ScaleFields.H"
+#include "Particles/Resampling/Resampling.H"
+#include "WarpXParticleContainer.H"
 
-#include <AMReX_IArrayBox.H>
+#include <AMReX_GpuContainers.H>
+#include <AMReX_Particles.H>
+#include <AMReX_REAL.H>
+#include <AMReX_RealBox.H>
 
-#include <map>
+#include <AMReX_BaseFwd.H>
+#include <AMReX_AmrCoreFwd.H>
+
+#include <memory>
+#include <string>
 
 /**
  * PhysicalParticleContainer is the ParticleContainer class containing plasma
@@ -187,6 +192,14 @@ public:
     */
     void AddPlasma (int lev, amrex::RealBox part_realbox = amrex::RealBox());
 
+    /**
+     * Create new macroparticles for this species, with a fixed
+     * number of particles per cell in a plane.
+     * @param[in] lev the index of the refinement level
+     * @param[in] dt time step size, used to partially advance the particles
+    */
+    void AddPlasmaFlux (int lev, amrex::Real dt);
+
     void MapParticletoBoostedFrame (amrex::Real& x, amrex::Real& y, amrex::Real& z,
                                     amrex::Real& ux, amrex::Real& uy, amrex::Real& uz);
 
@@ -221,6 +234,12 @@ public:
         const amrex::Real t_lab, const amrex::Real dt,
         DiagnosticParticles& diagnostic_particles) final;
 
+    /** Convert particle momentum to/from SI
+     *
+     * @see particlesConvertUnits
+     *
+     * @param convert_dir convert to or from SI
+     */
     virtual void ConvertUnits (ConvertDirection convert_dir) override;
 
 /**
@@ -338,11 +357,15 @@ protected:
     // particle and the time of the boosted frame.
     bool boost_adjust_transverse_positions = false;
     bool do_backward_propagation = false;
+    bool m_rz_random_theta = true;
 
     Resampling m_resampler;
 
     // Inject particles during the whole simulation
     void ContinuousInjection (const amrex::RealBox& injection_box) override;
+
+    // Continuously inject a flux of particles from a defined surface
+    void ContinuousFluxInjection (const amrex::Real dt) override;
 
     //This function return true if the PhysicalParticleContainer contains electrons
     //or positrons, false otherwise
@@ -350,6 +373,9 @@ protected:
     //When true PhysicalParticleContainer tries to use a pusher including
     //radiation reaction
     bool do_classical_radiation_reaction = false;
+
+    // A flag to enable saving of the previous timestep positions
+    bool m_save_previous_position = false;
 
 #ifdef WARPX_QED
     // A flag to enable quantum_synchrotron process for leptons
