@@ -62,6 +62,10 @@
 #include <iostream>
 
 
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
+
 #include <memory>
 #include <string>
 #include <utility>

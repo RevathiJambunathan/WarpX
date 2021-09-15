@@ -346,8 +346,6 @@ public:
 #ifdef PULSAR
     virtual void PulsarParticleRemoval () override;
     virtual void PulsarParticleInjection () override;
-    virtual void PulsarParticleRemoval () override;
-    virtual void PulsarParticleInjection () override;
 #endif
 
 protected:

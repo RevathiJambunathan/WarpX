@@ -38,6 +38,10 @@
     #include "Particles/PulsarParameters.H"
 #endif
 
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+
 #include <AMReX_Particles.H>
 
 #include <AMReX_BaseFwd.H>

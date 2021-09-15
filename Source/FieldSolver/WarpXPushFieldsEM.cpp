@@ -45,6 +45,10 @@
 #include <AMReX_MFIter.H>
 
 
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
+
 #include <AMReX.H>
 #include <AMReX_Math.H>
 #include <AMReX_MultiFab.H>
@@ -438,6 +442,16 @@ WarpX::PushPSATD ()
         ApplyBfieldBoundary(lev, PatchType::fine, DtType::FirstHalf);
         if (lev > 0) ApplyBfieldBoundary(lev, PatchType::coarse, DtType::FirstHalf);
     }
+#ifdef PULSAR
+    amrex::Real a_dt = 0._rt;
+    if (PulsarParm::enforceDipoleB == 1) {
+        PulsarParm::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+    }
+    if (PulsarParm::enforceCorotatingE == 1) {
+        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+
+#endif    
 #endif
 }
 
@@ -549,8 +563,6 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
                 a_dt, pml_has_particles );
         }
     }
-
-
 #ifdef PULSAR
     if (PulsarParm::enforceCorotatingE == 1) {
         PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
@@ -698,6 +710,11 @@ WarpX::MacroscopicEvolveE (int lev, PatchType patch_type, amrex::Real a_dt) {
                 a_dt, pml_has_particles );
         }
     }
+#ifdef PULSAR
+    if (PulsarParm::enforceCorotatingE == 1) {
+        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+#endif    
 
     ApplyEfieldBoundary(lev, patch_type);
 }
