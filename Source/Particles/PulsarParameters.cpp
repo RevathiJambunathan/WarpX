@@ -7,51 +7,6 @@
 #include "WarpX.H"
 
 
-//namespace PulsarParm
-//{
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real damping_scale = 10.0;
-//    AMREX_GPU_DEVICE_MANAGED int EB_external = 0;
-//    AMREX_GPU_DEVICE_MANAGED int E_external_monopole = 0;
-//    AMREX_GPU_DEVICE_MANAGED
-//    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star;
-//    AMREX_GPU_DEVICE_MANAGED int damp_EB_internal = 0;
-//    AMREX_GPU_DEVICE_MANAGED int verbose = 0;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real max_ndens;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real Ninj_fraction;
-//    AMREX_GPU_DEVICE_MANAGED int ModifyParticleWtAtInjection = 1;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real rhoGJ_scale;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBcorotating_radius;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real max_EBdamping_radius;
-//    AMREX_GPU_DEVICE_MANAGED int turnoffdeposition = 0;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real max_nodepos_radius;
-//    AMREX_GPU_DEVICE_MANAGED int turnoff_plasmaEB_gather = 0;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real max_nogather_radius;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real max_particle_absorption_radius;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmin;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real particle_inject_rmax;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real corotatingE_maxradius;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real enforceDipoleB_maxradius;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Bfield;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real InitializeGrid_with_Pulsar_Efield;
-//    AMREX_GPU_DEVICE_MANAGED int enforceCorotatingE;
-//    AMREX_GPU_DEVICE_MANAGED int enforceDipoleB;
-//    AMREX_GPU_DEVICE_MANAGED int singleParticleTest;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real Bdamping_scale = 10;
-//    AMREX_GPU_DEVICE_MANAGED int DampBDipoleInRing = 0;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real injection_time = 0;
-//    AMREX_GPU_DEVICE_MANAGED int continuous_injection = 1;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_min = 90.;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real removeparticle_theta_max = 0.;
-//    AMREX_GPU_DEVICE_MANAGED int use_theoreticalEB = 0;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real theory_max_rstar = 0.;
-//    AMREX_GPU_DEVICE_MANAGED int LimitDipoleBInit = 0;
-//    AMREX_GPU_DEVICE_MANAGED amrex::Real DipoleB_init_maxradius;
-//    AMREX_GPU_DEVICE_MANAGED int AddExternalMonopoleOnly = 0;
-//    AMREX_GPU_DEVICE_MANAGED int AddMonopoleInsideRstarOnGrid = 0;
-//    AMREX_GPU_DEVICE_MANAGED int EnforceTheoreticalEBInGrid = 0;
-//
-//}
-
 Pulsar::Pulsar ()
 {
     ReadParameters();
