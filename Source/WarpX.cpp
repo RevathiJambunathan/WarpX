@@ -327,6 +327,9 @@ WarpX::WarpX ()
         m_macroscopic_properties = std::make_unique<MacroscopicProperties>();
     }
 
+#ifdef PULSAR
+    m_pulsar = std::make_unique<Pulsar>();
+#endif
 
     // Set default values for particle and cell weights for costs update;
     // Default values listed here for the case AMREX_USE_GPU are determined
@@ -1156,9 +1159,6 @@ WarpX::ReadParameters ()
        }
 
     }
-#ifdef PULSAR
-    PulsarParm::ReadParameters();
-#endif
 
 }
 

@@ -25,7 +25,12 @@ struct InjectorPositionRandom
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int /*i_part*/, int /*ref_fac*/,
-                        amrex::RandomEngine const& engine) const noexcept
+                        amrex::RandomEngine const& engine
+#ifdef PULSAR
+                        , int ModifyParticleWtAtInjection = 0,
+                        amrex::Real Ninj_fraction = 1.
+#endif
+                        ) const noexcept
     {
         return amrex::XDim3{amrex::Random(engine), amrex::Random(engine), amrex::Random(engine)};
     }
@@ -40,7 +45,12 @@ struct InjectorPositionRandomPlane
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int /*i_part*/, int /*ref_fac*/,
-                        amrex::RandomEngine const& engine) const noexcept
+                        amrex::RandomEngine const& engine
+#ifdef PULSAR
+                        , int ModifyParticleWtAtInjection = 0,
+                        amrex::Real Ninj_fraction = 1.
+#endif
+                        ) const noexcept
     {
         using namespace amrex::literals;
         if (dir == 0) return amrex::XDim3{0._rt, amrex::Random(engine), amrex::Random(engine)};
@@ -68,18 +78,23 @@ struct InjectorPositionRegular
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int const i_part, int const ref_fac,
-                        amrex::RandomEngine const&) const noexcept
+                        amrex::RandomEngine const&                        
+#ifdef PULSAR
+                        , int ModifyParticleWtAtInjection = 0,
+                        amrex::Real Ninj_fraction = 1.
+#endif
+                        ) const noexcept
     {
         using namespace amrex;
 #ifdef PULSAR
 #if (defined WARPX_DIM_3D) || (defined WARPX_DIM_RZ)
         int nx, ny, nz;
-        if (PulsarParm::ModifyParticleWtAtInjection == 1) {
+        if (ModifyParticleWtAtInjection == 1) {
             nx = ref_fac*ppc.x;
             ny = ref_fac*ppc.y;
             nz = ref_fac*ppc.z;
-        } else if (PulsarParm::ModifyParticleWtAtInjection == 0) {
-            amrex::Real ninj_per_dim = std::cbrt(PulsarParm::Ninj_fraction);
+        } else if (ModifyParticleWtAtInjection == 0) {
+            amrex::Real ninj_per_dim = std::cbrt(Ninj_fraction);
             nx = ref_fac*ppc.x*ninj_per_dim;
             ny = ref_fac*ppc.y*ninj_per_dim;
             nz = ref_fac*ppc.z*ninj_per_dim;
@@ -179,21 +194,41 @@ struct InjectorPosition
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int const i_part, int const ref_fac,
-                        amrex::RandomEngine const& engine) const noexcept
+                        amrex::RandomEngine const& engine
+#ifdef PULSAR
+                        , int ModifyParticleWtAtInjection = 0,
+                        amrex::Real Ninj_fraction = 1.
+#endif
+                        ) const noexcept
     {
         switch (type)
         {
         case Type::regular:
         {
-            return object.regular.getPositionUnitBox(i_part, ref_fac, engine);
+            return object.regular.getPositionUnitBox(i_part, ref_fac, engine
+#ifdef PULSAR
+                                                     , ModifyParticleWtAtInjection,
+                                                     Ninj_fraction
+#endif
+                                                    );
         }
         case Type::randomplane:
         {
-            return object.randomplane.getPositionUnitBox(i_part, ref_fac, engine);
+            return object.randomplane.getPositionUnitBox(i_part, ref_fac, engine
+#ifdef PULSAR
+                                                     , ModifyParticleWtAtInjection,
+                                                     Ninj_fraction
+#endif
+                                                    );
         }
         default:
         {
-            return object.random.getPositionUnitBox(i_part, ref_fac, engine);
+            return object.random.getPositionUnitBox(i_part, ref_fac, engine
+#ifdef PULSAR
+                                                     , ModifyParticleWtAtInjection,
+                                                     Ninj_fraction
+#endif
+                                                    );
         }
         };
     }

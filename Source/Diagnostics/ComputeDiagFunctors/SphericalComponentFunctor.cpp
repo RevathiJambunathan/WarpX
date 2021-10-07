@@ -73,13 +73,14 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
     amrex::GpuArray<int,3> sfz; // staggering of source zfield
     amrex::GpuArray<int,3> s_dst;
     amrex::GpuArray<int,3> cr;
-    
+    amrex::GpuArray<amrex::Real, 3> center_star_arr; 
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         sfx[i] = stag_xsrc[i];
         sfy[i] = stag_ysrc[i];
         sfz[i] = stag_zsrc[i];
         s_dst[i]  = stag_dst[i];
         cr[i] = m_crse_ratio[i];
+        center_star_arr[i] = warpx.GetPulsarParameters().center_star(i);
     }
     const int sphericalcomp = m_sphericalcomp;
     amrex::Real cur_time = warpx.gett_new(0);
@@ -109,20 +110,21 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
                 // convert to spherical coordinates
                 // compute cell coordinates
                 amrex::Real x, y, z;
-                PulsarParm::ComputeCellCoordinates(i,j,k, s_dst, problo, dx, x, y, z);
+                Pulsar::ComputeCellCoordinates(i,j,k, s_dst, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
                 amrex::Real r, theta, phi;
-                PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
-                                                             r, theta, phi);
+                Pulsar::ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
+                                                         problo, probhi,
+                                                         r, theta, phi);
 
                 if (sphericalcomp == 0) { // rcomponent of field 
-                    PulsarParm::ConvertCartesianToSphericalRComponent(
+                    Pulsar::ConvertCartesianToSphericalRComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 } else if (sphericalcomp == 1) { // theta component of field
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                    Pulsar::ConvertCartesianToSphericalThetaComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 } else if (sphericalcomp == 2) { // phi component of field
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                    Pulsar::ConvertCartesianToSphericalPhiComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 }
             });

@@ -444,11 +444,11 @@ WarpX::PushPSATD ()
     }
 #ifdef PULSAR
     amrex::Real a_dt = 0._rt;
-    if (PulsarParm::enforceDipoleB == 1) {
-        PulsarParm::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+    if (m_pulsar->enforceDipoleB() == 1) {
+        m_pulsar->ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
     }
-    if (PulsarParm::enforceCorotatingE == 1) {
-        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    if (m_pulsar->enforceCorotatingE() == 1) {
+        m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
 
 #endif    
@@ -501,8 +501,8 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt, DtType a_dt_typ
     }
 
 #ifdef PULSAR
-    if (PulsarParm::enforceDipoleB == 1) {
-        PulsarParm::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+    if (m_pulsar->enforceDipoleB() == 1) {
+        m_pulsar->ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
     }
 #endif    
 
@@ -564,8 +564,8 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
         }
     }
 #ifdef PULSAR
-    if (PulsarParm::enforceCorotatingE == 1) {
-        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    if (m_pulsar->enforceCorotatingE() == 1) {
+        m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
 #endif    
 
@@ -711,8 +711,8 @@ WarpX::MacroscopicEvolveE (int lev, PatchType patch_type, amrex::Real a_dt) {
         }
     }
 #ifdef PULSAR
-    if (PulsarParm::enforceCorotatingE == 1) {
-        PulsarParm::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    if (m_pulsar->enforceCorotatingE() == 1) {
+        m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
 #endif    
 
