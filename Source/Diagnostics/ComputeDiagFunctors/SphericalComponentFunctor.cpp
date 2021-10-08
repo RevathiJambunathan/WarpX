@@ -79,8 +79,6 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
         center_star_arr[i] = Pulsar::m_center_star[i];
     }
     const int sphericalcomp = m_sphericalcomp;
-    amrex::Real cur_time = warpx.gett_new(0);
-    int Efield = m_Efield;
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
