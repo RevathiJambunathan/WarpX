@@ -1156,7 +1156,9 @@ WarpX::ReadParameters ()
 
     }
 
+#ifdef PULSAR
     Pulsar::ReadParameters();
+#endif
 
 }
 
