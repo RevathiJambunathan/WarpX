@@ -422,7 +422,7 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
         center_star_arr[i] = Pulsar::m_center_star[i];
     }
     int do_turnoff_plasmaEB_gather_data = Pulsar::m_turnoff_plasmaEB_gather;
-    amrex::Real max_nogather_radius = Pulsar::m_max_nogahter_radius;
+    amrex::Real max_nogather_radius = Pulsar::m_max_nogather_radius;
 #endif
     amrex::Array4<const amrex::Real> const& ex_arr = exfab->array();
     amrex::Array4<const amrex::Real> const& ey_arr = eyfab->array();
@@ -455,9 +455,9 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
             // makes a difference
             int dogather = 1;
             if (do_turnoff_plasmaEB_gather_data == 1) {
-                const amrex::Real xc = center_star[0];
-                const amrex::Real yc = center_star[1];
-                const amrex::Real zc = center_star[2];
+                const amrex::Real xc = center_star_arr[0];
+                const amrex::Real yc = center_star_arr[1];
+                const amrex::Real zc = center_star_arr[2];
                 // find radius of the particlestar[0];
                 amrex::Real rp = std::sqrt( (xp-xc)*(xp-xc)
                                           + (yp-yc)*(yp-yc)
