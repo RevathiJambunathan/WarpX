@@ -18,61 +18,13 @@ public:
     //Constructor
     Pulsar ();    
 
-    std::string pulsar_type () {return m_pulsar_type;}
-    amrex::Real omega_star () {return m_omega_star;}
-    amrex::Real R_star () {return m_R_star;}
-    amrex::Real B_star () {return m_B_star;}
-    amrex::Real dR_star () {return m_dR_star;}
-    amrex::Real omega_ramp_time () {return m_omega_ramp_time;}
-    amrex::Real field_damping_scale () {return m_field_damping_scale;}
-    int do_EB_external () {return m_do_EB_external;}
-    int do_E_external_monopole () {return m_do_E_external_monopole;}
-    amrex::Real center_star (int i_dim) {return m_center_star[i_dim];}
-    amrex::Real max_ndens () {return m_max_ndens;}
-    amrex::Real Ninj_fraction () { return m_Ninj_fraction;}
-    amrex::Real ModifyParticleWtAtInjection () { return m_ModifyParticleWtAtInjection;}
-    amrex::Real rhoGJ_scale () {return m_rhoGJ_scale;}
-    int do_damp_EB_internal () {return m_do_damp_EB_internal;}
-    amrex::Real max_EBcorotating_radius () {return m_max_EBcorotating_radius;}
-    amrex::Real max_EBdamping_radius () {return m_max_EBdamping_radius;}
-    int do_turnoff_deposition () {return m_turnoffdeposition; }
-    amrex::Real max_nodepos_radius () {return m_max_nodepos_radius;}
-    int do_turnoff_plasmaEB_gather () {return m_turnoff_plasmaEB_gather;}
-    amrex::Real max_nogather_radius () {return m_max_nogather_radius;}
-    int verbose () {return m_verbose;}
-    amrex::Real max_particle_absorption_radius () {return m_max_particle_absorption_radius;}
-    amrex::Real particle_inject_rmin () {return m_particle_inject_rmin;}
-    amrex::Real particle_inject_rmax () {return m_particle_inject_rmax;}
-    amrex::Real corotatingE_maxradius () {return m_corotatingE_maxradius;}
-    amrex::Real enforceDipoleB_maxradius () {return m_enforceDipoleB_maxradius;}
-    int do_InitializeGrid_with_Pulsar_Bfield ()
-                    {return m_do_InitializeGrid_with_Pulsar_Bfield;}
-    int do_InitializeGrid_with_Pulsar_Efield () 
-                    {return m_do_InitializeGrid_with_Pulsar_Efield;}
-    int enforceCorotatingE () {return m_enforceCorotatingE;}
-    int enforceDipoleB () {return m_enforceDipoleB;}
-    int do_singleParticleTest () {return m_singleParticleTest;}
-    amrex::Real Bdamping_scale () {return m_Bdamping_scale;}
-    int do_DampBDipoleInRing () {return m_do_DampBDipoleInRing;}
-    amrex::Real injection_time () {return m_injection_time;}
-    int do_continuous_injection () {return m_continuous_injection;}
-    amrex::Real removeparticle_theta_min () {return m_removeparticle_theta_min;}
-    amrex::Real removeparticle_theta_max () {return m_removeparticle_theta_max;}
-    int use_theoreticalEB () {return m_use_theoreticalEB;}
-    amrex::Real theory_max_rstar () {return m_theory_max_rstar;}
-    int LimitDipoleBInit () {return m_LimitDipoleBInit;}
-    amrex::Real DipoleB_init_maxradius () {return m_DipoleB_init_maxradius;}
-    int ApplyExternalMonopoleOnly () {return m_AddExternalMonopoleOnly;}
-    int ApplyMonopoleInsideRstarOnGrid () {return m_AddMonopoleInsideRstarOnGrid;}
-    int EnforceTheoreticalEBInGrid () {return m_EnforceTheoreticalEBInGrid;}
-
-    void ReadParameters();
-    void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
+    static void ReadParameters();
+    static void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
         amrex::MultiFab *mfy, amrex::MultiFab *mfz, const int lev, const bool init_Bfield);
 
-    void ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Efield,
+    static void ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
-    void ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Bfield,
+    static void ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Bfield,
                                     const int lev, const amrex::Real a_dt);
 
 
@@ -292,7 +244,7 @@ public:
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    static void DampField(int i, int j, int k, amrex::GeometryData const& geom,
+    static void DampField(int i, int j, int k,
                           amrex::Array4<amrex::Real> const& Efield,
                           amrex::GpuArray<int, 3> const mf_ixtype,
                           amrex::GpuArray<amrex::Real, 3> const center_star_data,
@@ -319,52 +271,53 @@ public:
     }
 
 
+    static std::string m_pulsar_type;
+    static amrex::Real m_omega_star;
+    static amrex::Real m_R_star;
+    static amrex::Real m_B_star;
+    static amrex::Real m_dR_star;    
+    static amrex::Real m_omega_ramp_time;
+    static amrex::Real m_field_damping_scale;
+    static int m_do_EB_external;
+    static int m_do_E_external_monopole;
+    static amrex::Array<amrex::Real, 3> m_center_star;
+    static amrex::Real m_max_ndens;
+    static amrex::Real m_Ninj_fraction;
+    static int m_ModifyParticleWtAtInjection;
+    static amrex::Real m_rhoGJ_scale;
+    static int m_do_damp_EB_internal;
+    static amrex::Real m_max_EBcorotating_radius;
+    static amrex::Real m_max_EBdamping_radius;
+    static int m_turnoffdeposition;
+    static amrex::Real m_max_nodepos_radius;
+    static int m_turnoff_plasmaEB_gather;
+    static amrex::Real m_max_nogather_radius;
+    static int m_verbose;
+    static amrex::Real m_max_particle_absorption_radius;
+    static amrex::Real m_particle_inject_rmin;
+    static amrex::Real m_particle_inject_rmax;
+    static amrex::Real m_corotatingE_maxradius;
+    static amrex::Real m_enforceDipoleB_maxradius;
+    static int m_do_InitializeGrid_with_Pulsar_Bfield;
+    static int m_do_InitializeGrid_with_Pulsar_Efield;
+    static int m_enforceCorotatingE;
+    static int m_enforceDipoleB;
+    static int m_singleParticleTest;
+    static amrex::Real m_Bdamping_scale;
+    static int m_do_DampBDipoleInRing;
+    static amrex::Real m_injection_time;
+    static int m_continuous_injection;
+    static amrex::Real m_removeparticle_theta_min;
+    static amrex::Real m_removeparticle_theta_max;
+    static int m_use_theoreticalEB;
+    static amrex::Real m_theory_max_rstar;
+    static int m_LimitDipoleBInit;
+    static amrex::Real m_DipoleB_init_maxradius;
+    static int m_AddExternalMonopoleOnly;
+    static int m_AddMonopoleInsideRstarOnGrid;
+    static int m_EnforceTheoreticalEBInGrid;
+
 private:
-    std::string m_pulsar_type;
-    amrex::Real m_omega_star;
-    amrex::Real m_R_star;
-    amrex::Real m_B_star;
-    amrex::Real m_dR_star;    
-    amrex::Real m_omega_ramp_time;
-    amrex::Real m_field_damping_scale;
-    int m_do_EB_external;
-    int m_do_E_external_monopole;
-    amrex::Array<amrex::Real, 3> m_center_star = {{0.}};
-    amrex::Real m_max_ndens;
-    amrex::Real m_Ninj_fraction = 1.0;
-    int m_ModifyParticleWtAtInjection = 1.0;
-    amrex::Real m_rhoGJ_scale;
-    int m_do_damp_EB_internal;
-    amrex::Real m_max_EBcorotating_radius;
-    amrex::Real m_max_EBdamping_radius;
-    int m_turnoffdeposition;
-    amrex::Real m_max_nodepos_radius;
-    int m_turnoff_plasmaEB_gather;
-    amrex::Real m_max_nogather_radius;
-    int m_verbose;
-    amrex::Real m_max_particle_absorption_radius;
-    amrex::Real m_particle_inject_rmin;
-    amrex::Real m_particle_inject_rmax;
-    amrex::Real m_corotatingE_maxradius;
-    amrex::Real m_enforceDipoleB_maxradius;
-    int m_do_InitializeGrid_with_Pulsar_Bfield;
-    int m_do_InitializeGrid_with_Pulsar_Efield;
-    int m_enforceCorotatingE;
-    int m_enforceDipoleB;
-    int m_singleParticleTest;
-    amrex::Real m_Bdamping_scale;
-    int m_do_DampBDipoleInRing;
-    amrex::Real m_injection_time;
-    int m_continuous_injection;
-    amrex::Real m_removeparticle_theta_min;
-    amrex::Real m_removeparticle_theta_max;
-    int m_use_theoreticalEB;
-    amrex::Real m_theory_max_rstar;
-    int m_LimitDipoleBInit;
-    amrex::Real m_DipoleB_init_maxradius;
-    int m_AddExternalMonopoleOnly;
-    int m_AddMonopoleInsideRstarOnGrid;
-    int m_EnforceTheoreticalEBInGrid;
 };
 
 #endif

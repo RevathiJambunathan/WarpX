@@ -80,7 +80,7 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
         sfz[i] = stag_zsrc[i];
         s_dst[i]  = stag_dst[i];
         cr[i] = m_crse_ratio[i];
-        center_star_arr[i] = warpx.GetPulsarParameters().center_star(i);
+        center_star_arr[i] = Pulsar::m_center_star[i];
     }
     const int sphericalcomp = m_sphericalcomp;
     amrex::Real cur_time = warpx.gett_new(0);

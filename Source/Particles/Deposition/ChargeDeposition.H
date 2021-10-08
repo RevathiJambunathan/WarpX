@@ -84,14 +84,12 @@ void doChargeDepositionShapeN (const GetParticlePosition& GetPosition,
     constexpr int CELL = amrex::IndexType::CELL;
 
 #ifdef PULSAR
-    auto& warpx = WarpX::GetInstance();
-    auto& pulsar = warpx.GetPulsarParameters();
-    int turnoff_deposition = pulsar.do_turnoff_deposition();
+    int turnoff_deposition = Pulsar::m_turnoffdeposition;
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for(int i = 0; i < 3; ++i) {
-        center_star_arr[i] = pulsar.center_star(i);
+        center_star_arr[i] = Pulsar::m_center_star[i];
     }
-    amrex::Real max_nodepos_radius = pulsar.max_nodepos_radius();
+    amrex::Real max_nodepos_radius = Pulsar::m_max_nodepos_radius;
 #endif
 
     // Loop over particles and deposit into rho_fab

@@ -574,35 +574,35 @@ WarpX::InitLevelData (int lev, Real /*time*/)
        }
     }
 #ifdef PULSAR
-    if (m_pulsar->do_InitializeGrid_with_Pulsar_Bfield() == 1) {
+    if (Pulsar::m_do_InitializeGrid_with_Pulsar_Bfield == 1) {
         bool Init_Bfield = true;
-        m_pulsar->InitializeExternalPulsarFieldsOnGrid (Bfield_fp[lev][0].get(),
+        Pulsar::InitializeExternalPulsarFieldsOnGrid (Bfield_fp[lev][0].get(),
                                               Bfield_fp[lev][1].get(),
                                               Bfield_fp[lev][2].get(),
                                               lev, Init_Bfield);
         if (lev > 0) {
-            m_pulsar->InitializeExternalPulsarFieldsOnGrid (Bfield_aux[lev][0].get(),
+            Pulsar::InitializeExternalPulsarFieldsOnGrid (Bfield_aux[lev][0].get(),
                                                   Bfield_aux[lev][1].get(),
                                                   Bfield_aux[lev][2].get(),
                                                   lev, Init_Bfield);
-            m_pulsar->InitializeExternalPulsarFieldsOnGrid (Bfield_cp[lev][0].get(),
+            Pulsar::InitializeExternalPulsarFieldsOnGrid (Bfield_cp[lev][0].get(),
                                                   Bfield_cp[lev][1].get(),
                                                   Bfield_cp[lev][2].get(),
                                                   lev, Init_Bfield);
         }
     }
-    if (m_pulsar->do_InitializeGrid_with_Pulsar_Efield() == 1) {
+    if (Pulsar::m_do_InitializeGrid_with_Pulsar_Efield == 1) {
         bool Init_Bfield = false;
-        m_pulsar->InitializeExternalPulsarFieldsOnGrid (Efield_fp[lev][0].get(),
+        Pulsar::InitializeExternalPulsarFieldsOnGrid (Efield_fp[lev][0].get(),
                                               Efield_fp[lev][1].get(),
                                               Efield_fp[lev][2].get(),
                                               lev, Init_Bfield);
         if (lev > 0) {
-            m_pulsar->InitializeExternalPulsarFieldsOnGrid (Efield_aux[lev][0].get(),
+            Pulsar::InitializeExternalPulsarFieldsOnGrid (Efield_aux[lev][0].get(),
                                                   Efield_aux[lev][1].get(),
                                                   Efield_aux[lev][2].get(),
                                                   lev, Init_Bfield);
-            m_pulsar->InitializeExternalPulsarFieldsOnGrid (Efield_cp[lev][0].get(),
+            Pulsar::InitializeExternalPulsarFieldsOnGrid (Efield_cp[lev][0].get(),
                                                   Efield_cp[lev][1].get(),
                                                   Efield_cp[lev][2].get(),
                                                   lev, Init_Bfield);

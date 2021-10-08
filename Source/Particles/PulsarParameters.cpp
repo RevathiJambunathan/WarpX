@@ -7,6 +7,53 @@
 #include "WarpX.H"
 
 
+std::string Pulsar::m_pulsar_type;
+amrex::Real Pulsar::m_omega_star;
+amrex::Real Pulsar::m_R_star;
+amrex::Real Pulsar::m_B_star;
+amrex::Real Pulsar::m_dR_star;    
+amrex::Real Pulsar::m_omega_ramp_time = 1.0;
+amrex::Real Pulsar::m_field_damping_scale;
+int Pulsar::m_do_EB_external = 0;
+int Pulsar::m_do_E_external_monopole = 0;
+amrex::Array<amrex::Real, 3> Pulsar::m_center_star = {{0.}};
+amrex::Real Pulsar::m_max_ndens;
+amrex::Real Pulsar::m_Ninj_fraction = 1.0;
+int Pulsar::m_ModifyParticleWtAtInjection = 1.0;
+amrex::Real Pulsar::m_rhoGJ_scale;
+int Pulsar::m_do_damp_EB_internal = 0;
+amrex::Real Pulsar::m_max_EBcorotating_radius;
+amrex::Real Pulsar::m_max_EBdamping_radius;
+int Pulsar::m_turnoffdeposition = 0;
+amrex::Real Pulsar::m_max_nodepos_radius;
+int Pulsar::m_turnoff_plasmaEB_gather = 0;
+amrex::Real Pulsar::m_max_nogather_radius;
+int Pulsar::m_verbose;
+amrex::Real Pulsar::m_max_particle_absorption_radius;
+amrex::Real Pulsar::m_particle_inject_rmin;
+amrex::Real Pulsar::m_particle_inject_rmax;
+amrex::Real Pulsar::m_corotatingE_maxradius;
+amrex::Real Pulsar::m_enforceDipoleB_maxradius;
+int Pulsar::m_do_InitializeGrid_with_Pulsar_Bfield = 1;
+int Pulsar::m_do_InitializeGrid_with_Pulsar_Efield = 1;
+int Pulsar::m_enforceCorotatingE = 1;
+int Pulsar::m_enforceDipoleB = 1;
+int Pulsar::m_singleParticleTest = 0;
+int Pulsar::m_do_DampBDipoleInRing = 0;
+amrex::Real Pulsar::m_Bdamping_scale;
+amrex::Real Pulsar::m_injection_time = 0.;
+int Pulsar::m_continuous_injection = 1;
+amrex::Real Pulsar::m_removeparticle_theta_min = 180.;
+amrex::Real Pulsar::m_removeparticle_theta_max = 0.;
+int Pulsar::m_use_theoreticalEB = 0;
+amrex::Real Pulsar::m_theory_max_rstar;
+int Pulsar::m_LimitDipoleBInit = 0;
+amrex::Real Pulsar::m_DipoleB_init_maxradius;
+int Pulsar::m_AddExternalMonopoleOnly = 1;
+int Pulsar::m_AddMonopoleInsideRstarOnGrid = 0;
+int Pulsar::m_EnforceTheoreticalEBInGrid = 0;
+
+
 Pulsar::Pulsar ()
 {
     ReadParameters();
@@ -31,7 +78,6 @@ Pulsar::ReadParameters () {
     pp.query("E_external_monopole",m_do_E_external_monopole);
     pp.query("damp_EB_internal",m_do_damp_EB_internal);
     pp.query("damping_scale",m_field_damping_scale);
-    m_omega_ramp_time = -1.0;
     pp.query("ramp_omega_time",m_omega_ramp_time);
     amrex::Print() << " Pulsar center: " << m_center_star[0] << " " << m_center_star[1] << " " << m_center_star[2] << "\n";
     amrex::Print() << " Pulsar omega: " << m_omega_star << "\n";
@@ -90,15 +136,10 @@ Pulsar::ReadParameters () {
     m_enforceDipoleB_maxradius = m_R_star;
     pp.query("corotatingE_maxradius", m_corotatingE_maxradius);
     pp.query("enforceDipoleB_maxradius", m_enforceDipoleB_maxradius);
-    m_do_InitializeGrid_with_Pulsar_Bfield = 1;
-    m_do_InitializeGrid_with_Pulsar_Efield = 1;
     pp.query("init_dipoleBfield", m_do_InitializeGrid_with_Pulsar_Bfield);
     pp.query("init_corotatingEfield", m_do_InitializeGrid_with_Pulsar_Efield);
-    m_enforceCorotatingE = 1;
-    m_enforceDipoleB = 1;
     pp.query("enforceCorotatingE", m_enforceCorotatingE);
     pp.query("enforceDipoleB", m_enforceDipoleB);
-    m_singleParticleTest = 0;
     pp.query("singleParticleTest", m_singleParticleTest);
     pp.query("DampBDipoleInRing", m_do_DampBDipoleInRing);
     if (m_do_DampBDipoleInRing == 1) pp.query("Bdamping_scale", m_Bdamping_scale);
@@ -143,16 +184,16 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
         x_IndexType[idim] = x_nodal_flag[idim];
         y_IndexType[idim] = y_nodal_flag[idim];
         z_IndexType[idim] = z_nodal_flag[idim];
-        center_star_arr[idim] = center_star(idim);
+        center_star_arr[idim] = m_center_star[idim];
     }
-    amrex::Real omega_star_data = omega_star();
-    amrex::Real ramp_omega_time_data = omega_ramp_time();
-    amrex::Real Bstar_data = B_star();
-    amrex::Real Rstar_data = R_star();
-    amrex::Real dRstar_data = dR_star();
-    int LimitDipoleBInit_data = LimitDipoleBInit();
-    amrex::Real DipoleB_init_maxradius_data = DipoleB_init_maxradius();
-    amrex::Real corotatingE_maxradius_data = corotatingE_maxradius();
+    amrex::Real omega_star_data = m_omega_star;
+    amrex::Real ramp_omega_time_data = m_omega_ramp_time;
+    amrex::Real Bstar_data = m_B_star;
+    amrex::Real Rstar_data = m_R_star;
+    amrex::Real dRstar_data = m_dR_star;
+    int LimitDipoleBInit_data = m_LimitDipoleBInit;
+    amrex::Real DipoleB_init_maxradius_data = m_DipoleB_init_maxradius;
+    amrex::Real corotatingE_maxradius_data = m_corotatingE_maxradius;
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -307,16 +348,16 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
         x_IndexType[idim] = x_nodal_flag[idim];
         y_IndexType[idim] = y_nodal_flag[idim];
         z_IndexType[idim] = z_nodal_flag[idim];
-        center_star_arr[idim] = center_star(idim);
+        center_star_arr[idim] = m_center_star[idim];
     }
-    amrex::Real omega_star_data = omega_star();
-    amrex::Real ramp_omega_time_data = omega_ramp_time();
-    amrex::Real Bstar_data = B_star();
-    amrex::Real Rstar_data = R_star();
-    amrex::Real dRstar_data = dR_star();
-    amrex::Real corotatingE_maxradius_data = corotatingE_maxradius();
-    int E_external_monopole_data = do_E_external_monopole();
-    int EnforceTheoreticalEBInGrid_data = EnforceTheoreticalEBInGrid();
+    amrex::Real omega_star_data = m_omega_star;
+    amrex::Real ramp_omega_time_data = m_omega_ramp_time;
+    amrex::Real Bstar_data = m_B_star;
+    amrex::Real Rstar_data = m_R_star;
+    amrex::Real dRstar_data = m_dR_star;
+    amrex::Real corotatingE_maxradius_data = m_corotatingE_maxradius;
+    int E_external_monopole_data = m_do_E_external_monopole;
+    int EnforceTheoreticalEBInGrid_data = m_EnforceTheoreticalEBInGrid;
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
@@ -454,16 +495,16 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
         x_IndexType[idim] = x_nodal_flag[idim];
         y_IndexType[idim] = y_nodal_flag[idim];
         z_IndexType[idim] = z_nodal_flag[idim];
-        center_star_arr[idim] = center_star(idim);
+        center_star_arr[idim] = m_center_star[idim];
     }
-    amrex::Real Bstar_data = B_star();
-    amrex::Real Rstar_data = R_star();
-    amrex::Real dRstar_data = dR_star();
-    int EnforceTheoreticalEBInGrid_data = EnforceTheoreticalEBInGrid();
-    amrex::Real corotatingE_maxradius_data = corotatingE_maxradius();
-    amrex::Real enforceDipoleB_maxradius_data = enforceDipoleB_maxradius();
-    int DampBDipoleInRing_data = do_DampBDipoleInRing();
-    amrex::Real Bdamping_scale_data = Bdamping_scale();
+    amrex::Real Bstar_data = m_B_star;
+    amrex::Real Rstar_data = m_R_star;
+    amrex::Real dRstar_data = m_dR_star;
+    int EnforceTheoreticalEBInGrid_data = m_EnforceTheoreticalEBInGrid;
+    amrex::Real corotatingE_maxradius_data = m_corotatingE_maxradius;
+    amrex::Real enforceDipoleB_maxradius_data = m_enforceDipoleB_maxradius;
+    int DampBDipoleInRing_data = m_do_DampBDipoleInRing;
+    amrex::Real Bdamping_scale_data = m_Bdamping_scale;
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif

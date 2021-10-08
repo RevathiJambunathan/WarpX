@@ -112,14 +112,12 @@ void doDepositionShapeN(const GetParticlePosition& GetPosition,
     constexpr int CELL = amrex::IndexType::CELL;
 
 #ifdef PULSAR
-    auto& warpx = WarpX::GetInstance();
-    auto& pulsar = warpx.GetPulsarParameters();
-    int turnoff_deposition = pulsar.do_turnoff_deposition();
+    int turnoff_deposition = Pulsar::m_turnoffdeposition;
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for(int i = 0; i < 3; ++i) {
-        center_star_arr[i] = pulsar.center_star(i);
+        center_star_arr[i] = Pulsar::m_center_star[i];
     }
-    amrex::Real max_nodepos_radius = pulsar.max_nodepos_radius();
+    amrex::Real max_nodepos_radius = Pulsar::m_max_nodepos_radius;
 #endif
 
     // Loop over particles and deposit into jx_fab, jy_fab and jz_fab
@@ -433,14 +431,12 @@ void doEsirkepovDepositionShapeN (const GetParticlePosition& GetPosition,
     Real const clightsq = 1.0_rt / ( PhysConst::c * PhysConst::c );
 
 #ifdef PULSAR
-    auto& warpx = WarpX::GetInstance();
-    auto& pulsar = warpx.GetPulsarParameters();
-    int turnoff_deposition = pulsar.do_turnoff_deposition();
+    int turnoff_deposition = Pulsar::m_turnoffdeposition;
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for(int i = 0; i < 3; ++i) {
-        center_star_arr[i] = pulsar.center_star(i);
+        center_star_arr[i] = Pulsar::m_center_star[i];
     }
-    amrex::Real max_nodepos_radius = pulsar.max_nodepos_radius();
+    amrex::Real max_nodepos_radius = Pulsar::m_max_nodepos_radius;
 #endif
     // Loop over particles and deposit into Jx_arr, Jy_arr and Jz_arr
 #if defined(WARPX_USE_GPUCLOCK)
@@ -811,14 +807,12 @@ void doVayDepositionShapeN (const GetParticlePosition& GetPosition,
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
 
 #ifdef PULSAR
-    auto& warpx = WarpX::GetInstance();
-    auto& pulsar = warpx.GetPulsarParameters();
-    int turnoff_deposition = pulsar.do_turnoff_deposition();
+    int turnoff_deposition = Pulsar::m_turnoffdeposition;
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for(int i = 0; i < 3; ++i) {
-        center_star_arr[i] = pulsar.center_star(i);
+        center_star_arr[i] = Pulsar::m_center_star[i];
     }
-    amrex::Real max_nodepos_radius = pulsar.max_nodepos_radius();
+    amrex::Real max_nodepos_radius = Pulsar::m_max_nodepos_radius;
 #endif
 
     // Loop over particles and deposit (Dx,Dy,Dz) into jx_fab, jy_fab and jz_fab

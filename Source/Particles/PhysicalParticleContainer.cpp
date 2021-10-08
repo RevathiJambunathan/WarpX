@@ -690,7 +690,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     WARPX_PROFILE("PhysicalParticleContainer::AddPlasma()");
 
 #ifdef PULSAR
-    amrex::Print() << " in add plasma" << WarpX::GetInstance().GetPulsarParameters().R_star() << "\n";
+    amrex::Print() << " in add plasma" << Pulsar::m_R_star << "\n";
 #endif
 
     // If no part_realbox is provided, initialize particles in the whole domain
@@ -715,10 +715,9 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 #endif
     }
 #ifdef PULSAR
-    auto& pulsar = WarpX::GetInstance().GetPulsarParameters();
     // modifying particle weight to achieve fractional injection
-    if (pulsar.ModifyParticleWtAtInjection() == 1) {
-        scale_fac = scale_fac*pulsar.Ninj_fraction();
+    if (Pulsar::m_ModifyParticleWtAtInjection == 1) {
+        scale_fac = scale_fac*Pulsar::m_Ninj_fraction;
     }
 #endif
 
@@ -759,15 +758,15 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const Real dt = WarpX::GetInstance().getdt(0);
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for (int i = 0; i < 3; ++i) {
-        center_star_arr[i] = pulsar.center_star(i);
+        center_star_arr[i] = Pulsar::m_center_star[i];
     }
-    amrex::Real particle_inject_rmin = pulsar.particle_inject_rmin();
-    amrex::Real particle_inject_rmax = pulsar.particle_inject_rmax();
-    amrex::Real dR_star = pulsar.dR_star();
-    int ModifyParticleWtAtInjection = pulsar.ModifyParticleWtAtInjection();
-    amrex::Real Ninj_fraction = pulsar.Ninj_fraction();
-    amrex::Real removeparticle_theta_min = pulsar.removeparticle_theta_min();
-    amrex::Real removeparticle_theta_max = pulsar.removeparticle_theta_max();
+    amrex::Real particle_inject_rmin = Pulsar::m_particle_inject_rmin;
+    amrex::Real particle_inject_rmax = Pulsar::m_particle_inject_rmax;
+    amrex::Real dR_star = Pulsar::m_dR_star;
+    int ModifyParticleWtAtInjection = Pulsar::m_ModifyParticleWtAtInjection;
+    amrex::Real Ninj_fraction = Pulsar::m_Ninj_fraction;
+    amrex::Real removeparticle_theta_min = Pulsar::m_removeparticle_theta_min;
+    amrex::Real removeparticle_theta_max = Pulsar::m_removeparticle_theta_max;
 #endif
 
 #ifdef WARPX_DIM_RZ
@@ -2127,17 +2126,17 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     const auto problo = warpx.Geom(lev).ProbLoArray();
     const auto probhi = warpx.Geom(lev).ProbHiArray();
     amrex::Real cur_time = warpx.gett_new(lev);
-    auto &pulsar = warpx.GetPulsarParameters();
-    amrex::Real omega_star_data = pulsar.omega_star();
-    amrex::Real ramp_omega_time_data = pulsar.omega_ramp_time();
-    amrex::Real Bstar_data = pulsar.B_star();
-    amrex::Real Rstar_data = pulsar.R_star();
-    amrex::Real dRstar_data = pulsar.dR_star();
-    amrex::Real corotatingE_maxradius_data = pulsar.corotatingE_maxradius();
-    amrex::Real E_external_monopole_data = pulsar.do_E_external_monopole();
-    int AddExternalMonopoleOnly = pulsar.ApplyExternalMonopoleOnly();
-    int use_theoreticalEB = pulsar.use_theoreticalEB();
-    amrex::Real theory_max_rstar = pulsar.theory_max_rstar();
+    amrex::Real omega_star_data = Pulsar::m_omega_star;
+    amrex::Real ramp_omega_time_data = Pulsar::m_omega_ramp_time;
+    amrex::Real Bstar_data = Pulsar::m_B_star;
+    amrex::Real Rstar_data = Pulsar::m_R_star;
+    amrex::Real dRstar_data = Pulsar::m_dR_star;
+    amrex::Real corotatingE_maxradius_data = Pulsar::m_corotatingE_maxradius;
+    int E_external_monopole_data = Pulsar::m_do_E_external_monopole;
+    int AddExternalMonopoleOnly = Pulsar::m_AddExternalMonopoleOnly;
+    int use_theoreticalEB = Pulsar::m_use_theoreticalEB;
+    amrex::Real theory_max_rstar = Pulsar::m_theory_max_rstar;
+    int singleParticleTest = Pulsar::m_singleParticleTest;
 //    amrex::AllPrintToFile("PulsarParticle") << " step : " << warpx.getistep(0) << " time : " << cur_time << "\n";
 #endif
 
@@ -2176,7 +2175,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
             amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
             amrex::GpuArray<amrex::Real, 3> center_star_arr;
             for (int idim = 0; idim < 3; ++idim) {
-                center_star_arr[idim] = pulsar.center_star(idim);
+                center_star_arr[idim] = Pulsar::m_center_star[idim];
             }
 
             amrex::Array4<const amrex::Real> const& ex_arr = exfab.array();
@@ -2515,7 +2514,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     }
 //    amrex::AllPrintToFile("PulsarParticle") << " momentum update complete step : " << warpx.getistep(0) << " time : " << cur_time << "\n";
     amrex::Gpu::synchronize();
-    if (pulsar.do_singleParticleTest() == 1) { 
+    if (Pulsar::m_singleParticleTest == 1) { 
         const amrex::Real q = this->charge;
         if (q > 0) {
             amrex::AllPrintToFile("PulsarPositronDiagnostics") << " cur_time xp yp zp r_p theta_p phi_p ux uy uz ur utheta uphi Ex Ey Ez Bx By Bz Er Etheta Ephi Br Btheta Bphi Er_theory Etheta_theory Ephi_theory Br_theory Btheta_theory Bphi_theory qEx_force qEy_force qEz_force qvcrossB_x qvcrossB_y qvcrossB_z qE_r qE_theta qE_phi qvcrossB_r qvcrossB_theta qvcrossB_phi qEx_theory qEy_theory qEz_theory qvcrossB_x_theory qvcrossB_y_theory qvcrossB_z_theory qEr_theory qEtheta_theory qEphi_theory qvcrossB_r_theory qvcrossB_theta_theory qvcrossB_phi_theory\n";
@@ -2791,18 +2790,17 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     auto &warpx = WarpX::GetInstance();
     const auto problo = warpx.Geom(lev).ProbLoArray();
     const auto probhi = warpx.Geom(lev).ProbHiArray();
-    auto &pulsar = warpx.GetPulsarParameters();
-    amrex::Real omega_star_data = pulsar.omega_star();
-    amrex::Real ramp_omega_time_data = pulsar.omega_ramp_time();
-    amrex::Real Bstar_data = pulsar.B_star();
-    amrex::Real Rstar_data = pulsar.R_star();
-    amrex::Real dRstar_data = pulsar.dR_star();
-    amrex::Real corotatingE_maxradius_data = pulsar.corotatingE_maxradius();
-    int E_external_monopole_data = pulsar.do_E_external_monopole();
-    int AddExternalMonopoleOnly = pulsar.ApplyExternalMonopoleOnly();
-    int use_theoreticalEB = pulsar.use_theoreticalEB();
-    amrex::Real theory_max_rstar = pulsar.theory_max_rstar();
-    int singleParticleTest = pulsar.do_singleParticleTest();
+    amrex::Real omega_star_data = Pulsar::m_omega_star;
+    amrex::Real ramp_omega_time_data = Pulsar::m_omega_ramp_time;
+    amrex::Real Bstar_data = Pulsar::m_B_star;
+    amrex::Real Rstar_data = Pulsar::m_R_star;
+    amrex::Real dRstar_data = Pulsar::m_dR_star;
+    amrex::Real corotatingE_maxradius_data = Pulsar::m_corotatingE_maxradius;
+    int E_external_monopole_data = Pulsar::m_do_E_external_monopole;
+    int AddExternalMonopoleOnly = Pulsar::m_AddExternalMonopoleOnly;
+    int use_theoreticalEB = Pulsar::m_use_theoreticalEB;
+    amrex::Real theory_max_rstar = Pulsar::m_theory_max_rstar;
+    int singleParticleTest = Pulsar::m_singleParticleTest;
     amrex::Gpu::synchronize();
     amrex::Gpu::ManagedVector<amrex::Real> PulsarParticleDiag(55,0.0);
     amrex::Real * PulsarParticleDiagData = PulsarParticleDiag.data();
@@ -2884,7 +2882,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     auto& particles = pti.GetArrayOfStructs();
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for (int idim = 0; idim < 3; ++idim) {
-        center_star_arr[idim] = pulsar.center_star(idim);
+        center_star_arr[idim] = Pulsar::m_center_star[idim];
     }
 #endif
 
@@ -3387,8 +3385,7 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 
 #ifdef PULSAR
 void PhysicalParticleContainer::PulsarParticleInjection() {
-    auto& pulsar = WarpX::GetInstance().GetPulsarParameters();
-    if (pulsar.do_singleParticleTest() == 1) { 
+    if (Pulsar::m_singleParticleTest == 1) { 
         AddParticles(0); // Note - add on level 0
         Redistribute();  // We then redistribute
     } else {
@@ -3402,12 +3399,11 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
     Gpu::DeviceScalar<amrex::Real> sumWeight(0.0);   
     int sum_d ; 
     const amrex::Real q = this->charge;
-    auto& pulsar = WarpX::GetInstance().GetPulsarParameters();
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        center_star_arr[i_dim] = pulsar.center_star(i_dim);
+        center_star_arr[i_dim] = Pulsar::m_center_star[i_dim];
     }
-    amrex::Real max_particle_absorption_radius = pulsar.max_particle_absorption_radius();
+    amrex::Real max_particle_absorption_radius = Pulsar::m_max_particle_absorption_radius;
     // Remove Particles From inside sphere
 #ifdef _OPENMP
 #pragma omp parallel

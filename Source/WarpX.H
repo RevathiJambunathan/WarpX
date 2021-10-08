@@ -702,10 +702,6 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> device_current_centering_stencil_coeffs_z;
 #endif
 
-#ifdef PULSAR
-    Pulsar& GetPulsarParameters() {return *m_pulsar;} 
-#endif
-
 protected:
 
     /**
@@ -1056,11 +1052,6 @@ private:
 
     // Macroscopic properties
     std::unique_ptr<MacroscopicProperties> m_macroscopic_properties;
-
-#ifdef PULSAR
-    std::unique_ptr<Pulsar> m_pulsar;
-#endif
-
 
     // Load balancing
     /** Load balancing intervals that reads the "load_balance_intervals" string int the input file
