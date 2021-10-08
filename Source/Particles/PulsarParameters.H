@@ -49,11 +49,10 @@ public:
                                     amrex::Real const dRstar,
                                     amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
+        amrex::ignore_unused(phi);
         amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
-        amrex::Real c_phi   = std::cos(phi);
-        amrex::Real s_phi   = std::sin(phi);
         amrex::Real r_ratio;
         if (r > 0) {
             r_ratio = Rstar/r;
@@ -73,15 +72,14 @@ public:
                                   amrex::Real const omega_star_data,
                                   amrex::Real const ramp_omega_time_data,
                                   amrex::Real const Bstar, amrex::Real const Rstar,
-                                  int const corotatingE_maxradius,
+                                  amrex::Real const corotatingE_maxradius,
                                   int const Eexternal_monopole,
                                   amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
+        amrex::ignore_unused(phi);
         amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
-        amrex::Real c_phi   = std::cos(phi);
-        amrex::Real s_phi   = std::sin(phi);
         amrex::Real r_ratio = Rstar/r;
         // inside pulsar
         //if ( r <= max_EBcorotating_radius ) {
@@ -115,11 +113,8 @@ public:
                                      amrex::Real const Bstar, amrex::Real const Rstar,
                                      amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
+        amrex::ignore_unused(phi, theta);
         amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
-        amrex::Real c_theta = std::cos(theta);
-        amrex::Real s_theta = std::sin(theta);
-        amrex::Real c_phi   = std::cos(phi);
-        amrex::Real s_phi   = std::sin(phi);
         amrex::Real r_ratio = Rstar/r;
 
         Er = (2.0/3.0) * omega * Bstar * Rstar * r_ratio * r_ratio;
@@ -135,6 +130,7 @@ public:
                                   amrex::Real const dRstar,
                                   amrex::Real &Br, amrex::Real &Btheta, amrex::Real &Bphi)
     {
+        amrex::ignore_unused(phi, time);
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
         amrex::Real r_ratio;
@@ -170,8 +166,6 @@ public:
     static void ConvertCartesianToSphericalCoord ( amrex::Real const x, amrex::Real const y,
              amrex::Real const z,
              amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const center_star,
-             amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_lo,
-             amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const domain_hi,
              amrex::Real &r, amrex::Real &theta, amrex::Real &phi)
     {
         amrex::Real xc = center_star[0];
@@ -190,6 +184,7 @@ public:
              amrex::Real const r, amrex::Real const theta,
              amrex::Real const phi, amrex::Real & F_x)
     {
+        amrex::ignore_unused(r);
         F_x = F_r     * std::sin(theta) * std::cos(phi)
             + F_theta * std::cos(theta) * std::cos(phi)
             - F_phi   * std::sin(phi);
@@ -201,6 +196,7 @@ public:
              amrex::Real const r, amrex::Real const theta,
              amrex::Real const phi, amrex::Real & F_y)
     {
+        amrex::ignore_unused(r);
         F_y = F_r     * std::sin(theta) * std::sin(phi)
             + F_theta * std::cos(theta) * std::sin(phi)
             + F_phi   * std::cos(phi);
@@ -212,6 +208,7 @@ public:
              amrex::Real const r, amrex::Real const theta,
              amrex::Real const phi, amrex::Real & F_z)
     {
+        amrex::ignore_unused(r, phi, F_phi);
         F_z = F_r * std::cos(theta) - F_theta * std::sin(theta);
     }
 
@@ -240,6 +237,8 @@ public:
             amrex::Real const F_y, amrex::Real const F_z,
             amrex::Real const theta, amrex::Real const phi, amrex::Real &F_phi)
     {
+
+        amrex::ignore_unused(theta, F_z);
         F_phi = - F_x * std::sin(phi) + F_y * std::cos(phi);
     }
 
@@ -249,7 +248,6 @@ public:
                           amrex::GpuArray<int, 3> const mf_ixtype,
                           amrex::GpuArray<amrex::Real, 3> const center_star_data,
                           amrex::GpuArray<amrex::Real, 3> const domain_xlo,
-                          amrex::GpuArray<amrex::Real, 3> const domain_xhi,
                           amrex::GpuArray<amrex::Real, 3> const domain_dx,
                           amrex::Real max_EBdamping_radius_data,
                           amrex::Real damping_scale_data,
@@ -258,7 +256,7 @@ public:
         amrex::Real x, y, z;
         ComputeCellCoordinates(i, j, k, mf_ixtype, domain_xlo, domain_dx, x, y, z);
         amrex::Real r, theta, phi;
-        ConvertCartesianToSphericalCoord (x, y, z, center_star_data, domain_xlo, domain_xhi,
+        ConvertCartesianToSphericalCoord (x, y, z, center_star_data,
                                           r, theta, phi);
         if (r <= max_EBdamping_radius_data) {
             // Damping function: Fd = tanh(damping_scale * (r / R_star - 1)) + 1

@@ -21,7 +21,6 @@ void
 EdotBFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const
 {
     using namespace amrex;
-    auto & warpx = WarpX::GetInstance();
     const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     // convert boxarray of source MultiFab to staggering of dst Multifab
@@ -50,10 +49,6 @@ void
 EdotBFunctor::ComputeEdotB(amrex::MultiFab& mf_dst, int dcomp) const
 {
     using namespace amrex;
-    auto & warpx = WarpX::GetInstance();
-    const auto dx = warpx.Geom(m_lev).CellSizeArray();
-    const auto problo = warpx.Geom(m_lev).ProbLoArray();
-    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
     const amrex::IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
     const amrex::IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
     const amrex::IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();

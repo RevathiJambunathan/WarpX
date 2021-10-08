@@ -170,8 +170,6 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(lev).CellSizeArray();
     const auto problo = warpx.Geom(lev).ProbLoArray();
-    const auto probhi = warpx.Geom(lev).ProbHiArray();
-    const RealBox& real_box = warpx.Geom(lev).ProbDomain();
     amrex::Real cur_time = warpx.gett_new(lev);
     amrex::IntVect x_nodal_flag = mfx->ixType().toIntVect();
     amrex::IntVect y_nodal_flag = mfy->ixType().toIntVect();
@@ -216,7 +214,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 // Initialize with Bfield in spherical coordinates
                 if (init_Bfield == 1) {
@@ -254,7 +252,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 // Initialize with Bfield in spherical coordinates                    
                 if (init_Bfield == 1) {
@@ -292,7 +290,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 // Initialize with Bfield in spherical coordinates
                 if (init_Bfield == 1) {
@@ -334,8 +332,6 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(lev).CellSizeArray();
     const auto problo = warpx.Geom(lev).ProbLoArray();
-    const auto probhi = warpx.Geom(lev).ProbHiArray();
-    const RealBox& real_box = warpx.Geom(lev).ProbDomain();
     amrex::Real cur_time = warpx.gett_new(lev) + a_dt;
     amrex::IntVect x_nodal_flag = Efield[0]->ixType().toIntVect();
     amrex::IntVect y_nodal_flag = Efield[1]->ixType().toIntVect();
@@ -379,7 +375,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (r <= corotatingE_maxradius_data) {
@@ -411,7 +407,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (r <= corotatingE_maxradius_data) {
@@ -443,7 +439,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (r <= corotatingE_maxradius_data) {
@@ -481,8 +477,6 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(lev).CellSizeArray();
     const auto problo = warpx.Geom(lev).ProbLoArray();
-    const auto probhi = warpx.Geom(lev).ProbHiArray();
-    const RealBox& real_box = warpx.Geom(lev).ProbDomain();
     amrex::Real cur_time = warpx.gett_new(lev) + a_dt;
     amrex::IntVect x_nodal_flag = Bfield[0]->ixType().toIntVect();
     amrex::IntVect y_nodal_flag = Bfield[1]->ixType().toIntVect();
@@ -526,7 +520,7 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, x_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (r <= enforceDipoleB_maxradius_data) {
@@ -573,7 +567,7 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, y_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (r <= enforceDipoleB_maxradius_data) {
@@ -614,7 +608,7 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 // compute cell coordinates
                 ComputeCellCoordinates(i, j, k, z_IndexType, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
-                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr, problo, probhi,
+                ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (r <= enforceDipoleB_maxradius_data) {

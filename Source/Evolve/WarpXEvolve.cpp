@@ -293,21 +293,21 @@ WarpX::Evolve (int numsteps)
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
                         Pulsar::DampField(i, j, k, Exfab, Ex_stag, center_star_data,
-                                          domain_xlo, domain_xhi, domain_dx,
+                                          domain_xlo, domain_dx,
                                           max_EBdamping_radius_data,
                                           damping_scale_data, Rstar_data);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
                         Pulsar::DampField(i, j, k, Eyfab, Ey_stag, center_star_data,
-                                          domain_xlo, domain_xhi, domain_dx,
+                                          domain_xlo, domain_dx,
                                           max_EBdamping_radius_data,
                                           damping_scale_data, Rstar_data);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
                         Pulsar::DampField(i, j, k, Ezfab, Ez_stag, center_star_data,
-                                          domain_xlo, domain_xhi, domain_dx,
+                                          domain_xlo, domain_dx,
                                           max_EBdamping_radius_data,
                                           damping_scale_data, Rstar_data);
                     });
@@ -326,21 +326,21 @@ WarpX::Evolve (int numsteps)
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
                         Pulsar::DampField(i, j, k, Bxfab, Bx_stag, center_star_data,
-                                          domain_xlo, domain_xhi, domain_dx,
+                                          domain_xlo, domain_dx,
                                           max_EBdamping_radius_data,
                                           damping_scale_data, Rstar_data);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
                         Pulsar::DampField(i, j, k, Byfab, By_stag, center_star_data,
-                                          domain_xlo, domain_xhi, domain_dx,
+                                          domain_xlo, domain_dx,
                                           max_EBdamping_radius_data,
                                           damping_scale_data, Rstar_data);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
                         Pulsar::DampField(i, j, k, Bzfab, Bz_stag, center_star_data,
-                                          domain_xlo, domain_xhi, domain_dx,
+                                          domain_xlo, domain_dx,
                                           max_EBdamping_radius_data,
                                           damping_scale_data, Rstar_data);
                     });

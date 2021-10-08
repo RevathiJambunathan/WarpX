@@ -29,7 +29,6 @@ void
 SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const
 {
     using namespace amrex;
-    auto & warpx = WarpX::GetInstance();
     const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     // convert boxarray of source MultiFab to staggering of dst Multifab
@@ -60,7 +59,6 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
-    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
     const amrex::IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
     const amrex::IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
     const amrex::IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
@@ -111,7 +109,6 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
                 // convert cartesian to spherical coordinates
                 amrex::Real r, theta, phi;
                 Pulsar::ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
-                                                         problo, probhi,
                                                          r, theta, phi);
 
                 if (sphericalcomp == 0) { // rcomponent of field 
@@ -126,6 +123,7 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
                 }
             });
     }
-
+#else
+    amrex::ignore_unused(mf_dst,dcomp);
 #endif
 }

@@ -73,10 +73,10 @@ void UpdateMomentumBoris(
     ux += uy_p*sz - uz_p*sy;
     uy += uz_p*sx - ux_p*sz;
     uz += ux_p*sy - uy_p*sx;
+#ifdef PULSAR
     amrex::Real tmp_ux = uy_p*sz - uz_p*sy;
     amrex::Real tmp_uy = uz_p*sx - ux_p*sz;
     amrex::Real tmp_uz = ux_p*sy - uy_p*sx;
-#ifdef PULSAR
 //    amrex::AllPrintToFile("PulsarParticle") << " Momentum after rotation : " << ux << " " << " uy : " << uy << " uz " << uz << " rot ux : " << tmp_ux << " rot uy " << tmp_uy << " rot uz "  << tmp_uz<< "\n";
     if (i == 0) {
         if (compute_from_theory == 0) {

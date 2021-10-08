@@ -1296,7 +1296,6 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
 #endif
 
     int Nmax_particles = 0;
-    int valid_particles_beforeAdd = TotalNumberOfParticles();    
 
     MFItInfo info;
     if (do_tiling && Gpu::notInLaunchRegion()) {
@@ -2200,8 +2199,10 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
             ParticleReal* const AMREX_RESTRICT uz = attribs[PIdx::uz].dataPtr();
 
             amrex::Gpu::synchronize();
+#ifdef PULSAR
             amrex::Gpu::ManagedVector<amrex::Real> PulsarParticleDiag(55,0.0);
             amrex::Real * PulsarParticleDiagData = PulsarParticleDiag.data();
+#endif
 
             int* AMREX_RESTRICT ion_lev = nullptr;
             if (do_field_ionization) {
@@ -2229,7 +2230,6 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 //                amrex::AllPrintToFile("PulsarParticle") << " part id : " << p.id() << " ip: " << ip << " q: " << q << " xp : " << xp << " yp " << yp << " zp " << zp  << "\n";
                 amrex::Real r_p, theta_p, phi_p;
                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
-                                                          problo, probhi,
                                                           r_p, theta_p, phi_p);
 //                amrex::AllPrintToFile("PulsarParticle") << " rp : " << r_p << " thetap " << theta_p << " phip " << phi_p << "\n";
 #endif
@@ -2253,8 +2253,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                         amrex::Real Erp, Ethetap, Ephip;
                         amrex::Real r_p, theta_p, phi_p;
                         Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
-                                                                  problo, probhi, r_p,
-                                                                  theta_p, phi_p);
+                                                                  r_p, theta_p, phi_p);
                         if (r_p > corotatingE_maxradius_data) {
                             Pulsar::ExternalEMonopoleSpherical(r_p, theta_p, phi_p, cur_time,
                                                                    omega_star_data,
@@ -2901,7 +2900,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 #ifdef PULSAR
         amrex::Real r_p, theta_p, phi_p;
         Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
-                                                  problo, probhi, r_p, theta_p, phi_p);
+                                                  r_p, theta_p, phi_p);
 #endif
         if (save_previous_position) {
             x_old[ip] = xp;
@@ -2931,8 +2930,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                  amrex::Real Erp, Ethetap, Ephip;
                  amrex::Real r_p, theta_p, phi_p;
                  Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
-                                                           problo, probhi, r_p,
-                                                           theta_p, phi_p);
+                                                           r_p, theta_p, phi_p);
                  if (r_p > corotatingE_maxradius_data) {
                      Pulsar::ExternalEMonopoleSpherical(r_p, theta_p, phi_p, cur_time,
                                                             omega_star_data,
