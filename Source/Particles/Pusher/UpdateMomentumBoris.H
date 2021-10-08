@@ -17,7 +17,11 @@ void UpdateMomentumBoris(
     amrex::ParticleReal& ux, amrex::ParticleReal& uy, amrex::ParticleReal& uz,
     const amrex::ParticleReal Ex, const amrex::ParticleReal Ey, const amrex::ParticleReal Ez,
     const amrex::ParticleReal Bx, const amrex::ParticleReal By, const amrex::ParticleReal Bz,
-    const amrex::Real q, const amrex::Real m, const amrex::Real dt, amrex::Real * PulsarDiag = nullptr, const int i=0, const int compute_from_theory = 0 )
+    const amrex::Real q, const amrex::Real m, const amrex::Real dt
+#ifdef PULSAR
+    , amrex::Real * PulsarDiag = nullptr, const int i=0, const int compute_from_theory = 0
+#endif
+    )
 {
     using namespace amrex::literals;
 

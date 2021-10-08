@@ -31,8 +31,6 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
     using namespace amrex;
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
-    const auto problo = warpx.Geom(m_lev).ProbLoArray();
-    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
     const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     // convert boxarray of source MultiFab to staggering of dst Multifab
@@ -51,7 +49,7 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
         amrex::MultiFab mf_tmp( ba_tmp, m_mfx_src->DistributionMap(), ncomp, 0);
         const int dcomp_tmp = 0;
         ComputeSphericalFieldComponent(mf_tmp, dcomp_tmp);
-        mf_dst.copy( mf_tmp, 0, dcomp, ncomp);
+        mf_dst.ParallelCopy( mf_tmp, 0, dcomp, ncomp);
     }
 }
 
@@ -73,14 +71,18 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
     amrex::GpuArray<int,3> sfz; // staggering of source zfield
     amrex::GpuArray<int,3> s_dst;
     amrex::GpuArray<int,3> cr;
-    amrex::GpuArray<amrex::Real, 3> center_star_arr; 
+#ifdef PULSAR
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+#endif
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         sfx[i] = stag_xsrc[i];
         sfy[i] = stag_ysrc[i];
         sfz[i] = stag_zsrc[i];
         s_dst[i]  = stag_dst[i];
         cr[i] = m_crse_ratio[i];
+#ifdef PULSAR
         center_star_arr[i] = Pulsar::m_center_star[i];
+#endif
     }
     const int sphericalcomp = m_sphericalcomp;
     amrex::Real cur_time = warpx.gett_new(0);

@@ -2173,10 +2173,12 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 
             amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
             amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+#ifdef PULSAR
             amrex::GpuArray<amrex::Real, 3> center_star_arr;
             for (int idim = 0; idim < 3; ++idim) {
                 center_star_arr[idim] = Pulsar::m_center_star[idim];
             }
+#endif
 
             amrex::Array4<const amrex::Real> const& ex_arr = exfab.array();
             amrex::Array4<const amrex::Real> const& ey_arr = eyfab.array();
@@ -2422,8 +2424,11 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 #endif
                     UpdateMomentumBoris( ux[ip], uy[ip], uz[ip],
                                          Exp, Eyp, Ezp, Bxp,
-                                         Byp, Bzp, qp, m, dt,
-                                         PulsarParticleDiagData, ip, 0);
+                                         Byp, Bzp, qp, m, dt
+#ifdef PULSAR
+                                         , PulsarParticleDiagData, ip, 0
+#endif
+                                         );
 #ifdef PULSAR
                     if (ip == 0) {
                         amrex::Real Exp_theory, Eyp_theory, Ezp_theory;
@@ -2514,6 +2519,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     }
 //    amrex::AllPrintToFile("PulsarParticle") << " momentum update complete step : " << warpx.getistep(0) << " time : " << cur_time << "\n";
     amrex::Gpu::synchronize();
+#ifdef PULSAR
     if (Pulsar::m_singleParticleTest == 1) { 
         const amrex::Real q = this->charge;
         if (q > 0) {
@@ -2522,6 +2528,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
             amrex::AllPrintToFile("PulsarElectronDiagnostics") << " cur_time xp yp zp r_p theta_p phi_p ux uy uz ur utheta uphi Ex Ey Ez Bx By Bz Er Etheta Ephi Br Btheta Bphi Er_theory Etheta_theory Ephi_theory Br_theory Btheta_theory Bphi_theory qEx_force qEy_force qEz_force qvcrossB_x qvcrossB_y qvcrossB_z qE_r qE_theta qE_phi qvcrossB_r qvcrossB_theta qvcrossB_phi qEx_theory qEy_theory qEz_theory qvcrossB_x_theory qvcrossB_y_theory qvcrossB_z_theory qEr_theory qEtheta_theory qEphi_theory qvcrossB_r_theory qvcrossB_theta_theory qvcrossB_phi_theory\n";
         }
     }
+#endif
 }
 
 void
@@ -3203,6 +3210,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     });
 //    amrex::AllPrintToFile("PulsarParticle") << " done with particle push " << cur_time << "\n";
     amrex::Gpu::synchronize();
+#ifdef PULSAR
     if (singleParticleTest == 1) { 
         if ( q > 0) { // positrons
             amrex::AllPrintToFile("PulsarPositronDiagnostics") << " ";
@@ -3219,6 +3227,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         }
         amrex::Gpu::synchronize();
     }
+#endif
 }
 
 void

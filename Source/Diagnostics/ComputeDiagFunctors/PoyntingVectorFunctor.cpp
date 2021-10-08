@@ -49,7 +49,7 @@ PoyntingVectorFunctor::operator ()(amrex::MultiFab& mf_dst,
         amrex::MultiFab mf_tmp( ba_tmp, m_Ex_src->DistributionMap(), ncomp, 0 );
         const int dcomp_tmp = 0;
         ComputePoyntingVector(mf_tmp, dcomp_tmp);
-        mf_dst.copy( mf_tmp, 0, dcomp, ncomp);
+        mf_dst.ParallelCopy( mf_tmp, 0, dcomp, ncomp);
     }
 
 }
