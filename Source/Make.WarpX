@@ -200,6 +200,8 @@ ifeq ($(USE_PSATD),TRUE)
   endif
 endif
 
+libraries += -lgsl
+
 ifeq ($(USE_RZ),TRUE)
   USERSuffix := $(USERSuffix).RZ
 endif

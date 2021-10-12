@@ -570,6 +570,13 @@ WarpX::InitLevelData (int lev, Real /*time*/)
                                                     lev);
        }
     }
+    int IncludeBfieldPerturbation = 0;
+    pp_warpx.query("IncludeBfieldPerturbation",IncludeBfieldPerturbation);
+    if (IncludeBfieldPerturbation == 1) {
+        AddBfieldPerturbation (Bfield_fp[lev][0].get(),
+                               Bfield_fp[lev][1].get(),
+                               Bfield_fp[lev][2].get(),lev);
+    }
 
     // if the input string for the E-field is "parse_e_ext_grid_function",
     // then the analytical expression or function must be
@@ -652,6 +659,45 @@ WarpX::InitLevelData (int lev, Real /*time*/)
             (*costs[lev])[i] = 0.0;
             WarpX::setLoadBalanceEfficiency(lev, -1);
         }
+    }
+}
+
+void
+WarpX::AddBfieldPerturbation (amrex::MultiFab *Bx,
+                              amrex::MultiFab *By,
+                              amrex::MultiFab *Bz, const int lev)
+{
+
+    const auto dx_lev = geom[lev].CellSizeArray();
+    const RealBox& real_box = geom[lev].ProbDomain();
+    amrex::IntVect x_nodal_flag = Bx->ixType().toIntVect();
+    amrex::IntVect y_nodal_flag = By->ixType().toIntVect();
+    amrex::IntVect z_nodal_flag = Bz->ixType().toIntVect();
+    for ( MFIter mfi(*Bx, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box& tbx = mfi.tilebox( x_nodal_flag, Bx->nGrowVect() );
+        const amrex::Box& tby = mfi.tilebox( y_nodal_flag, By->nGrowVect() );
+        const amrex::Box& tbz = mfi.tilebox( z_nodal_flag, Bz->nGrowVect() );
+        // Compute perturbation and add to Bx
+        amrex::LoopOnCpu( tbx, [=] (int i, int j, int k)
+        {
+            amrex::Real real_arg1 = 0.5_rt;
+            amrex::Real dilog_real = gsl_sf_dilog(real_arg1);
+            amrex::Print() << "real_arg1 " <<real_arg1 << " dilog : " << dilog_real << "\n";
+            std::complex<double> z1(0.5,0.5);
+            std::complex<double> z_dilog;
+            gsl_sf_result z1_re, z1_im;
+            int error = gsl_sf_complex_dilog_e(z1.real(), z1.imag(), &z1_re, &z1_im );
+            amrex::Print() << " z1 : " << " " << z1.real() <<" " << z1.imag() << " " << z1_re.val << " " << z1_im.val << "\n";
+        });
+        // Compute perturbation and add to By
+        amrex::LoopOnCpu( tby, [=] (int i, int j, int k)
+        {
+        }
+        // Compute perturbation and add to Bz
+        amrex::LoopOnCpu( tby, [=] (int i, int j, int k)
+        {
+        }   
     }
 }
 
