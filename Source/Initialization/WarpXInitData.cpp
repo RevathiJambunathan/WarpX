@@ -693,11 +693,11 @@ WarpX::AddBfieldPerturbation (amrex::MultiFab *Bx,
         // Compute perturbation and add to By
         amrex::LoopOnCpu( tby, [=] (int i, int j, int k)
         {
-        }
+        });
         // Compute perturbation and add to Bz
         amrex::LoopOnCpu( tby, [=] (int i, int j, int k)
         {
-        }   
+        }); 
     }
 }
 
