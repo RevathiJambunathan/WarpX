@@ -135,8 +135,10 @@ WarpX::Evolve (int numsteps)
                 }
             }
         } else {
-            mypc->PulsarParticleInjection();
-            mypc->Redistribute();
+            if ( cur_time >= Pulsar::m_injection_time) {
+                mypc->PulsarParticleInjection();
+                mypc->Redistribute();
+	    }
         }
 #endif
         // At the beginning, we have B^{n} and E^{n}.
