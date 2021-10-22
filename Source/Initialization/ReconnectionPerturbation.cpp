@@ -4,7 +4,6 @@
  *
  * License: BSD-3-Clause-LBNL
  */
-#include "WarpX.H"
 #include "Utils/WarpXAlgorithmSelection.H"
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXProfilerWrapper.H"
@@ -52,19 +51,19 @@ void
 Reconnection_Perturbation::AddBfieldPerturbation (amrex::MultiFab *Bx,
                               amrex::MultiFab *By,
                               amrex::MultiFab *Bz,
-                              ParserExecutor<3> const& xfield_parser,
-                              ParserExecutor<3> const& yfield_parser, 
-                              ParserExecutor<3> const& zfield_parser, const int lev)
+                              amrex::ParserExecutor<3> const& xfield_parser,
+                              amrex::ParserExecutor<3> const& yfield_parser, 
+                              amrex::ParserExecutor<3> const& zfield_parser, const int lev)
 {
-
-    const auto dx_lev = geom[lev].CellSizeArray();
-    const RealBox& real_box = geom[lev].ProbDomain();
+    auto &warpx = WarpX::GetInstance();
+    const auto dx_lev = warpx.Geom(lev).CellSizeArray();
+    const RealBox& real_box = warpx.Geom(lev).ProbDomain();
     amrex::IntVect x_nodal_flag = Bx->ixType().toIntVect();
     amrex::IntVect y_nodal_flag = By->ixType().toIntVect();
     amrex::IntVect z_nodal_flag = Bz->ixType().toIntVect();
 
-    const auto problo = geom[0].ProbLoArray();
-    const auto probhi = geom[0].ProbHiArray();
+    const auto problo = warpx.Geom(0).ProbLoArray();
+    const auto probhi = warpx.Geom(0).ProbHiArray();
     amrex::Real pi_val = MathConst::pi;
     amrex::Real Lx = (real_box.hi(0) - real_box.lo(0) ) / 2.0;
 #if (AMREX_SPACEDIM==2)
@@ -138,10 +137,9 @@ Reconnection_Perturbation::AddBfieldPerturbation (amrex::MultiFab *Bx,
                                         * std::cos(pi_val/Lx * (x-xcs)) ;
             amrex::Real IntegralBz_val = Reconnection_Perturbation::IntegralBz(
                                          x, z, pi_val, xcs, B0, nd_ratio, delta);
-            //Bz_array(i,j,k) = magnitude_fac * ( prefactor_term1 * IntegralBz_val
-            //                                   + prefactor_term2 * zfield_parser(x,y,z)
-            //                                   );
-            Bz_array(i,j,k) = prefactor_term2 * zfield_parser(x,y,z)
+            Bz_array(i,j,k) = magnitude_fac * ( prefactor_term1 * IntegralBz_val
+                                               + prefactor_term2 * zfield_parser(x,y,z)
+                                               );
         });
     }
 }

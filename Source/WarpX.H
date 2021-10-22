@@ -738,13 +738,6 @@ public:
          amrex::ParserExecutor<3> const& zfield_parser,
          std::array< std::unique_ptr<amrex::MultiFab>, 3 > const& geom_data, const int lev);
 
-    void AddBfieldPerturbation (amrex::MultiFab *Bx,
-                                amrex::MultiFab *By,
-                                amrex::MultiFab *Bz,
-                                amrex::ParserExecutor<3> const& xfield_parser,
-                                amrex::ParserExecutor<3> const& yfield_parser,
-                                amrex::ParserExecutor<3> const& zfield_parser,
-                                const int lev);
     /** \brief adds particle and cell contributions in cells to compute heuristic
      * cost in each box on each level, and records in `costs`
      * @param[in] costs vector of (`unique_ptr` to) vectors; expected to be initialized
