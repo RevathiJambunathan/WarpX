@@ -1,0 +1,109 @@
+#################################
+########### CONSTANTS ###########
+#################################
+my_constants.nde = 2.82395872706189E+017
+my_constants.ndi = 2.82395872706189E+017
+my_constants.nbe = 5.64791745412378E+016
+my_constants.nbi = 5.64791745412378E+016
+my_constants.delta = 0.1
+#my_constants.Bo = 0.4175177341
+my_constants.Bo = 1
+my_constants.xcs = 1
+my_constants.pi = 3.14159265358979
+#################################
+####### GENERAL PARAMETERS ######
+#################################
+max_step = 1
+amr.n_cell = 256 128 # nboxes : 56 * 27 = 1512 (check with 42 nodes=252 (6boxes/gpu))
+amr.max_grid_size_x = 256
+amr.max_grid_size_y = 256
+amr.max_grid_size_z = 256
+amr.blocking_factor = 128
+amr.max_level = 0
+geometry.coord_sys   = 0                  # 0: Cartesian
+boundary.field_lo = periodic periodic
+boundary.field_hi = periodic periodic
+#geometry.prob_lo     = -8.96   -4.32
+#geometry.prob_hi     =  8.96    4.32
+geometry.prob_lo     =  -2.   -1.
+geometry.prob_hi     =   2.   1.
+#################################
+############ NUMERICS ###########
+#################################
+warpx.serialize_ics = 1
+warpx.verbose = 1
+warpx.cfl = 0.99
+#amr.restart = diags/check30000
+algo.particle_shape = 3
+algo.load_balance_intervals = 10
+algo.load_balance_with_sfc = 0
+algo.load_balance_costs_update = Heuristic
+algo.load_balance_efficiency_ratio_threshold = 1.01
+algo.load_balance_knapsack_factor = 2.0
+warpx.do_dive_cleaning = 1
+warpx.use_filter = 1
+#################################
+########## DIAGNOSTICS ##########
+#################################
+diagnostics.diags_names = diags
+diags.intervals = 200
+diags.diag_type = Full
+diags.fields_to_plot = Bx Bz
+
+#check.intervals = 5
+#check.diag_type = Full
+#check.format = checkpoint
+
+warpx.reduced_diags_names = LBCost LBEfficiency
+LBCost.type = LoadBalanceCosts
+LBCost.intervals = 20
+LBEfficiency.type = LoadBalanceEfficiency
+LBEfficiency.intervals = 20
+
+
+#################################
+############ FIELD ##############
+#################################
+warpx.B_ext_grid_init_style="parse_B_ext_grid_function"
+warpx.Bx_external_grid_function(x,y,z) = "0"
+warpx.By_external_grid_function(x,y,z) = "0"
+warpx.Bz_external_grid_function(x,y,z) = "-1* Bo * 2. / (pi/2. + 5. - 1.) * (atan(tanh((x+xcs)/2./delta)) - atan(tanh((x-xcs)/2./delta)) - pi/4. + 1./2. * (5. - 1.) * (tanh((x+xcs)/delta) - tanh((x-xcs)/delta) - 1.) )"
+warpx.IncludeBfieldPerturbation = 1
+warpx.xcs = 1
+warpx.B0 = 1
+warpx.nd_ratio = 5.0
+warpx.delta = 0.1
+#################################
+############ PLASMA #############
+#################################
+#particles.species_names = electrons ions
+electrons.charge = -q_e
+electrons.mass = m_e
+electrons.injection_style = "NUniformPerCell"
+electrons.num_particles_per_cell_each_dim = 16 16
+electrons.profile = parse_density_function
+electrons.density_function(x,y,z) = "nbe + (nde-nbe) * (cosh((x + xcs)/delta)**-1 + cosh((x - xcs)/delta)**-1)"
+electrons.momentum_distribution_type = maxwell_juttner
+electrons.bulk_vel_dir = -y
+electrons.cell_size = 0.0078
+electrons.cell_centered = true
+electrons.xcs = 1
+electrons.nbnd = 0.2
+electrons.sigma = 30
+electrons.lambdae = 0.01
+electrons.delta = 0.1
+ions.charge = q_e
+ions.mass = m_e
+ions.injection_style = "NUniformPerCell"
+ions.num_particles_per_cell_each_dim = 16 16
+ions.profile = parse_density_function
+ions.density_function(x,y,z) = "nbi + (ndi-nbi) * (cosh((x + xcs)/delta)**-1 + cosh((x - xcs)/delta)**-1)"
+ions.momentum_distribution_type = maxwell_juttner
+ions.bulk_vel_dir = y
+ions.cell_size = 0.0078
+ions.cell_centered = true
+ions.xcs = 1.
+ions.nbnd = 0.2
+ions.sigma = 30
+ions.lambdae = 0.01
+ions.delta = 0.1
