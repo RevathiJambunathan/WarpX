@@ -57,7 +57,7 @@ public:
                               amrex::ParserExecutor<3> const& yfield_parser,
                               amrex::ParserExecutor<3> const& zfield_parser, const int lev);
 
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    AMREX_FORCE_INLINE
     static std::complex<double> getComplexDilog ( const std::complex<double> z_arg) {
         gsl_sf_result z_dilog_re, z_dilog_im;
         amrex::Real magnitude = std::sqrt(z_arg.real()*z_arg.real() + z_arg.imag()*z_arg.imag());
@@ -72,7 +72,7 @@ public:
     
     /**
      * Perform derivative along x on a cell-centered grid, from a nodal field `F` */
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    AMREX_FORCE_INLINE
     static amrex::Real IntegralBz (
         const amrex::Real x, const amrex::Real z,
         const amrex::Real pi_val, const amrex::Real xcs, const amrex::Real B0,
