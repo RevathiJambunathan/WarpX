@@ -122,8 +122,8 @@ WarpX::Evolve (int numsteps)
 #ifdef PULSAR
         if (Pulsar::m_singleParticleTest == 1) {
             if (Pulsar::m_continuous_injection == 0) {
-                if (Pulsar::m_injection_time - dt[0] <= cur_time &&
-                    cur_time <= Pulsar::m_injection_time) {
+                if (Pulsar::m_injection_time <= cur_time &&
+                    cur_time <= Pulsar::m_injection_time + 0.5*dt[0]) {
 			amrex::Print() << " injecting particles \n";
                         mypc->PulsarParticleInjection();
                         mypc->Redistribute();
