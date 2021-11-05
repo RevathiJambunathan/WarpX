@@ -111,7 +111,7 @@ Reconnection_Perturbation::AddBfieldPerturbation (amrex::MultiFab *Bx,
                                   * std::cos(pi_val/Lx * (x-xcs));
             amrex::Real IntegralBz_val = Reconnection_Perturbation::IntegralBz(
                                          x, z, pi_val, xcs, B0, nd_ratio, delta);
-            Bx_array(i,j,k,0) = magnitude_fac * prefactor * IntegralBz_val;
+            Bx_array(i,j,k) += magnitude_fac * prefactor * IntegralBz_val;
 
         });
         // Compute perturbation and add to Bz
@@ -137,7 +137,7 @@ Reconnection_Perturbation::AddBfieldPerturbation (amrex::MultiFab *Bx,
                                         * std::cos(pi_val/Lx * (x-xcs)) ;
             amrex::Real IntegralBz_val = Reconnection_Perturbation::IntegralBz(
                                          x, z, pi_val, xcs, B0, nd_ratio, delta);
-            Bz_array(i,j,k) = magnitude_fac * ( prefactor_term1 * IntegralBz_val
+            Bz_array(i,j,k) += magnitude_fac * ( prefactor_term1 * IntegralBz_val
                                                + prefactor_term2 * zfield_parser(x,y,z)
                                                );
         });
