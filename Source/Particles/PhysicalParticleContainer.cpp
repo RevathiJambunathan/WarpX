@@ -1103,10 +1103,10 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                         theta_p < removeparticle_theta_max*MathConst::pi/180.) {
                         p.id() = -1;
                     }
-		     
-		    //// temporarily testing if on positrons emitted at eq
-		    //// and only electrons emitted at poles
-		    //if (q_pm < 0) { // for electrons inject at pole 
+             
+            //// temporarily testing if on positrons emitted at eq
+            //// and only electrons emitted at poles
+            //if (q_pm < 0) { // for electrons inject at pole 
                     //    if (theta_p >= 40*MathConst::pi/180. and
                     //        theta_p <= 90*MathConst::pi/180.) {
                     //        p.id() = -1;
@@ -1115,17 +1115,17 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     //        theta_p <= 140*MathConst::pi/180.) {
                     //        p.id() = -1;
                     //    }
-		    //} else if (q_pm > 0 ) {
+            //} else if (q_pm > 0 ) {
                     //    if (  theta_p <= 75*MathConst::pi/180. and
-		    //          theta_p >= 0.*MathConst::pi/180.) {
+            //          theta_p >= 0.*MathConst::pi/180.) {
                     //        p.id() = -1;
                     //    }
                     //    if (  theta_p <= 180*MathConst::pi/180. and
-		    //          theta_p >= 105.*MathConst::pi/180.) {
+            //          theta_p >= 105.*MathConst::pi/180.) {
                     //        p.id() = -1;
                     //    }
-		    //}
-		    
+            //}
+            
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);

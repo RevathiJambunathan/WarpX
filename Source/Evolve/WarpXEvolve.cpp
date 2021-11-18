@@ -124,7 +124,7 @@ WarpX::Evolve (int numsteps)
             if (Pulsar::m_continuous_injection == 0) {
                 if (Pulsar::m_injection_time <= cur_time &&
                     cur_time <= Pulsar::m_injection_time + 0.5*dt[0]) {
-			amrex::Print() << " injecting particles \n";
+            amrex::Print() << " injecting particles \n";
                         mypc->PulsarParticleInjection();
                         mypc->Redistribute();
                 }
@@ -138,7 +138,7 @@ WarpX::Evolve (int numsteps)
             if ( cur_time >= Pulsar::m_injection_time) {
                 mypc->PulsarParticleInjection();
                 mypc->Redistribute();
-	    }
+        }
         }
 #endif
         // At the beginning, we have B^{n} and E^{n}.
