@@ -35,6 +35,9 @@
 #include "Particles/WarpXParticleContainer_fwd.H"
 #include "Utils/IntervalsParser.H"
 #include "Utils/WarpXAlgorithmSelection.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_AmrCore.H>
@@ -1049,7 +1052,6 @@ private:
 
     // Macroscopic properties
     std::unique_ptr<MacroscopicProperties> m_macroscopic_properties;
-
 
     // Load balancing
     /** Load balancing intervals that reads the "load_balance_intervals" string int the input file

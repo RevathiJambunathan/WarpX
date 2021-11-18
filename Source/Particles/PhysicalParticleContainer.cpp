@@ -690,7 +690,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     WARPX_PROFILE("PhysicalParticleContainer::AddPlasma()");
 
 #ifdef PULSAR
-    amrex::Print() << " in add plasma" << PulsarParm::R_star << "\n";
+    amrex::Print() << " in add plasma" << Pulsar::m_R_star << "\n";
 #endif
 
     // If no part_realbox is provided, initialize particles in the whole domain
@@ -716,8 +716,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     }
 #ifdef PULSAR
     // modifying particle weight to achieve fractional injection
-    if (PulsarParm::ModifyParticleWtAtInjection == 1) {
-        scale_fac = scale_fac*PulsarParm::Ninj_fraction;
+    if (Pulsar::m_ModifyParticleWtAtInjection == 1) {
+        scale_fac = scale_fac*Pulsar::m_Ninj_fraction;
     }
 #endif
 
@@ -756,6 +756,17 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& Ez_mf = WarpX::GetInstance().getEfield(lev,2);
     const MultiFab& rho_mf = WarpX::GetInstance().getrho_fp(lev);
     const Real dt = WarpX::GetInstance().getdt(0);
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int i = 0; i < 3; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    amrex::Real particle_inject_rmin = Pulsar::m_particle_inject_rmin;
+    amrex::Real particle_inject_rmax = Pulsar::m_particle_inject_rmax;
+    amrex::Real dR_star = Pulsar::m_dR_star;
+    int ModifyParticleWtAtInjection = Pulsar::m_ModifyParticleWtAtInjection;
+    amrex::Real Ninj_fraction = Pulsar::m_Ninj_fraction;
+    amrex::Real removeparticle_theta_min = Pulsar::m_removeparticle_theta_min;
+    amrex::Real removeparticle_theta_max = Pulsar::m_removeparticle_theta_max;
 #endif
 
 #ifdef WARPX_DIM_RZ
@@ -856,35 +867,35 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             lo.z = applyBallisticCorrection(lo, inj_mom, gamma_boost, beta_boost, t);
             hi.z = applyBallisticCorrection(hi, inj_mom, gamma_boost, beta_boost, t);
 #ifdef PULSAR
-            amrex::Real xc = PulsarParm::center_star[0];
-            amrex::Real yc = PulsarParm::center_star[1];
-            amrex::Real zc = PulsarParm::center_star[2];
+            amrex::Real xc = center_star_arr[0];
+            amrex::Real yc = center_star_arr[1];
+            amrex::Real zc = center_star_arr[2];
             // Find cell-center
             amrex::Real x, y, z;
             x = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
             y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
             z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
             // radius of the cell-center
-            amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));            
+            amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
             // Adding buffer-factor to ensure all cells that intersect the ring
             // inject particles
             amrex::Real buffer_factor = 0.5;
             // is cell-center inside the pulsar ring
-            if (inj_pos->insidePulsarBoundsCC( rad, PulsarParm::particle_inject_rmin,
-                                                    PulsarParm::particle_inject_rmax,
-                                                    PulsarParm::dR_star*buffer_factor) )
+            if (inj_pos->insidePulsarBoundsCC( rad, particle_inject_rmin,
+                                                    particle_inject_rmax,
+                                                    dR_star*buffer_factor) )
             {
                 auto index = overlap_box.index(iv);
                 const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
-                if (PulsarParm::ModifyParticleWtAtInjection == 1) {
+                if (ModifyParticleWtAtInjection == 1) {
                     // instead of modiying number of particles, the weight is changed
                     pcounts[index] = num_ppc;
-                } else if (PulsarParm::ModifyParticleWtAtInjection == 0) {
+                } else if (ModifyParticleWtAtInjection == 0) {
                     // Modiying number of particles injected
                     // (could lead to round-off errors)
-                    pcounts[index] = int(ppc_per_dim.x*std::cbrt(PulsarParm::Ninj_fraction))
-                                   * int(ppc_per_dim.y*std::cbrt(PulsarParm::Ninj_fraction))
-                                   * int(ppc_per_dim.z*std::cbrt(PulsarParm::Ninj_fraction));
+                    pcounts[index] = int(ppc_per_dim.x*std::cbrt(Ninj_fraction))
+                                   * int(ppc_per_dim.y*std::cbrt(Ninj_fraction))
+                                   * int(ppc_per_dim.z*std::cbrt(Ninj_fraction));
                 }
             }
 #else
@@ -1004,7 +1015,12 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 p.cpu() = cpuid;
 
                 const XDim3 r =
-                    inj_pos->getPositionUnitBox(i_part, lrrfac, engine);
+                    inj_pos->getPositionUnitBox(i_part, lrrfac, engine
+#ifdef PULSAR
+                                                , ModifyParticleWtAtInjection,
+                                                Ninj_fraction
+#endif
+                                               );
                 auto pos = getCellCoords(overlap_corner, dx, r, iv);
 
 #if (AMREX_SPACEDIM == 3)
@@ -1071,26 +1087,26 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     }
 #ifdef PULSAR
                     //amrex::Print() << " old xyz  : " << xb << " " << yb << " " << z0 << "\n";
-                    amrex::Real xc = PulsarParm::center_star[0];
-                    amrex::Real yc = PulsarParm::center_star[1];
-                    amrex::Real zc = PulsarParm::center_star[2];
+                    amrex::Real xc = center_star_arr[0];
+                    amrex::Real yc = center_star_arr[1];
+                    amrex::Real zc = center_star_arr[2];
                     amrex::Real rad = std::sqrt( (xb-xc)*(xb-xc) + (yb-yc)*(yb-yc) + (z0-zc)*(z0-zc));
-                    if (!inj_pos->insidePulsarBounds(rad,PulsarParm::particle_inject_rmin,
-                                                         PulsarParm::particle_inject_rmax)) {
+                    if (!inj_pos->insidePulsarBounds(rad,particle_inject_rmin,
+                                                         particle_inject_rmax)) {
                          p.id() = -1;
                        continue;
                     }
                     // particle theta
                     amrex::Real theta_p = 0.0;
                     if (rad > 0.) theta_p = std::acos((z0-zc)/rad);
-                    if (theta_p > PulsarParm::removeparticle_theta_min*MathConst::pi/180. and
-                        theta_p < PulsarParm::removeparticle_theta_max*MathConst::pi/180.) {
+                    if (theta_p > removeparticle_theta_min*MathConst::pi/180. and
+                        theta_p < removeparticle_theta_max*MathConst::pi/180.) {
                         p.id() = -1;
                     }
-		     
-		    //// temporarily testing if on positrons emitted at eq
-		    //// and only electrons emitted at poles
-		    //if (q_pm < 0) { // for electrons inject at pole 
+
+            //// temporarily testing if on positrons emitted at eq
+            //// and only electrons emitted at poles
+            //if (q_pm < 0) { // for electrons inject at pole
                     //    if (theta_p >= 40*MathConst::pi/180. and
                     //        theta_p <= 90*MathConst::pi/180.) {
                     //        p.id() = -1;
@@ -1099,17 +1115,17 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     //        theta_p <= 140*MathConst::pi/180.) {
                     //        p.id() = -1;
                     //    }
-		    //} else if (q_pm > 0 ) {
+            //} else if (q_pm > 0 ) {
                     //    if (  theta_p <= 75*MathConst::pi/180. and
-		    //          theta_p >= 0.*MathConst::pi/180.) {
+            //          theta_p >= 0.*MathConst::pi/180.) {
                     //        p.id() = -1;
                     //    }
                     //    if (  theta_p <= 180*MathConst::pi/180. and
-		    //          theta_p >= 105.*MathConst::pi/180.) {
+            //          theta_p >= 105.*MathConst::pi/180.) {
                     //        p.id() = -1;
                     //    }
-		    //}
-		    
+            //}
+
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
@@ -1280,7 +1296,6 @@ PhysicalParticleContainer::AddPlasmaFlux (int lev, amrex::Real dt)
 #endif
 
     int Nmax_particles = 0;
-    int valid_particles_beforeAdd = TotalNumberOfParticles();    
 
     MFItInfo info;
     if (do_tiling && Gpu::notInLaunchRegion()) {
@@ -2106,10 +2121,21 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     const std::array<amrex::Real,3>& dx = WarpX::CellSize(std::max(lev,0));
 
 #ifdef PULSAR
-    const auto problo = WarpX::GetInstance().Geom(lev).ProbLoArray();
-    const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
-    amrex::Real cur_time = WarpX::GetInstance().gett_new(lev);
     auto &warpx = WarpX::GetInstance();
+    const auto problo = warpx.Geom(lev).ProbLoArray();
+    const auto probhi = warpx.Geom(lev).ProbHiArray();
+    amrex::Real cur_time = warpx.gett_new(lev);
+    amrex::Real omega_star_data = Pulsar::m_omega_star;
+    amrex::Real ramp_omega_time_data = Pulsar::m_omega_ramp_time;
+    amrex::Real Bstar_data = Pulsar::m_B_star;
+    amrex::Real Rstar_data = Pulsar::m_R_star;
+    amrex::Real dRstar_data = Pulsar::m_dR_star;
+    amrex::Real corotatingE_maxradius_data = Pulsar::m_corotatingE_maxradius;
+    int E_external_monopole_data = Pulsar::m_do_E_external_monopole;
+    int AddExternalMonopoleOnly = Pulsar::m_AddExternalMonopoleOnly;
+    int use_theoreticalEB = Pulsar::m_use_theoreticalEB;
+    amrex::Real theory_max_rstar = Pulsar::m_theory_max_rstar;
+    int singleParticleTest = Pulsar::m_singleParticleTest;
 //    amrex::AllPrintToFile("PulsarParticle") << " step : " << warpx.getistep(0) << " time : " << cur_time << "\n";
 #endif
 
@@ -2146,6 +2172,12 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 
             amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
             amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
+#ifdef PULSAR
+            amrex::GpuArray<amrex::Real, 3> center_star_arr;
+            for (int idim = 0; idim < 3; ++idim) {
+                center_star_arr[idim] = Pulsar::m_center_star[idim];
+            }
+#endif
 
             amrex::Array4<const amrex::Real> const& ex_arr = exfab.array();
             amrex::Array4<const amrex::Real> const& ey_arr = eyfab.array();
@@ -2167,8 +2199,10 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
             ParticleReal* const AMREX_RESTRICT uz = attribs[PIdx::uz].dataPtr();
 
             amrex::Gpu::synchronize();
+#ifdef PULSAR
             amrex::Gpu::ManagedVector<amrex::Real> PulsarParticleDiag(55,0.0);
             amrex::Real * PulsarParticleDiagData = PulsarParticleDiag.data();
+#endif
 
             int* AMREX_RESTRICT ion_lev = nullptr;
             if (do_field_ionization) {
@@ -2195,7 +2229,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 //                auto& p = particles[ip];
 //                amrex::AllPrintToFile("PulsarParticle") << " part id : " << p.id() << " ip: " << ip << " q: " << q << " xp : " << xp << " yp " << yp << " zp " << zp  << "\n";
                 amrex::Real r_p, theta_p, phi_p;
-                PulsarParm::ConvertCartesianToSphericalCoord( xp, yp, zp, problo, probhi, r_p, theta_p, phi_p);
+                Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                          r_p, theta_p, phi_p);
 //                amrex::AllPrintToFile("PulsarParticle") << " rp : " << r_p << " thetap " << theta_p << " phip " << phi_p << "\n";
 #endif
                 amrex::ParticleReal Exp = 0._rt, Eyp = 0._rt, Ezp = 0._rt;
@@ -2214,30 +2249,32 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 //                                   ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
 //                                   dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
 //                                   nox, galerkin_interpolation, problo, probhi, cur_time);
-                    if (PulsarParm::AddExternalMonopoleOnly == 1) {
+                    if (AddExternalMonopoleOnly == 1) {
                         amrex::Real Erp, Ethetap, Ephip;
                         amrex::Real r_p, theta_p, phi_p;
-                        PulsarParm::ConvertCartesianToSphericalCoord( xp, yp, zp,
-                                                                      problo, probhi, r_p,
-                                                                      theta_p, phi_p);
-                        if (r_p > PulsarParm::corotatingE_maxradius) {
-                            PulsarParm::ExternalEMonopoleSpherical(r_p, theta_p, phi_p, cur_time,
+                        Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                                  r_p, theta_p, phi_p);
+                        if (r_p > corotatingE_maxradius_data) {
+                            Pulsar::ExternalEMonopoleSpherical(r_p, theta_p, phi_p, cur_time,
+                                                                   omega_star_data,
+                                                                   ramp_omega_time_data,
+                                                                   Bstar_data, Rstar_data,
                                                                    Erp, Ethetap, Ephip);
                             amrex::Real Ex_monopole, Ey_monopole, Ez_monopole;
-                            PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
+                            Pulsar::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
                                                                   Ephip, r_p, theta_p,
                                                                   phi_p, Ex_monopole);
-                            PulsarParm::ConvertSphericalToCartesianYComponent(Erp, Ethetap,
+                            Pulsar::ConvertSphericalToCartesianYComponent(Erp, Ethetap,
                                                                   Ephip, r_p, theta_p,
                                                                   phi_p, Ey_monopole);
-                            PulsarParm::ConvertSphericalToCartesianZComponent(Erp, Ethetap,
+                            Pulsar::ConvertSphericalToCartesianZComponent(Erp, Ethetap,
                                                                   Ephip, r_p,
                                                                   theta_p, phi_p, Ez_monopole);
                             Exp += Ex_monopole;
                             Eyp += Ey_monopole;
                             Ezp += Ez_monopole;
                         }
-                    }                                   
+                    }
 #endif
                 }
                 // Externally applied E-field in Cartesian co-ordinates
@@ -2255,60 +2292,73 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                     amrex::Real qp = q;
                     if (ion_lev) { qp *= ion_lev[ip]; }
 #ifdef PULSAR
-//                    amrex::AllPrintToFile("PulsarParticle") << "Exp " << Exp << " Eyp " << Eyp << " Ezp " << Ezp << " Bxp : " << Bxp << " Byp : " << Byp << " Bzp " << Bzp << "\n"; 
-//                    amrex::AllPrintToFile("PulsarParticle") << "uxp " << ux[ip] << " uyp " << uy[ip] << " uzp " << uz[ip] << "\n"; 
+//                    amrex::AllPrintToFile("PulsarParticle") << "Exp " << Exp << " Eyp " << Eyp << " Ezp " << Ezp << " Bxp : " << Bxp << " Byp : " << Byp << " Bzp " << Bzp << "\n";
+//                    amrex::AllPrintToFile("PulsarParticle") << "uxp " << ux[ip] << " uyp " << uy[ip] << " uzp " << uz[ip] << "\n";
 
                     amrex::Real Erp, Ethetap, Ephip;
-                    PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                    Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                        omega_star_data,
+                                                        ramp_omega_time_data,
+                                                        Bstar_data, Rstar_data,
+                                                        corotatingE_maxradius_data,
+                                                        E_external_monopole_data,
                                                         Erp, Ethetap, Ephip);
                     amrex::Real Er_comp, Etheta_comp, Ephi_comp;
-                    PulsarParm::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
+                    Pulsar::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
                                                             theta_p, phi_p, Er_comp);
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent( Exp, Eyp, Ezp,
+                    Pulsar::ConvertCartesianToSphericalThetaComponent( Exp, Eyp, Ezp,
                                                             theta_p, phi_p, Etheta_comp);
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent( Exp, Eyp, Ezp,
+                    Pulsar::ConvertCartesianToSphericalPhiComponent( Exp, Eyp, Ezp,
                                                             theta_p, phi_p, Ephi_comp);
                     amrex::Real Brp, Bthetap, Bphip;
-                    PulsarParm::ExternalBFieldSpherical (r_p, theta_p, phi_p, cur_time,
+                    Pulsar::ExternalBFieldSpherical (r_p, theta_p, phi_p, cur_time,
+                                                         Bstar_data, Rstar_data, dRstar_data,
                                                          Brp, Bthetap, Bphip);
                     amrex::Real Br_comp, Btheta_comp, Bphi_comp;
-                    PulsarParm::ConvertCartesianToSphericalRComponent( Bxp, Byp, Bzp,
+                    Pulsar::ConvertCartesianToSphericalRComponent( Bxp, Byp, Bzp,
                                                             theta_p, phi_p, Br_comp);
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent( Bxp, Byp, Bzp,
+                    Pulsar::ConvertCartesianToSphericalThetaComponent( Bxp, Byp, Bzp,
                                                             theta_p, phi_p, Btheta_comp);
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent( Bxp, Byp, Bzp,
+                    Pulsar::ConvertCartesianToSphericalPhiComponent( Bxp, Byp, Bzp,
                                                             theta_p, phi_p, Bphi_comp);
-//                    amrex::AllPrintToFile("PulsarParticle") << " Er theory " << Erp << " Etheta_theory " << Ethetap << " Ephi_theory " << Ephip << "\n"; 
-//                    amrex::AllPrintToFile("PulsarParticle") << " Er sim " << Er_comp << " Etheta_comp " << Etheta_comp << " Ephi_comp " << Ephi_comp << "\n"; 
+//                    amrex::AllPrintToFile("PulsarParticle") << " Er theory " << Erp << " Etheta_theory " << Ethetap << " Ephi_theory " << Ephip << "\n";
+//                    amrex::AllPrintToFile("PulsarParticle") << " Er sim " << Er_comp << " Etheta_comp " << Etheta_comp << " Ephi_comp " << Ephi_comp << "\n";
 //                    amrex::AllPrintToFile("PulsarParticle") << " Br theory " << Brp << " Btheta_theory " << Bthetap << " Bphi_theory " << Bphip << "\n";
 //                    amrex::AllPrintToFile("PulsarParticle") << " Br sim " << Br_comp << " Btheta_comp " << Btheta_comp << " Bphi_comp " << Bphi_comp << "\n";
                     amrex::Real ur_p, utheta_p, uphi_p;
-                    PulsarParm::ConvertCartesianToSphericalRComponent( ux[ip], uy[ip], uz[ip],
+                    Pulsar::ConvertCartesianToSphericalRComponent( ux[ip], uy[ip], uz[ip],
                                                             theta_p, phi_p, ur_p);
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent( ux[ip], uy[ip], uz[ip],
+                    Pulsar::ConvertCartesianToSphericalThetaComponent( ux[ip], uy[ip], uz[ip],
                                                             theta_p, phi_p, utheta_p);
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent( ux[ip], uy[ip], uz[ip],
+                    Pulsar::ConvertCartesianToSphericalPhiComponent( ux[ip], uy[ip], uz[ip],
                                                             theta_p, phi_p, uphi_p);
                     amrex::Real Exp_theory, Eyp_theory, Ezp_theory;
                     amrex::Real Bxp_theory, Byp_theory, Bzp_theory;
-                    if (PulsarParm::use_theoreticalEB == 1) {
-                        if (r_p < ( PulsarParm::theory_max_rstar) ) {
-                            PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                    if (use_theoreticalEB == 1) {
+                        if (r_p < ( theory_max_rstar) ) {
+                            Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                                omega_star_data,
+                                                                ramp_omega_time_data,
+                                                                Bstar_data, Rstar_data,
+                                                                corotatingE_maxradius_data,
+                                                                E_external_monopole_data,
                                                                 Erp, Ethetap, Ephip);
-                            PulsarParm::ExternalBFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                            Pulsar::ExternalBFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                                Bstar_data, Rstar_data,
+                                                                dRstar_data,
                                                                 Brp, Bthetap, Bphip);
-                            PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
+                            Pulsar::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
                                                                   Ephip, r_p, theta_p,
                                                                   phi_p, Exp_theory);
-                            PulsarParm::ConvertSphericalToCartesianYComponent(Erp, Ethetap, Ephip, r_p,
+                            Pulsar::ConvertSphericalToCartesianYComponent(Erp, Ethetap, Ephip, r_p,
                                                                   theta_p, phi_p, Eyp_theory);
-                            PulsarParm::ConvertSphericalToCartesianZComponent(Erp, Ethetap, Ephip, r_p,
+                            Pulsar::ConvertSphericalToCartesianZComponent(Erp, Ethetap, Ephip, r_p,
                                                                   theta_p, phi_p, Ezp_theory);
-                            PulsarParm::ConvertSphericalToCartesianXComponent(Brp, Bthetap, Bphip, r_p,
+                            Pulsar::ConvertSphericalToCartesianXComponent(Brp, Bthetap, Bphip, r_p,
                                                                   theta_p, phi_p, Bxp_theory);
-                            PulsarParm::ConvertSphericalToCartesianYComponent(Brp, Bthetap, Bphip, r_p,
+                            Pulsar::ConvertSphericalToCartesianYComponent(Brp, Bthetap, Bphip, r_p,
                                                                   theta_p, phi_p, Byp_theory);
-                            PulsarParm::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
+                            Pulsar::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
                                                                   theta_p, phi_p, Bzp_theory);
                             Exp = Exp_theory;
                             Eyp = Eyp_theory;
@@ -2318,17 +2368,17 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                             Bzp = Bzp_theory;
                         }
                     }
-                    PulsarParm::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
-                                                            theta_p, phi_p, Er_comp);
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent( Exp, Eyp, Ezp,
-                                                            theta_p, phi_p, Etheta_comp);
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent( Exp, Eyp, Ezp,
-                                                            theta_p, phi_p, Ephi_comp);
-                    PulsarParm::ConvertCartesianToSphericalRComponent( Bxp, Byp, Bzp,
-                                                            theta_p, phi_p, Br_comp);
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent( Bxp, Byp, Bzp,
-                                                            theta_p, phi_p, Btheta_comp);
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent( Bxp, Byp, Bzp,
+                    Pulsar::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
+                                                        theta_p, phi_p, Er_comp);
+                    Pulsar::ConvertCartesianToSphericalThetaComponent( Exp, Eyp, Ezp,
+                                                        theta_p, phi_p, Etheta_comp);
+                    Pulsar::ConvertCartesianToSphericalPhiComponent( Exp, Eyp, Ezp,
+                                                        theta_p, phi_p, Ephi_comp);
+                    Pulsar::ConvertCartesianToSphericalRComponent( Bxp, Byp, Bzp,
+                                                        theta_p, phi_p, Br_comp);
+                    Pulsar::ConvertCartesianToSphericalThetaComponent( Bxp, Byp, Bzp,
+                                                        theta_p, phi_p, Btheta_comp);
+                    Pulsar::ConvertCartesianToSphericalPhiComponent( Bxp, Byp, Bzp,
                                                             theta_p, phi_p, Bphi_comp);
                     amrex::Real uxip1 = ux[ip];
                     amrex::Real uyip1 = uy[ip];
@@ -2373,73 +2423,76 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 #endif
                     UpdateMomentumBoris( ux[ip], uy[ip], uz[ip],
                                          Exp, Eyp, Ezp, Bxp,
-                                         Byp, Bzp, qp, m, dt,
-                                         PulsarParticleDiagData, ip, 0);
+                                         Byp, Bzp, qp, m, dt
+#ifdef PULSAR
+                                         , PulsarParticleDiagData, ip, 0
+#endif
+                                         );
 #ifdef PULSAR
                     if (ip == 0) {
                         amrex::Real Exp_theory, Eyp_theory, Ezp_theory;
-                        PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap, Ephip, r_p,
-                                                              theta_p, phi_p, Exp_theory);
-                        PulsarParm::ConvertSphericalToCartesianYComponent(Erp, Ethetap, Ephip, r_p,
-                                                              theta_p, phi_p, Eyp_theory);
-                        PulsarParm::ConvertSphericalToCartesianZComponent(Erp, Ethetap, Ephip, r_p,
+                        Pulsar::ConvertSphericalToCartesianXComponent(Erp, Ethetap, Ephip, r_p,
+                                                          theta_p, phi_p, Exp_theory);
+                        Pulsar::ConvertSphericalToCartesianYComponent(Erp, Ethetap, Ephip, r_p,
+                                                          theta_p, phi_p, Eyp_theory);
+                        Pulsar::ConvertSphericalToCartesianZComponent(Erp, Ethetap, Ephip, r_p,
                                                               theta_p, phi_p, Ezp_theory);
                         amrex::Real Bxp_theory, Byp_theory, Bzp_theory;
-                        PulsarParm::ConvertSphericalToCartesianXComponent(Brp, Bthetap, Bphip, r_p,
-                                                              theta_p, phi_p, Bxp_theory);
-                        PulsarParm::ConvertSphericalToCartesianYComponent(Brp, Bthetap, Bphip, r_p,
-                                                              theta_p, phi_p, Byp_theory);
-                        PulsarParm::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
+                        Pulsar::ConvertSphericalToCartesianXComponent(Brp, Bthetap, Bphip, r_p,
+                                                          theta_p, phi_p, Bxp_theory);
+                        Pulsar::ConvertSphericalToCartesianYComponent(Brp, Bthetap, Bphip, r_p,
+                                                          theta_p, phi_p, Byp_theory);
+                        Pulsar::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
                                                               theta_p, phi_p, Bzp_theory);
                         UpdateMomentumBoris( uxip2, uyip2, uzip2,
                                              Exp_theory, Eyp_theory, Ezp_theory, Bxp_theory,
                                              Byp_theory, Bzp_theory, qp, m, dt,
                                              PulsarParticleDiagData, ip, 1);
-                        PulsarParm::ConvertCartesianToSphericalRComponent(
+                        Pulsar::ConvertCartesianToSphericalRComponent(
                             PulsarParticleDiagData[31], PulsarParticleDiagData[32],
                             PulsarParticleDiagData[33], theta_p, phi_p,
                             PulsarParticleDiagData[37] );
-                        PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                        Pulsar::ConvertCartesianToSphericalThetaComponent(
                             PulsarParticleDiagData[31], PulsarParticleDiagData[32],
                             PulsarParticleDiagData[33], theta_p, phi_p,
                             PulsarParticleDiagData[38] );
-                        PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                        Pulsar::ConvertCartesianToSphericalPhiComponent(
                             PulsarParticleDiagData[31], PulsarParticleDiagData[32],
                             PulsarParticleDiagData[33], theta_p, phi_p,
                             PulsarParticleDiagData[39] );
-                        PulsarParm::ConvertCartesianToSphericalRComponent(
+                        Pulsar::ConvertCartesianToSphericalRComponent(
                             PulsarParticleDiagData[34], PulsarParticleDiagData[35],
                             PulsarParticleDiagData[36], theta_p, phi_p,
                             PulsarParticleDiagData[40] );
-                        PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                        Pulsar::ConvertCartesianToSphericalThetaComponent(
                             PulsarParticleDiagData[34], PulsarParticleDiagData[35],
                             PulsarParticleDiagData[36], theta_p, phi_p,
                             PulsarParticleDiagData[41] );
-                        PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                        Pulsar::ConvertCartesianToSphericalPhiComponent(
                             PulsarParticleDiagData[34], PulsarParticleDiagData[35],
                             PulsarParticleDiagData[36], theta_p, phi_p,
                             PulsarParticleDiagData[42] );
-                        PulsarParm::ConvertCartesianToSphericalRComponent(
+                        Pulsar::ConvertCartesianToSphericalRComponent(
                             PulsarParticleDiagData[43], PulsarParticleDiagData[44],
                             PulsarParticleDiagData[45], theta_p, phi_p,
                             PulsarParticleDiagData[49] );
-                        PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                        Pulsar::ConvertCartesianToSphericalThetaComponent(
                             PulsarParticleDiagData[43], PulsarParticleDiagData[44],
                             PulsarParticleDiagData[45], theta_p, phi_p,
                             PulsarParticleDiagData[50] );
-                        PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                        Pulsar::ConvertCartesianToSphericalPhiComponent(
                             PulsarParticleDiagData[43], PulsarParticleDiagData[44],
                             PulsarParticleDiagData[45], theta_p, phi_p,
                             PulsarParticleDiagData[51] );
-                        PulsarParm::ConvertCartesianToSphericalRComponent(
+                        Pulsar::ConvertCartesianToSphericalRComponent(
                             PulsarParticleDiagData[46], PulsarParticleDiagData[47],
                             PulsarParticleDiagData[48], theta_p, phi_p,
                             PulsarParticleDiagData[52] );
-                        PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                        Pulsar::ConvertCartesianToSphericalThetaComponent(
                             PulsarParticleDiagData[46], PulsarParticleDiagData[47],
                             PulsarParticleDiagData[48], theta_p, phi_p,
                             PulsarParticleDiagData[53] );
-                        PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                        Pulsar::ConvertCartesianToSphericalPhiComponent(
                             PulsarParticleDiagData[46], PulsarParticleDiagData[47],
                             PulsarParticleDiagData[48], theta_p, phi_p,
                             PulsarParticleDiagData[54] );
@@ -2465,7 +2518,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     }
 //    amrex::AllPrintToFile("PulsarParticle") << " momentum update complete step : " << warpx.getistep(0) << " time : " << cur_time << "\n";
     amrex::Gpu::synchronize();
-    if (PulsarParm::singleParticleTest == 1) { 
+#ifdef PULSAR
+    if (Pulsar::m_singleParticleTest == 1) {
         const amrex::Real q = this->charge;
         if (q > 0) {
             amrex::AllPrintToFile("PulsarPositronDiagnostics") << " cur_time xp yp zp r_p theta_p phi_p ux uy uz ur utheta uphi Ex Ey Ez Bx By Bz Er Etheta Ephi Br Btheta Bphi Er_theory Etheta_theory Ephi_theory Br_theory Btheta_theory Bphi_theory qEx_force qEy_force qEz_force qvcrossB_x qvcrossB_y qvcrossB_z qE_r qE_theta qE_phi qvcrossB_r qvcrossB_theta qvcrossB_phi qEx_theory qEy_theory qEz_theory qvcrossB_x_theory qvcrossB_y_theory qvcrossB_z_theory qEr_theory qEtheta_theory qEphi_theory qvcrossB_r_theory qvcrossB_theta_theory qvcrossB_phi_theory\n";
@@ -2473,6 +2527,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
             amrex::AllPrintToFile("PulsarElectronDiagnostics") << " cur_time xp yp zp r_p theta_p phi_p ux uy uz ur utheta uphi Ex Ey Ez Bx By Bz Er Etheta Ephi Br Btheta Bphi Er_theory Etheta_theory Ephi_theory Br_theory Btheta_theory Bphi_theory qEx_force qEy_force qEz_force qvcrossB_x qvcrossB_y qvcrossB_z qE_r qE_theta qE_phi qvcrossB_r qvcrossB_theta qvcrossB_phi qEx_theory qEy_theory qEz_theory qvcrossB_x_theory qvcrossB_y_theory qvcrossB_z_theory qEr_theory qEtheta_theory qEphi_theory qvcrossB_r_theory qvcrossB_theta_theory qvcrossB_phi_theory\n";
         }
     }
+#endif
 }
 
 void
@@ -2738,9 +2793,20 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 
     const Dim3 lo = lbound(box);
 #ifdef PULSAR
-    const auto problo = WarpX::GetInstance().Geom(lev).ProbLoArray();
-    const auto probhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
     auto &warpx = WarpX::GetInstance();
+    const auto problo = warpx.Geom(lev).ProbLoArray();
+    const auto probhi = warpx.Geom(lev).ProbHiArray();
+    amrex::Real omega_star_data = Pulsar::m_omega_star;
+    amrex::Real ramp_omega_time_data = Pulsar::m_omega_ramp_time;
+    amrex::Real Bstar_data = Pulsar::m_B_star;
+    amrex::Real Rstar_data = Pulsar::m_R_star;
+    amrex::Real dRstar_data = Pulsar::m_dR_star;
+    amrex::Real corotatingE_maxradius_data = Pulsar::m_corotatingE_maxradius;
+    int E_external_monopole_data = Pulsar::m_do_E_external_monopole;
+    int AddExternalMonopoleOnly = Pulsar::m_AddExternalMonopoleOnly;
+    int use_theoreticalEB = Pulsar::m_use_theoreticalEB;
+    amrex::Real theory_max_rstar = Pulsar::m_theory_max_rstar;
+    int singleParticleTest = Pulsar::m_singleParticleTest;
     amrex::Gpu::synchronize();
     amrex::Gpu::ManagedVector<amrex::Real> PulsarParticleDiag(55,0.0);
     amrex::Real * PulsarParticleDiagData = PulsarParticleDiag.data();
@@ -2820,6 +2886,10 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 
 #ifdef PULSAR
     auto& particles = pti.GetArrayOfStructs();
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int idim = 0; idim < 3; ++idim) {
+        center_star_arr[idim] = Pulsar::m_center_star[idim];
+    }
 #endif
 
     amrex::ParallelFor( np_to_push, [=] AMREX_GPU_DEVICE (long ip)
@@ -2829,7 +2899,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 
 #ifdef PULSAR
         amrex::Real r_p, theta_p, phi_p;
-        PulsarParm::ConvertCartesianToSphericalCoord( xp, yp, zp, problo, probhi, r_p, theta_p, phi_p);
+        Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                  r_p, theta_p, phi_p);
 #endif
         if (save_previous_position) {
             x_old[ip] = xp;
@@ -2855,23 +2926,25 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 //                           ex_type, ey_type, ez_type, bx_type, by_type, bz_type,
 //                           dx_arr, xyzmin_arr, lo, n_rz_azimuthal_modes,
 //                           nox, galerkin_interpolation, problo, probhi, cur_time);
-             if (PulsarParm::AddExternalMonopoleOnly == 1) {
+             if (AddExternalMonopoleOnly == 1) {
                  amrex::Real Erp, Ethetap, Ephip;
                  amrex::Real r_p, theta_p, phi_p;
-                 PulsarParm::ConvertCartesianToSphericalCoord( xp, yp, zp,
-                                                               problo, probhi, r_p,
-                                                               theta_p, phi_p);
-                 if (r_p > PulsarParm::corotatingE_maxradius) {
-                     PulsarParm::ExternalEMonopoleSpherical(r_p, theta_p, phi_p, cur_time,
+                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                           r_p, theta_p, phi_p);
+                 if (r_p > corotatingE_maxradius_data) {
+                     Pulsar::ExternalEMonopoleSpherical(r_p, theta_p, phi_p, cur_time,
+                                                            omega_star_data,
+                                                            ramp_omega_time_data,
+                                                            Bstar_data, Rstar_data,
                                                             Erp, Ethetap, Ephip);
                      amrex::Real Ex_monopole, Ey_monopole, Ez_monopole;
-                     PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
+                     Pulsar::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
                                                            Ephip, r_p, theta_p,
                                                            phi_p, Ex_monopole);
-                     PulsarParm::ConvertSphericalToCartesianYComponent(Erp, Ethetap,
+                     Pulsar::ConvertSphericalToCartesianYComponent(Erp, Ethetap,
                                                            Ephip, r_p, theta_p,
                                                            phi_p, Ey_monopole);
-                     PulsarParm::ConvertSphericalToCartesianZComponent(Erp, Ethetap,
+                     Pulsar::ConvertSphericalToCartesianZComponent(Erp, Ethetap,
                                                            Ephip, r_p,
                                                            theta_p, phi_p, Ez_monopole);
                      Exp += Ex_monopole;
@@ -2889,13 +2962,19 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         scaleFields(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
 
 #ifdef PULSAR
-        
+
         amrex::Real Erp, Ethetap, Ephip;
-        PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
-                                            Erp, Ethetap, Ephip);
+        Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                        omega_star_data,
+                                        ramp_omega_time_data,
+                                        Bstar_data, Rstar_data,
+                                        corotatingE_maxradius_data,
+                                        E_external_monopole_data,
+                                        Erp, Ethetap, Ephip);
         amrex::Real Brp, Bthetap, Bphip;
-        PulsarParm::ExternalBFieldSpherical (r_p, theta_p, phi_p, cur_time,
-                                             Brp, Bthetap, Bphip);
+        Pulsar::ExternalBFieldSpherical (r_p, theta_p, phi_p, cur_time,
+                                         Bstar_data, Rstar_data, dRstar_data,
+                                         Brp, Bthetap, Bphip);
         //amrex::Real Er_comp, Etheta_comp, Ephi_comp;
         //PulsarParm::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
         //                                        theta_p, phi_p, Er_comp);
@@ -2919,25 +2998,31 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         //                                        theta_p, phi_p, uphi_p);
         amrex::Real Exp_theory, Eyp_theory, Ezp_theory;
         amrex::Real Bxp_theory, Byp_theory, Bzp_theory;
-        if (PulsarParm::use_theoreticalEB == 1) {
-            if (r_p < PulsarParm::theory_max_rstar) {
-                PulsarParm::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
-                                                    Erp, Ethetap, Ephip);
-                PulsarParm::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
-                                                      Ephip, r_p, theta_p,
-                                                      phi_p, Exp_theory);
-                PulsarParm::ConvertSphericalToCartesianYComponent(Erp, Ethetap, Ephip, r_p,
-                                                      theta_p, phi_p, Eyp_theory);
-                PulsarParm::ConvertSphericalToCartesianZComponent(Erp, Ethetap, Ephip, r_p,
-                                                      theta_p, phi_p, Ezp_theory);
-                PulsarParm::ExternalBFieldSpherical(r_p, theta_p, phi_p, cur_time,
-                                                    Brp, Bthetap, Bphip);
-                PulsarParm::ConvertSphericalToCartesianXComponent(Brp, Bthetap, Bphip, r_p,
-                                                      theta_p, phi_p, Bxp_theory);
-                PulsarParm::ConvertSphericalToCartesianYComponent(Brp, Bthetap, Bphip, r_p,
-                                                      theta_p, phi_p, Byp_theory);
-                PulsarParm::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
-                                                      theta_p, phi_p, Bzp_theory);            
+        if (use_theoreticalEB == 1) {
+            if (r_p < theory_max_rstar) {
+                Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                omega_star_data,
+                                                ramp_omega_time_data,
+                                                Bstar_data, Rstar_data,
+                                                corotatingE_maxradius_data,
+                                                E_external_monopole_data,
+                                                Erp, Ethetap, Ephip);
+                Pulsar::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
+                                                              Ephip, r_p, theta_p,
+                                                              phi_p, Exp_theory);
+                Pulsar::ConvertSphericalToCartesianYComponent(Erp, Ethetap, Ephip, r_p,
+                                                              theta_p, phi_p, Eyp_theory);
+                Pulsar::ConvertSphericalToCartesianZComponent(Erp, Ethetap, Ephip, r_p,
+                                                              theta_p, phi_p, Ezp_theory);
+                Pulsar::ExternalBFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                Bstar_data, Rstar_data, dRstar_data,
+                                                Brp, Bthetap, Bphip);
+                Pulsar::ConvertSphericalToCartesianXComponent(Brp, Bthetap, Bphip, r_p,
+                                                              theta_p, phi_p, Bxp_theory);
+                Pulsar::ConvertSphericalToCartesianYComponent(Brp, Bthetap, Bphip, r_p,
+                                                              theta_p, phi_p, Byp_theory);
+                Pulsar::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
+                                                              theta_p, phi_p, Bzp_theory);
                 Exp = Exp_theory;
                 Eyp = Eyp_theory;
                 Ezp = Ezp_theory;
@@ -2947,25 +3032,25 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
             }
         }
         amrex::Real Er_comp, Etheta_comp, Ephi_comp;
-        PulsarParm::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
-                                                theta_p, phi_p, Er_comp);
-        PulsarParm::ConvertCartesianToSphericalThetaComponent( Exp, Eyp, Ezp,
-                                                theta_p, phi_p, Etheta_comp);
-        PulsarParm::ConvertCartesianToSphericalPhiComponent( Exp, Eyp, Ezp,
-                                                theta_p, phi_p, Ephi_comp);
+        Pulsar::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
+                                            theta_p, phi_p, Er_comp);
+        Pulsar::ConvertCartesianToSphericalThetaComponent( Exp, Eyp, Ezp,
+                                            theta_p, phi_p, Etheta_comp);
+        Pulsar::ConvertCartesianToSphericalPhiComponent( Exp, Eyp, Ezp,
+                                            theta_p, phi_p, Ephi_comp);
         amrex::Real Br_comp, Btheta_comp, Bphi_comp;
-        PulsarParm::ConvertCartesianToSphericalRComponent( Bxp, Byp, Bzp,
-                                                theta_p, phi_p, Br_comp);
-        PulsarParm::ConvertCartesianToSphericalThetaComponent( Bxp, Byp, Bzp,
-                                                theta_p, phi_p, Btheta_comp);
-        PulsarParm::ConvertCartesianToSphericalPhiComponent( Bxp, Byp, Bzp,
-                                                theta_p, phi_p, Bphi_comp);
+        Pulsar::ConvertCartesianToSphericalRComponent( Bxp, Byp, Bzp,
+                                            theta_p, phi_p, Br_comp);
+        Pulsar::ConvertCartesianToSphericalThetaComponent( Bxp, Byp, Bzp,
+                                            theta_p, phi_p, Btheta_comp);
+        Pulsar::ConvertCartesianToSphericalPhiComponent( Bxp, Byp, Bzp,
+                                            theta_p, phi_p, Bphi_comp);
         amrex::Real ur_p, utheta_p, uphi_p;
-        PulsarParm::ConvertCartesianToSphericalRComponent( ux[ip+offset], uy[ip+offset], uz[ip+offset],
-                                                theta_p, phi_p, ur_p);
-        PulsarParm::ConvertCartesianToSphericalThetaComponent( ux[ip+offset], uy[ip+offset], uz[ip+offset],
-                                                theta_p, phi_p, utheta_p);
-        PulsarParm::ConvertCartesianToSphericalPhiComponent( ux[ip+offset], uy[ip+offset], uz[ip+offset],
+        Pulsar::ConvertCartesianToSphericalRComponent( ux[ip+offset], uy[ip+offset], uz[ip+offset],
+                                            theta_p, phi_p, ur_p);
+        Pulsar::ConvertCartesianToSphericalThetaComponent( ux[ip+offset], uy[ip+offset], uz[ip+offset],
+                                            theta_p, phi_p, utheta_p);
+        Pulsar::ConvertCartesianToSphericalPhiComponent( ux[ip+offset], uy[ip+offset], uz[ip+offset],
                                                 theta_p, phi_p, uphi_p);
         if (ip == 0) {
             PulsarParticleDiagData[0] = cur_time;
@@ -3054,56 +3139,56 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 //                                              Byp_theory);
 //        PulsarParm::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p, theta_p, phi_p,
 //                                              Bzp_theory);
-                    PulsarParm::ConvertCartesianToSphericalRComponent(
+                    Pulsar::ConvertCartesianToSphericalRComponent(
                         PulsarParticleDiagData[31], PulsarParticleDiagData[32],
                         PulsarParticleDiagData[33], theta_p, phi_p,
                         PulsarParticleDiagData[37] );
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                    Pulsar::ConvertCartesianToSphericalThetaComponent(
                         PulsarParticleDiagData[31], PulsarParticleDiagData[32],
                         PulsarParticleDiagData[33], theta_p, phi_p,
                         PulsarParticleDiagData[38] );
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                    Pulsar::ConvertCartesianToSphericalPhiComponent(
                         PulsarParticleDiagData[31], PulsarParticleDiagData[32],
                         PulsarParticleDiagData[33], theta_p, phi_p,
                         PulsarParticleDiagData[39] );
-                    PulsarParm::ConvertCartesianToSphericalRComponent(
+                    Pulsar::ConvertCartesianToSphericalRComponent(
                         PulsarParticleDiagData[34], PulsarParticleDiagData[35],
                         PulsarParticleDiagData[36], theta_p, phi_p,
                         PulsarParticleDiagData[40] );
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                    Pulsar::ConvertCartesianToSphericalThetaComponent(
                         PulsarParticleDiagData[34], PulsarParticleDiagData[35],
                         PulsarParticleDiagData[36], theta_p, phi_p,
                         PulsarParticleDiagData[41] );
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                    Pulsar::ConvertCartesianToSphericalPhiComponent(
                         PulsarParticleDiagData[34], PulsarParticleDiagData[35],
                         PulsarParticleDiagData[36], theta_p, phi_p,
                         PulsarParticleDiagData[42] );
                     // theoretical forces
-                    PulsarParm::ConvertCartesianToSphericalRComponent(
+                    Pulsar::ConvertCartesianToSphericalRComponent(
                         PulsarParticleDiagData[43], PulsarParticleDiagData[44],
                         PulsarParticleDiagData[45], theta_p, phi_p,
                         PulsarParticleDiagData[49] );
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                    Pulsar::ConvertCartesianToSphericalThetaComponent(
                         PulsarParticleDiagData[43], PulsarParticleDiagData[44],
                         PulsarParticleDiagData[45], theta_p, phi_p,
                         PulsarParticleDiagData[50] );
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                    Pulsar::ConvertCartesianToSphericalPhiComponent(
                         PulsarParticleDiagData[43], PulsarParticleDiagData[44],
                         PulsarParticleDiagData[45], theta_p, phi_p,
                         PulsarParticleDiagData[51] );
-                    PulsarParm::ConvertCartesianToSphericalRComponent(
+                    Pulsar::ConvertCartesianToSphericalRComponent(
                         PulsarParticleDiagData[46], PulsarParticleDiagData[47],
                         PulsarParticleDiagData[48], theta_p, phi_p,
                         PulsarParticleDiagData[52] );
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                    Pulsar::ConvertCartesianToSphericalThetaComponent(
                         PulsarParticleDiagData[46], PulsarParticleDiagData[47],
                         PulsarParticleDiagData[48], theta_p, phi_p,
                         PulsarParticleDiagData[53] );
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                    Pulsar::ConvertCartesianToSphericalPhiComponent(
                         PulsarParticleDiagData[46], PulsarParticleDiagData[47],
                         PulsarParticleDiagData[48], theta_p, phi_p,
                         PulsarParticleDiagData[54] );
-        }     
+        }
 #endif
 
 //#ifdef PULSAR
@@ -3123,7 +3208,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     });
 //    amrex::AllPrintToFile("PulsarParticle") << " done with particle push " << cur_time << "\n";
     amrex::Gpu::synchronize();
-    if (PulsarParm::singleParticleTest == 1) { 
+#ifdef PULSAR
+    if (singleParticleTest == 1) {
         if ( q > 0) { // positrons
             amrex::AllPrintToFile("PulsarPositronDiagnostics") << " ";
             for (int i = 0; i < PulsarParticleDiag.size(); ++i) {
@@ -3139,6 +3225,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         }
         amrex::Gpu::synchronize();
     }
+#endif
 }
 
 void
@@ -3305,8 +3392,7 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 
 #ifdef PULSAR
 void PhysicalParticleContainer::PulsarParticleInjection() {
-
-    if (PulsarParm::singleParticleTest == 1) { 
+    if (Pulsar::m_singleParticleTest == 1) {
         AddParticles(0); // Note - add on level 0
         Redistribute();  // We then redistribute
     } else {
@@ -3316,10 +3402,15 @@ void PhysicalParticleContainer::PulsarParticleInjection() {
 
 void PhysicalParticleContainer::PulsarParticleRemoval() {
     int lev = 0;
-    Gpu::DeviceScalar<int> sumParticles(0);   
-    Gpu::DeviceScalar<amrex::Real> sumWeight(0.0);   
-    int sum_d ; 
+    Gpu::DeviceScalar<int> sumParticles(0);
+    Gpu::DeviceScalar<amrex::Real> sumWeight(0.0);
+    int sum_d ;
     const amrex::Real q = this->charge;
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        center_star_arr[i_dim] = Pulsar::m_center_star[i_dim];
+    }
+    amrex::Real max_particle_absorption_radius = Pulsar::m_max_particle_absorption_radius;
     // Remove Particles From inside sphere
 #ifdef _OPENMP
 #pragma omp parallel
@@ -3333,9 +3424,9 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
         for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
         {
             const auto GetPosition = GetParticlePosition(pti);
-            Real xc = PulsarParm::center_star[0];
-            Real yc = PulsarParm::center_star[1];
-            Real zc = PulsarParm::center_star[2];
+            Real xc = center_star_arr[0];
+            Real yc = center_star_arr[1];
+            Real zc = center_star_arr[2];
             ParticleType* pp = pti.GetArrayOfStructs()().data();
             auto& attribs = pti.GetAttribs();
             auto&  wp = attribs[PIdx::w];
@@ -3350,7 +3441,7 @@ void PhysicalParticleContainer::PulsarParticleRemoval() {
                       Real r = std::sqrt((x-xc)*(x-xc)
                                        + (y-yc)*(y-yc)
                                        + (z-zc)*(z-zc));
-                      if (r <= (PulsarParm::max_particle_absorption_radius)) {
+                      if (r <= (max_particle_absorption_radius)) {
                           pp[i].id() = -1;
                           // atomic add
                           int const unity = 1;

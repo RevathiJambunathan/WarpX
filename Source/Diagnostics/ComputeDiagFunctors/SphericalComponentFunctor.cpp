@@ -12,7 +12,7 @@
 #include <AMReX.H>
 
 SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mfx_src,
-                                                      amrex::MultiFab const * mfy_src, 
+                                                      amrex::MultiFab const * mfy_src,
                                                       amrex::MultiFab const * mfz_src,
                                                       int lev,
                                                       amrex::IntVect crse_ratio,
@@ -25,14 +25,10 @@ SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mf
 {}
 
 
-void 
+void
 SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const
 {
     using namespace amrex;
-    auto & warpx = WarpX::GetInstance();
-    const auto dx = warpx.Geom(m_lev).CellSizeArray();
-    const auto problo = warpx.Geom(m_lev).ProbLoArray();
-    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
     const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     // convert boxarray of source MultiFab to staggering of dst Multifab
@@ -46,12 +42,12 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
         ComputeSphericalFieldComponent(mf_dst, dcomp);
     } else {
         const int ncomp = 1;
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_mfx_src->DistributionMap() == m_mfy_src->DistributionMap() and m_mfy_src->DistributionMap() == m_mfz_src->DistributionMap(), 
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_mfx_src->DistributionMap() == m_mfy_src->DistributionMap() and m_mfy_src->DistributionMap() == m_mfz_src->DistributionMap(),
             " all sources must have the same Distribution map");
         amrex::MultiFab mf_tmp( ba_tmp, m_mfx_src->DistributionMap(), ncomp, 0);
         const int dcomp_tmp = 0;
         ComputeSphericalFieldComponent(mf_tmp, dcomp_tmp);
-        mf_dst.copy( mf_tmp, 0, dcomp, ncomp);
+        mf_dst.ParallelCopy( mf_tmp, 0, dcomp, ncomp);
     }
 }
 
@@ -59,10 +55,10 @@ void
 SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_dst, int dcomp) const
 {
     using namespace amrex;
+#ifdef PULSAR
     auto & warpx = WarpX::GetInstance();
     const auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
-    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
     const amrex::IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
     const amrex::IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
     const amrex::IntVect stag_zsrc = m_mfz_src->ixType().toIntVect();
@@ -73,18 +69,16 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
     amrex::GpuArray<int,3> sfz; // staggering of source zfield
     amrex::GpuArray<int,3> s_dst;
     amrex::GpuArray<int,3> cr;
-    
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         sfx[i] = stag_xsrc[i];
         sfy[i] = stag_ysrc[i];
         sfz[i] = stag_zsrc[i];
         s_dst[i]  = stag_dst[i];
         cr[i] = m_crse_ratio[i];
+        center_star_arr[i] = Pulsar::m_center_star[i];
     }
     const int sphericalcomp = m_sphericalcomp;
-    amrex::Real cur_time = warpx.gett_new(0);
-    int Efield = m_Efield;
-#ifdef PULSAR
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -109,24 +103,25 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
                 // convert to spherical coordinates
                 // compute cell coordinates
                 amrex::Real x, y, z;
-                PulsarParm::ComputeCellCoordinates(i,j,k, s_dst, problo, dx, x, y, z);
+                Pulsar::ComputeCellCoordinates(i,j,k, s_dst, problo, dx, x, y, z);
                 // convert cartesian to spherical coordinates
                 amrex::Real r, theta, phi;
-                PulsarParm::ConvertCartesianToSphericalCoord(x, y, z, problo, probhi,
-                                                             r, theta, phi);
+                Pulsar::ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
+                                                         r, theta, phi);
 
-                if (sphericalcomp == 0) { // rcomponent of field 
-                    PulsarParm::ConvertCartesianToSphericalRComponent(
+                if (sphericalcomp == 0) { // rcomponent of field
+                    Pulsar::ConvertCartesianToSphericalRComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 } else if (sphericalcomp == 1) { // theta component of field
-                    PulsarParm::ConvertCartesianToSphericalThetaComponent(
+                    Pulsar::ConvertCartesianToSphericalThetaComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 } else if (sphericalcomp == 2) { // phi component of field
-                    PulsarParm::ConvertCartesianToSphericalPhiComponent(
+                    Pulsar::ConvertCartesianToSphericalPhiComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 }
             });
     }
-
+#else
+    amrex::ignore_unused(mf_dst,dcomp);
 #endif
 }

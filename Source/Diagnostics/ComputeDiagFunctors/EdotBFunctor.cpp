@@ -21,10 +21,6 @@ void
 EdotBFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const
 {
     using namespace amrex;
-    auto & warpx = WarpX::GetInstance();
-    const auto dx = warpx.Geom(m_lev).CellSizeArray();
-    const auto problo = warpx.Geom(m_lev).ProbLoArray();
-    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
     const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
 
     // convert boxarray of source MultiFab to staggering of dst Multifab
@@ -38,14 +34,14 @@ EdotBFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buff
         ComputeEdotB(mf_dst, dcomp);
     } else {
         const int ncomp = 1;
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Ex_src->DistributionMap() == m_Ey_src->DistributionMap() and m_Ey_src->DistributionMap() == m_Ez_src->DistributionMap(), 
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Ex_src->DistributionMap() == m_Ey_src->DistributionMap() and m_Ey_src->DistributionMap() == m_Ez_src->DistributionMap(),
             " all sources must have the same Distribution map");
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Bx_src->DistributionMap() == m_By_src->DistributionMap() and m_By_src-> DistributionMap() == m_Bz_src->DistributionMap(), 
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Bx_src->DistributionMap() == m_By_src->DistributionMap() and m_By_src-> DistributionMap() == m_Bz_src->DistributionMap(),
             " all sources must have the same Distribution map");
         amrex::MultiFab mf_tmp( ba_tmp, m_Ex_src->DistributionMap(), ncomp, 0);
         const int dcomp_tmp = 0;
         ComputeEdotB(mf_tmp, dcomp_tmp);
-        mf_dst.copy( mf_tmp, 0, dcomp, ncomp);
+        mf_dst.ParallelCopy( mf_tmp, 0, dcomp, ncomp);
     }
 }
 
@@ -53,10 +49,6 @@ void
 EdotBFunctor::ComputeEdotB(amrex::MultiFab& mf_dst, int dcomp) const
 {
     using namespace amrex;
-    auto & warpx = WarpX::GetInstance();
-    const auto dx = warpx.Geom(m_lev).CellSizeArray();
-    const auto problo = warpx.Geom(m_lev).ProbLoArray();
-    const auto probhi = warpx.Geom(m_lev).ProbHiArray();
     const amrex::IntVect stag_Exsrc = m_Ex_src->ixType().toIntVect();
     const amrex::IntVect stag_Eysrc = m_Ey_src->ixType().toIntVect();
     const amrex::IntVect stag_Ezsrc = m_Ez_src->ixType().toIntVect();

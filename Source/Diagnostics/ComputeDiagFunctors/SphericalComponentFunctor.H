@@ -8,7 +8,7 @@ SphericalComponentFunctor final : public ComputeDiagFunctor
 {
 public:
     SphericalComponentFunctor ( const amrex::MultiFab * const mfx_src,
-                                const amrex::MultiFab * const mfy_src, 
+                                const amrex::MultiFab * const mfy_src,
                                 const amrex::MultiFab * const mfz_src,
                                 const int lev,
                                 const amrex::IntVect crse_ratio,
@@ -26,7 +26,7 @@ private:
     amrex::MultiFab const * const m_mfz_src = nullptr;
     int m_lev;
     int m_sphericalcomp;
-    int m_Efield;    
+    int m_Efield;
 };
 
 #endif

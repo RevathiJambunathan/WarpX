@@ -17,7 +17,7 @@ public:
                             const amrex::IntVect crse_ratio,
                             int vectorcomp,
                             int ncomp = 1);
-    virtual void operator() (amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const override;    
+    virtual void operator() (amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const override;
 
     void ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp) const;
 private:

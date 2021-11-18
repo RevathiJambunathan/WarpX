@@ -36,6 +36,7 @@
 
 #include <AMReX.H>
 #include <AMReX_Array.H>
+#include <AMReX_Array4.H>
 #include <AMReX_BLassert.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_IntVect.H>
@@ -119,23 +120,25 @@ WarpX::Evolve (int numsteps)
         }
 
 #ifdef PULSAR
-        if (PulsarParm::singleParticleTest == 1) {
-            if (PulsarParm::continuous_injection == 0) {
-                if (PulsarParm::injection_time - dt[0] <= cur_time &&
-                    cur_time <= PulsarParm::injection_time) {
-			amrex::Print() << " injecting particles \n";
+        if (Pulsar::m_singleParticleTest == 1) {
+            if (Pulsar::m_continuous_injection == 0) {
+                if (Pulsar::m_injection_time <= cur_time &&
+                    cur_time <= Pulsar::m_injection_time + 0.5*dt[0]) {
+            amrex::Print() << " injecting particles \n";
                         mypc->PulsarParticleInjection();
                         mypc->Redistribute();
                 }
             } else {
-                if ( cur_time > PulsarParm::injection_time) {
+                if ( cur_time > Pulsar::m_injection_time) {
                     mypc->PulsarParticleInjection();
                     mypc->Redistribute();
                 }
             }
         } else {
-            mypc->PulsarParticleInjection();
-            mypc->Redistribute();
+            if ( cur_time >= Pulsar::m_injection_time) {
+                mypc->PulsarParticleInjection();
+                mypc->Redistribute();
+        }
         }
 #endif
         // At the beginning, we have B^{n} and E^{n}.
@@ -240,7 +243,7 @@ WarpX::Evolve (int numsteps)
         }
 
 #ifdef PULSAR
-        if (PulsarParm::damp_EB_internal) {
+        if (Pulsar::m_do_damp_EB_internal == 1 ) {
             MultiFab *Ex, *Ey, *Ez;
             MultiFab *Bx, *By, *Bz;
             for (int lev = 0; lev <= finest_level; ++lev) {
@@ -257,6 +260,8 @@ WarpX::Evolve (int numsteps)
                 amrex::IntVect by_type = By->ixType().toIntVect();
                 amrex::IntVect bz_type = Bz->ixType().toIntVect();
                 amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag, Bx_stag, By_stag, Bz_stag;
+                amrex::GpuArray<amrex::Real, 3> center_star_data;
+
                 for (int idim = 0; idim < 3; ++idim)
                 {
                     Ex_stag[idim] = ex_type[idim];
@@ -265,8 +270,14 @@ WarpX::Evolve (int numsteps)
                     Bx_stag[idim] = bx_type[idim];
                     By_stag[idim] = by_type[idim];
                     Bz_stag[idim] = bz_type[idim];
+                    center_star_data[idim] = Pulsar::m_center_star[idim];
                 }
-                auto geom = Geom(lev).data();
+                amrex::Real max_EBdamping_radius_data = Pulsar::m_max_EBdamping_radius;
+                amrex::Real damping_scale_data = Pulsar::m_field_damping_scale;
+                amrex::Real Rstar_data = Pulsar::m_R_star;
+                const auto domain_xlo = WarpX::GetInstance().Geom(lev).ProbLoArray();
+                const auto domain_xhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
+                const auto domain_dx = WarpX::GetInstance().Geom(lev).CellSizeArray();
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
@@ -283,15 +294,24 @@ WarpX::Evolve (int numsteps)
                     amrex::ParallelFor(tex, tey, tez,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampField(i, j, k, geom, Exfab, Ex_stag);
+                        Pulsar::DampField(i, j, k, Exfab, Ex_stag, center_star_data,
+                                          domain_xlo, domain_dx,
+                                          max_EBdamping_radius_data,
+                                          damping_scale_data, Rstar_data);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampField(i, j, k, geom, Eyfab, Ey_stag);
+                        Pulsar::DampField(i, j, k, Eyfab, Ey_stag, center_star_data,
+                                          domain_xlo, domain_dx,
+                                          max_EBdamping_radius_data,
+                                          damping_scale_data, Rstar_data);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampField(i, j, k, geom, Ezfab, Ez_stag);
+                        Pulsar::DampField(i, j, k, Ezfab, Ez_stag, center_star_data,
+                                          domain_xlo, domain_dx,
+                                          max_EBdamping_radius_data,
+                                          damping_scale_data, Rstar_data);
                     });
                 }
                 for ( MFIter mfi(*Bx, TilingIfNotGPU()); mfi.isValid(); ++mfi )
@@ -307,15 +327,24 @@ WarpX::Evolve (int numsteps)
                     amrex::ParallelFor(tex, tey, tez,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampField(i, j, k, geom, Bxfab, Bx_stag);
+                        Pulsar::DampField(i, j, k, Bxfab, Bx_stag, center_star_data,
+                                          domain_xlo, domain_dx,
+                                          max_EBdamping_radius_data,
+                                          damping_scale_data, Rstar_data);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampField(i, j, k, geom, Byfab, By_stag);
+                        Pulsar::DampField(i, j, k, Byfab, By_stag, center_star_data,
+                                          domain_xlo, domain_dx,
+                                          max_EBdamping_radius_data,
+                                          damping_scale_data, Rstar_data);
                     },
                     [=] AMREX_GPU_DEVICE (int i, int j, int k)
                     {
-                        PulsarParm::DampField(i, j, k, geom, Bzfab, Bz_stag);
+                        Pulsar::DampField(i, j, k, Bzfab, Bz_stag, center_star_data,
+                                          domain_xlo, domain_dx,
+                                          max_EBdamping_radius_data,
+                                          damping_scale_data, Rstar_data);
                     });
                 }
             }

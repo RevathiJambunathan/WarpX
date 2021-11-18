@@ -13,15 +13,17 @@
 #################################
 ####### GENERAL PARAMETERS ######
 #################################
-max_step = 5
+max_step = 1
 amr.n_cell = 128 128 128
 amr.max_grid_size = 128
 amr.blocking_factor = 128
 amr.max_level = 0
 geometry.coord_sys   = 0                  # 0: Cartesian
-geometry.is_periodic = 0 0 0     # Is periodic?
-geometry.prob_lo     = 0.0    0.0    0.0
+geometry.prob_lo     = 0 0 0
 geometry.prob_hi     = 180000 180000 180000
+
+boundary.field_lo = pml pml pml
+boundary.field_hi = pml pml pml
 
 #################################
 ############ NUMERICS ###########
@@ -31,17 +33,16 @@ warpx.verbose = 1
 warpx.do_dive_cleaning = 0
 warpx.use_filter = 1
 warpx.cfl = .95
-warpx.do_pml = 1
 my_constants.pi    = 3.141592653589793
 my_constants.dens  = 5.544e6
 my_constants.xc  = 90000
 my_constants.yc  = 90000
 my_constants.zc  = 90000
-my_constants.r_star  = 12000
+my_constants.r_star  = 12032
 my_constants.omega = 6245.676
 my_constants.c = 299792458.
 my_constants.B_star = 8.0323e-6                  # magnetic field of NS (T)
-my_constants.dR = 1400
+my_constants.dR = 1406.25
 my_constants.to = 2.e-4
 algo.particle_shape = 3
 
@@ -49,8 +50,8 @@ algo.particle_shape = 3
 #################################
 ############ PLASMA #############
 #################################
-particles.nspecies = 2
-particles.species_names = plasma_e plasma_p
+#particles.nspecies = 2
+#particles.species_names = plasma_e plasma_p
 
 plasma_e.charge = -q_e
 plasma_e.mass = m_e
@@ -102,11 +103,11 @@ pulsar.ramp_omega_time = 0.0             # time over which to ramp up NS angular
 pulsar.center_star = 90000 90000 90000
 pulsar.R_star = 12032                  # radius of NS (m)
 pulsar.B_star = 8.0323e-6                  # magnetic field of NS (T)
-pulsar.dR = 1400                       # thickness on the surface of the pulsar
+pulsar.dR = 1406.25                       # thickness on the surface of the pulsar
                                        # consistency requires dR = my_constants.dR
 pulsar.verbose = 0                     # [0/1]: turn on verbosity for debugging print statements
 pulsar.EB_external = 0                 # [0/1]: to apply external E and B
-pulsar.E_external_monopole = 0                  # [0/1]
+pulsar.E_external_monopole = 1                  # [0/1]
 pulsar.EB_corotating_maxradius = 12032 # The radius where E-field changes from corotating
                                        # inside the star to quadrapole outside.
                                        # Default is R_star. (r<=cor_radius) i.e. the includes
@@ -135,11 +136,18 @@ pulsar.turnoff_plasmaEB_gather = 0    # (0/1) 0 is default. always gather
 pulsar.max_nogather_radius = 0.       # radius within which self-consistent field gather
 pulsar.init_dipoleBfield = 1          # default is 1
 pulsar.init_corotatingEfield = 1      # default
-pulsar.corotatingE_maxradius = 12032  # default is Rstar
+pulsar.corotatingE_maxradius = 16250.75  # default is Rstar
 pulsar.enforceDipoleB_maxradius = 12032 # default is Rstar
 pulsar.enforceCorotatingE = 1        # default 1
 pulsar.enforceDipoleB = 1        # default 1
 pulsar.singleParticleTest = 0    # default 0, if 1, then a particle pair will be introduced.
                                  # Single particle position/momentum will need to be specified
-pulsar.DampBDipoleInRing = 1
+pulsar.DampBDipoleInRing = 0
 pulsar.Bdamping_scale = 10000
+pulsar.LimitDipoleBInit = 0   # if 1 then Bdipole is iniialization only in a smaller region
+pulsar.DipoleB_init_maxradius = 12032 # read if LimitBdipole is 1
+pulsar.use_theoreticalEB = 0
+pulsar.theory_max_rstar = 100000
+pulsar.EnforceTheoreticalEBInGrid = 1
+pulsar.AddExternalMonopoleOnly = 1
+

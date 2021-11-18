@@ -103,7 +103,14 @@ const std::map<std::string, ParticleBoundaryType> ParticleBCType_algo_to_enum = 
 const std::map<std::string, int> ReductionType_algo_to_int = {
     {"maximum",  ReductionType::Maximum},
     {"minimum",  ReductionType::Minimum},
-    {"integral", ReductionType::Sum}
+    {"integral", ReductionType::Sum},
+    {"surfaceintegral", ReductionType::Sum}
+};
+
+const std::map<std::string, int> IntegrationType_algo_to_int = {
+    {"volume",  IntegrationType::Volume},
+    {"surface", IntegrationType::Surface},
+    {"default", IntegrationType::Volume}
 };
 
 int
@@ -139,6 +146,8 @@ GetAlgorithmInteger( amrex::ParmParse& pp, const char* pp_search_key ){
         algo_to_int = MacroscopicSolver_algo_to_int;
     } else if (0 == std::strcmp(pp_search_key, "reduction_type")) {
         algo_to_int = ReductionType_algo_to_int;
+    } else if (0 == std::strcmp(pp_search_key, "integration_type")) {
+        algo_to_int = IntegrationType_algo_to_int;
     } else {
         std::string pp_search_string = pp_search_key;
         amrex::Abort("Unknown algorithm type: " + pp_search_string);
