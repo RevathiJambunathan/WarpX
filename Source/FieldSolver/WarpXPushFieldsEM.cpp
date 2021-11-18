@@ -451,7 +451,7 @@ WarpX::PushPSATD ()
         Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
 
-#endif    
+#endif
 #endif
 }
 
@@ -504,7 +504,7 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt, DtType a_dt_typ
     if (Pulsar::m_enforceDipoleB == 1) {
         Pulsar::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
     }
-#endif    
+#endif
 
     ApplyBfieldBoundary(lev, patch_type, a_dt_type);
 
@@ -567,7 +567,7 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
     if (Pulsar::m_enforceCorotatingE == 1) {
         Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
-#endif    
+#endif
 
     ApplyEfieldBoundary(lev, patch_type);
 }
@@ -714,7 +714,7 @@ WarpX::MacroscopicEvolveE (int lev, PatchType patch_type, amrex::Real a_dt) {
     if (Pulsar::m_enforceCorotatingE == 1) {
         Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
-#endif    
+#endif
 
     ApplyEfieldBoundary(lev, patch_type);
 }

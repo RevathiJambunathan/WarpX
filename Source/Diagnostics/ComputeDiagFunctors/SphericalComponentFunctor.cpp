@@ -12,7 +12,7 @@
 #include <AMReX.H>
 
 SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mfx_src,
-                                                      amrex::MultiFab const * mfy_src, 
+                                                      amrex::MultiFab const * mfy_src,
                                                       amrex::MultiFab const * mfz_src,
                                                       int lev,
                                                       amrex::IntVect crse_ratio,
@@ -25,7 +25,7 @@ SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mf
 {}
 
 
-void 
+void
 SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buffer=0*/) const
 {
     using namespace amrex;
@@ -42,7 +42,7 @@ SphericalComponentFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const
         ComputeSphericalFieldComponent(mf_dst, dcomp);
     } else {
         const int ncomp = 1;
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_mfx_src->DistributionMap() == m_mfy_src->DistributionMap() and m_mfy_src->DistributionMap() == m_mfz_src->DistributionMap(), 
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_mfx_src->DistributionMap() == m_mfy_src->DistributionMap() and m_mfy_src->DistributionMap() == m_mfz_src->DistributionMap(),
             " all sources must have the same Distribution map");
         amrex::MultiFab mf_tmp( ba_tmp, m_mfx_src->DistributionMap(), ncomp, 0);
         const int dcomp_tmp = 0;
@@ -109,7 +109,7 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
                 Pulsar::ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                          r, theta, phi);
 
-                if (sphericalcomp == 0) { // rcomponent of field 
+                if (sphericalcomp == 0) { // rcomponent of field
                     Pulsar::ConvertCartesianToSphericalRComponent(
                         cc_xfield, cc_yfield, cc_zfield, theta, phi, arr_dst(i,j,k,n+dcomp));
                 } else if (sphericalcomp == 1) { // theta component of field

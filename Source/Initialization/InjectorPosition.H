@@ -78,7 +78,7 @@ struct InjectorPositionRegular
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int const i_part, int const ref_fac,
-                        amrex::RandomEngine const&                        
+                        amrex::RandomEngine const&
 #ifdef PULSAR
                         , int ModifyParticleWtAtInjection = 0,
                         amrex::Real Ninj_fraction = 1.

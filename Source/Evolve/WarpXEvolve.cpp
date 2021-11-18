@@ -261,7 +261,7 @@ WarpX::Evolve (int numsteps)
                 amrex::IntVect bz_type = Bz->ixType().toIntVect();
                 amrex::GpuArray<int, 3> Ex_stag, Ey_stag, Ez_stag, Bx_stag, By_stag, Bz_stag;
                 amrex::GpuArray<amrex::Real, 3> center_star_data;
-                
+
                 for (int idim = 0; idim < 3; ++idim)
                 {
                     Ex_stag[idim] = ex_type[idim];
@@ -274,7 +274,7 @@ WarpX::Evolve (int numsteps)
                 }
                 amrex::Real max_EBdamping_radius_data = Pulsar::m_max_EBdamping_radius;
                 amrex::Real damping_scale_data = Pulsar::m_field_damping_scale;
-                amrex::Real Rstar_data = Pulsar::m_R_star; 
+                amrex::Real Rstar_data = Pulsar::m_R_star;
                 const auto domain_xlo = WarpX::GetInstance().Geom(lev).ProbLoArray();
                 const auto domain_xhi = WarpX::GetInstance().Geom(lev).ProbHiArray();
                 const auto domain_dx = WarpX::GetInstance().Geom(lev).CellSizeArray();

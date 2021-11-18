@@ -34,9 +34,9 @@ EdotBFunctor::operator ()(amrex::MultiFab& mf_dst, int dcomp, const int /*i_buff
         ComputeEdotB(mf_dst, dcomp);
     } else {
         const int ncomp = 1;
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Ex_src->DistributionMap() == m_Ey_src->DistributionMap() and m_Ey_src->DistributionMap() == m_Ez_src->DistributionMap(), 
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Ex_src->DistributionMap() == m_Ey_src->DistributionMap() and m_Ey_src->DistributionMap() == m_Ez_src->DistributionMap(),
             " all sources must have the same Distribution map");
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Bx_src->DistributionMap() == m_By_src->DistributionMap() and m_By_src-> DistributionMap() == m_Bz_src->DistributionMap(), 
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_Bx_src->DistributionMap() == m_By_src->DistributionMap() and m_By_src-> DistributionMap() == m_Bz_src->DistributionMap(),
             " all sources must have the same Distribution map");
         amrex::MultiFab mf_tmp( ba_tmp, m_Ex_src->DistributionMap(), ncomp, 0);
         const int dcomp_tmp = 0;

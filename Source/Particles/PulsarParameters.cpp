@@ -11,7 +11,7 @@ std::string Pulsar::m_pulsar_type;
 amrex::Real Pulsar::m_omega_star;
 amrex::Real Pulsar::m_R_star;
 amrex::Real Pulsar::m_B_star;
-amrex::Real Pulsar::m_dR_star;    
+amrex::Real Pulsar::m_dR_star;
 amrex::Real Pulsar::m_omega_ramp_time = 1.0;
 amrex::Real Pulsar::m_field_damping_scale;
 int Pulsar::m_do_EB_external = 0;
@@ -148,7 +148,7 @@ Pulsar::ReadParameters () {
     pp.query("removeparticle_theta_min",m_removeparticle_theta_min);
     pp.query("removeparticle_theta_max",m_removeparticle_theta_max);
     pp.query("use_theoreticalEB",m_use_theoreticalEB);
-    amrex::Print() << "use theory EB " << m_use_theoreticalEB << "\n"; 
+    amrex::Print() << "use theory EB " << m_use_theoreticalEB << "\n";
     pp.query("theory_max_rstar",m_theory_max_rstar);
     amrex::Print() << " theory max rstar : " << m_theory_max_rstar << "\n";
     pp.query("LimitDipoleBInit", m_LimitDipoleBInit);
@@ -200,7 +200,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
         const amrex::Box& tbx = mfi.tilebox(x_nodal_flag, mfx->nGrowVect() );
         const amrex::Box& tby = mfi.tilebox(y_nodal_flag, mfx->nGrowVect() );
         const amrex::Box& tbz = mfi.tilebox(z_nodal_flag, mfx->nGrowVect() );
-        
+
         amrex::Array4<amrex::Real> const& mfx_arr = mfx->array(mfi);
         amrex::Array4<amrex::Real> const& mfy_arr = mfy->array(mfi);
         amrex::Array4<amrex::Real> const& mfz_arr = mfz->array(mfi);
@@ -230,7 +230,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                                                 Fr, Ftheta, Fphi);
                     }
                 }
-                // Initialize corotating EField in r < corotating 
+                // Initialize corotating EField in r < corotating
                 if (init_Bfield == 0) {
                     if (r <= corotatingE_maxradius_data) {
                         CorotatingEfieldSpherical(r, theta, phi, cur_time,
@@ -254,7 +254,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                 // convert cartesian to spherical coordinates
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
-                // Initialize with Bfield in spherical coordinates                    
+                // Initialize with Bfield in spherical coordinates
                 if (init_Bfield == 1) {
                     if (LimitDipoleBInit_data == 1) {
                         if (r < DipoleB_init_maxradius_data) {
@@ -465,8 +465,8 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
             }
         );
     }
-    
-    
+
+
 }
 
 void

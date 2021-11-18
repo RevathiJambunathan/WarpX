@@ -876,7 +876,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
             z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
             // radius of the cell-center
-            amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));            
+            amrex::Real rad = std::sqrt( (x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
             // Adding buffer-factor to ensure all cells that intersect the ring
             // inject particles
             amrex::Real buffer_factor = 0.5;
@@ -1103,10 +1103,10 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                         theta_p < removeparticle_theta_max*MathConst::pi/180.) {
                         p.id() = -1;
                     }
-             
+
             //// temporarily testing if on positrons emitted at eq
             //// and only electrons emitted at poles
-            //if (q_pm < 0) { // for electrons inject at pole 
+            //if (q_pm < 0) { // for electrons inject at pole
                     //    if (theta_p >= 40*MathConst::pi/180. and
                     //        theta_p <= 90*MathConst::pi/180.) {
                     //        p.id() = -1;
@@ -1125,7 +1125,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     //        p.id() = -1;
                     //    }
             //}
-            
+
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
@@ -2274,7 +2274,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                             Eyp += Ey_monopole;
                             Ezp += Ez_monopole;
                         }
-                    }                                   
+                    }
 #endif
                 }
                 // Externally applied E-field in Cartesian co-ordinates
@@ -2292,8 +2292,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                     amrex::Real qp = q;
                     if (ion_lev) { qp *= ion_lev[ip]; }
 #ifdef PULSAR
-//                    amrex::AllPrintToFile("PulsarParticle") << "Exp " << Exp << " Eyp " << Eyp << " Ezp " << Ezp << " Bxp : " << Bxp << " Byp : " << Byp << " Bzp " << Bzp << "\n"; 
-//                    amrex::AllPrintToFile("PulsarParticle") << "uxp " << ux[ip] << " uyp " << uy[ip] << " uzp " << uz[ip] << "\n"; 
+//                    amrex::AllPrintToFile("PulsarParticle") << "Exp " << Exp << " Eyp " << Eyp << " Ezp " << Ezp << " Bxp : " << Bxp << " Byp : " << Byp << " Bzp " << Bzp << "\n";
+//                    amrex::AllPrintToFile("PulsarParticle") << "uxp " << ux[ip] << " uyp " << uy[ip] << " uzp " << uz[ip] << "\n";
 
                     amrex::Real Erp, Ethetap, Ephip;
                     Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
@@ -2321,8 +2321,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                                             theta_p, phi_p, Btheta_comp);
                     Pulsar::ConvertCartesianToSphericalPhiComponent( Bxp, Byp, Bzp,
                                                             theta_p, phi_p, Bphi_comp);
-//                    amrex::AllPrintToFile("PulsarParticle") << " Er theory " << Erp << " Etheta_theory " << Ethetap << " Ephi_theory " << Ephip << "\n"; 
-//                    amrex::AllPrintToFile("PulsarParticle") << " Er sim " << Er_comp << " Etheta_comp " << Etheta_comp << " Ephi_comp " << Ephi_comp << "\n"; 
+//                    amrex::AllPrintToFile("PulsarParticle") << " Er theory " << Erp << " Etheta_theory " << Ethetap << " Ephi_theory " << Ephip << "\n";
+//                    amrex::AllPrintToFile("PulsarParticle") << " Er sim " << Er_comp << " Etheta_comp " << Etheta_comp << " Ephi_comp " << Ephi_comp << "\n";
 //                    amrex::AllPrintToFile("PulsarParticle") << " Br theory " << Brp << " Btheta_theory " << Bthetap << " Bphi_theory " << Bphip << "\n";
 //                    amrex::AllPrintToFile("PulsarParticle") << " Br sim " << Br_comp << " Btheta_comp " << Btheta_comp << " Bphi_comp " << Bphi_comp << "\n";
                     amrex::Real ur_p, utheta_p, uphi_p;
@@ -2519,7 +2519,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 //    amrex::AllPrintToFile("PulsarParticle") << " momentum update complete step : " << warpx.getistep(0) << " time : " << cur_time << "\n";
     amrex::Gpu::synchronize();
 #ifdef PULSAR
-    if (Pulsar::m_singleParticleTest == 1) { 
+    if (Pulsar::m_singleParticleTest == 1) {
         const amrex::Real q = this->charge;
         if (q > 0) {
             amrex::AllPrintToFile("PulsarPositronDiagnostics") << " cur_time xp yp zp r_p theta_p phi_p ux uy uz ur utheta uphi Ex Ey Ez Bx By Bz Er Etheta Ephi Br Btheta Bphi Er_theory Etheta_theory Ephi_theory Br_theory Btheta_theory Bphi_theory qEx_force qEy_force qEz_force qvcrossB_x qvcrossB_y qvcrossB_z qE_r qE_theta qE_phi qvcrossB_r qvcrossB_theta qvcrossB_phi qEx_theory qEy_theory qEz_theory qvcrossB_x_theory qvcrossB_y_theory qvcrossB_z_theory qEr_theory qEtheta_theory qEphi_theory qvcrossB_r_theory qvcrossB_theta_theory qvcrossB_phi_theory\n";
@@ -2962,7 +2962,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         scaleFields(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
 
 #ifdef PULSAR
-        
+
         amrex::Real Erp, Ethetap, Ephip;
         Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                         omega_star_data,
@@ -3022,7 +3022,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                 Pulsar::ConvertSphericalToCartesianYComponent(Brp, Bthetap, Bphip, r_p,
                                                               theta_p, phi_p, Byp_theory);
                 Pulsar::ConvertSphericalToCartesianZComponent(Brp, Bthetap, Bphip, r_p,
-                                                              theta_p, phi_p, Bzp_theory);            
+                                                              theta_p, phi_p, Bzp_theory);
                 Exp = Exp_theory;
                 Eyp = Eyp_theory;
                 Ezp = Ezp_theory;
@@ -3188,7 +3188,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                         PulsarParticleDiagData[46], PulsarParticleDiagData[47],
                         PulsarParticleDiagData[48], theta_p, phi_p,
                         PulsarParticleDiagData[54] );
-        }     
+        }
 #endif
 
 //#ifdef PULSAR
@@ -3209,7 +3209,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 //    amrex::AllPrintToFile("PulsarParticle") << " done with particle push " << cur_time << "\n";
     amrex::Gpu::synchronize();
 #ifdef PULSAR
-    if (singleParticleTest == 1) { 
+    if (singleParticleTest == 1) {
         if ( q > 0) { // positrons
             amrex::AllPrintToFile("PulsarPositronDiagnostics") << " ";
             for (int i = 0; i < PulsarParticleDiag.size(); ++i) {
@@ -3392,7 +3392,7 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 
 #ifdef PULSAR
 void PhysicalParticleContainer::PulsarParticleInjection() {
-    if (Pulsar::m_singleParticleTest == 1) { 
+    if (Pulsar::m_singleParticleTest == 1) {
         AddParticles(0); // Note - add on level 0
         Redistribute();  // We then redistribute
     } else {
@@ -3402,9 +3402,9 @@ void PhysicalParticleContainer::PulsarParticleInjection() {
 
 void PhysicalParticleContainer::PulsarParticleRemoval() {
     int lev = 0;
-    Gpu::DeviceScalar<int> sumParticles(0);   
-    Gpu::DeviceScalar<amrex::Real> sumWeight(0.0);   
-    int sum_d ; 
+    Gpu::DeviceScalar<int> sumParticles(0);
+    Gpu::DeviceScalar<amrex::Real> sumWeight(0.0);
+    int sum_d ;
     const amrex::Real q = this->charge;
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {

@@ -16,7 +16,7 @@ class Pulsar {
 
 public:
     //Constructor
-    Pulsar ();    
+    Pulsar ();
 
     static void ReadParameters();
     static void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
@@ -58,7 +58,7 @@ public:
             r_ratio = Rstar/r;
         } else {
             r_ratio = Rstar/(dRstar*0.5);
-        }       
+        }
         amrex::Real r2 = r_ratio * r_ratio;
         // Michel and Li -- eq 14 , 15
         Er     =  Bstar * omega * r2 * Rstar * s_theta * s_theta;
@@ -273,7 +273,7 @@ public:
     static amrex::Real m_omega_star;
     static amrex::Real m_R_star;
     static amrex::Real m_B_star;
-    static amrex::Real m_dR_star;    
+    static amrex::Real m_dR_star;
     static amrex::Real m_omega_ramp_time;
     static amrex::Real m_field_damping_scale;
     static int m_do_EB_external;
