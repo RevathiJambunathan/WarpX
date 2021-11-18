@@ -37,6 +37,11 @@
 #ifdef PULSAR
     #include "Particles/PulsarParameters.H"
 #endif
+
+#ifdef PULSAR
+    #include "Particles/PulsarParameters.H"
+#endif
+
 #include <AMReX_Particles.H>
 
 #include <AMReX_BaseFwd.H>
@@ -326,8 +331,6 @@ public:
     int getSpeciesID (std::string product_str) const;
 
 #ifdef PULSAR
-    std::string m_E_ext_particle_coord = "cartesian";
-    std::string m_B_ext_particle_coord = "cartesian";
     void PulsarParticleRemoval();
     void PulsarParticleInjection();
 #endif

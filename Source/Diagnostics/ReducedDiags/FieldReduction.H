@@ -67,6 +67,7 @@ private:
 
     // Type of reduction (e.g. Maximum, Minimum or Sum)
     int m_reduction_type;
+    int m_integral_type;
 
 public:
 
@@ -128,6 +129,7 @@ public:
 
         // get parser
         auto reduction_function_parser = m_parser->compile<m_nvars>();
+        int integral_type = m_integral_type;
 
         // MFIter loop to interpolate fields to cell center and perform reduction
 #ifdef AMREX_USE_OMP
@@ -190,11 +192,20 @@ public:
             amrex::ParallelDescriptor::ReduceRealSum(reduce_value);
         // If reduction operation is a sum, multiply the value by the cell volume so that the
         // result is the integral of the function over the simulation domain.
+            if (integral_type == 0) {
 #if (AMREX_SPACEDIM==2)
             reduce_value *= dx[0]*dx[1];
 #else
             reduce_value *= dx[0]*dx[1]*dx[2];
 #endif
+            } else {
+            // works only when dx = dy = dz
+#if (AMREX_SPACEDIM==2)
+            reduce_value *= dx[0];
+#else
+            reduce_value *= dx[0]*dx[1];
+#endif
+            }
         }
 
         // Fill output array

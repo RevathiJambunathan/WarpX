@@ -22,6 +22,9 @@
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/WarpXUtil.H"
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_AmrCore.H>
@@ -57,6 +60,12 @@
 #include <array>
 #include <cctype>
 #include <iostream>
+
+
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -564,6 +573,43 @@ WarpX::InitLevelData (int lev, Real /*time*/)
                                                     lev);
        }
     }
+#ifdef PULSAR
+    if (Pulsar::m_do_InitializeGrid_with_Pulsar_Bfield == 1) {
+        bool Init_Bfield = true;
+        Pulsar::InitializeExternalPulsarFieldsOnGrid (Bfield_fp[lev][0].get(),
+                                              Bfield_fp[lev][1].get(),
+                                              Bfield_fp[lev][2].get(),
+                                              lev, Init_Bfield);
+        if (lev > 0) {
+            Pulsar::InitializeExternalPulsarFieldsOnGrid (Bfield_aux[lev][0].get(),
+                                                  Bfield_aux[lev][1].get(),
+                                                  Bfield_aux[lev][2].get(),
+                                                  lev, Init_Bfield);
+            Pulsar::InitializeExternalPulsarFieldsOnGrid (Bfield_cp[lev][0].get(),
+                                                  Bfield_cp[lev][1].get(),
+                                                  Bfield_cp[lev][2].get(),
+                                                  lev, Init_Bfield);
+        }
+    }
+    if (Pulsar::m_do_InitializeGrid_with_Pulsar_Efield == 1) {
+        bool Init_Bfield = false;
+        Pulsar::InitializeExternalPulsarFieldsOnGrid (Efield_fp[lev][0].get(),
+                                              Efield_fp[lev][1].get(),
+                                              Efield_fp[lev][2].get(),
+                                              lev, Init_Bfield);
+        if (lev > 0) {
+            Pulsar::InitializeExternalPulsarFieldsOnGrid (Efield_aux[lev][0].get(),
+                                                  Efield_aux[lev][1].get(),
+                                                  Efield_aux[lev][2].get(),
+                                                  lev, Init_Bfield);
+            Pulsar::InitializeExternalPulsarFieldsOnGrid (Efield_cp[lev][0].get(),
+                                                  Efield_cp[lev][1].get(),
+                                                  Efield_cp[lev][2].get(),
+                                                  lev, Init_Bfield);
+        }
+    }
+#endif
+
 
     // if the input string for the E-field is "parse_e_ext_grid_function",
     // then the analytical expression or function must be

@@ -36,7 +36,7 @@
 #include "Utils/WarpXAlgorithmSelection.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #ifdef PULSAR
-#include "Particles/PulsarParameters.H"
+    #include "Particles/PulsarParameters.H"
 #endif
 
 #ifdef AMREX_USE_SENSEI_INSITU
@@ -326,7 +326,6 @@ WarpX::WarpX ()
         // create object for macroscopic solver
         m_macroscopic_properties = std::make_unique<MacroscopicProperties>();
     }
-
 
     // Set default values for particle and cell weights for costs update;
     // Default values listed here for the case AMREX_USE_GPU are determined
@@ -1156,8 +1155,9 @@ WarpX::ReadParameters ()
        }
 
     }
+
 #ifdef PULSAR
-    PulsarParm::ReadParameters();
+    Pulsar::ReadParameters();
 #endif
 
 }
@@ -1562,12 +1562,16 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
     if (WarpX::maxwell_solver_id == MaxwellSolverAlgo::PSATD) {
         deposit_charge = do_dive_cleaning || update_with_rho || current_correction;
     }
+#ifndef PULSAR
     if (deposit_charge)
     {
         // For the multi-J algorithm we can allocate only one rho component (no distinction between old and new)
         const int rho_ncomps = (WarpX::do_multi_J) ? ncomps : 2*ncomps;
         rho_fp[lev] = std::make_unique<MultiFab>(amrex::convert(ba,rho_nodal_flag),dm,rho_ncomps,ngRho,tag("rho_fp"));
     }
+#else
+    rho_fp[lev] = std::make_unique<MultiFab>(amrex::convert(ba,rho_nodal_flag),dm,2*ncomps,ngRho,tag("rho_fp"));
+#endif
 
     if (do_electrostatic == ElectrostaticSolverAlgo::LabFrame)
     {

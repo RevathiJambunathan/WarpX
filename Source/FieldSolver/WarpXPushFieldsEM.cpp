@@ -24,6 +24,9 @@
 #include "Utils/WarpXProfilerWrapper.H"
 #include "WarpXPushFieldsEM_K.H"
 #include "WarpX_FDTD.H"
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #ifdef AMREX_USE_SENSEI_INSITU
@@ -40,6 +43,13 @@
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX_IndexType.H>
 #include <AMReX_MFIter.H>
+
+
+#ifdef PULSAR
+#   include "Particles/PulsarParameters.H"
+#endif
+
+#include <AMReX.H>
 #include <AMReX_Math.H>
 #include <AMReX_MultiFab.H>
 #include <AMReX_REAL.H>
@@ -432,6 +442,16 @@ WarpX::PushPSATD ()
         ApplyBfieldBoundary(lev, PatchType::fine, DtType::FirstHalf);
         if (lev > 0) ApplyBfieldBoundary(lev, PatchType::coarse, DtType::FirstHalf);
     }
+#ifdef PULSAR
+    amrex::Real a_dt = 0._rt;
+    if (Pulsar::m_enforceDipoleB == 1) {
+        Pulsar::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+    }
+    if (Pulsar::m_enforceCorotatingE == 1) {
+        Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+
+#endif
 #endif
 }
 
@@ -480,7 +500,14 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt, DtType a_dt_typ
         }
     }
 
+#ifdef PULSAR
+    if (Pulsar::m_enforceDipoleB == 1) {
+        Pulsar::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+    }
+#endif
+
     ApplyBfieldBoundary(lev, patch_type, a_dt_type);
+
 }
 
 
@@ -536,9 +563,13 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
                 a_dt, pml_has_particles );
         }
     }
+#ifdef PULSAR
+    if (Pulsar::m_enforceCorotatingE == 1) {
+        Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+#endif
 
     ApplyEfieldBoundary(lev, patch_type);
-
 }
 
 
@@ -679,6 +710,11 @@ WarpX::MacroscopicEvolveE (int lev, PatchType patch_type, amrex::Real a_dt) {
                 a_dt, pml_has_particles );
         }
     }
+#ifdef PULSAR
+    if (Pulsar::m_enforceCorotatingE == 1) {
+        Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+#endif
 
     ApplyEfieldBoundary(lev, patch_type);
 }

@@ -416,7 +416,14 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
 
     amrex::GpuArray<amrex::Real, 3> dx_arr = {dx[0], dx[1], dx[2]};
     amrex::GpuArray<amrex::Real, 3> xyzmin_arr = {xyzmin[0], xyzmin[1], xyzmin[2]};
-
+#ifdef PULSAR
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int i = 0; i < 3; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    int do_turnoff_plasmaEB_gather_data = Pulsar::m_turnoff_plasmaEB_gather;
+    amrex::Real max_nogather_radius = Pulsar::m_max_nogather_radius;
+#endif
     amrex::Array4<const amrex::Real> const& ex_arr = exfab->array();
     amrex::Array4<const amrex::Real> const& ey_arr = eyfab->array();
     amrex::Array4<const amrex::Real> const& ez_arr = ezfab->array();
@@ -447,16 +454,16 @@ void doGatherShapeN(const GetParticlePosition& getPosition,
             // of self-consistent fields within a region
             // makes a difference
             int dogather = 1;
-            if (PulsarParm::turnoff_plasmaEB_gather == 1) {
-                const amrex::Real xc = PulsarParm::center_star[0];
-                const amrex::Real yc = PulsarParm::center_star[1];
-                const amrex::Real zc = PulsarParm::center_star[2];
-                // find radius of the particle
+            if (do_turnoff_plasmaEB_gather_data == 1) {
+                const amrex::Real xc = center_star_arr[0];
+                const amrex::Real yc = center_star_arr[1];
+                const amrex::Real zc = center_star_arr[2];
+                // find radius of the particlestar[0];
                 amrex::Real rp = std::sqrt( (xp-xc)*(xp-xc)
                                           + (yp-yc)*(yp-yc)
                                           + (zp-zc)*(zp-zc) );
                 // set dogather to 0 if particle within user-defined nogather radius
-                if (rp <= PulsarParm::max_nogather_radius) {
+                if (rp <= max_nogather_radius) {
                     dogather = 0;
                 }
             }

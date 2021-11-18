@@ -111,6 +111,15 @@ void doDepositionShapeN(const GetParticlePosition& GetPosition,
     constexpr int NODE = amrex::IndexType::NODE;
     constexpr int CELL = amrex::IndexType::CELL;
 
+#ifdef PULSAR
+    int turnoff_deposition = Pulsar::m_turnoffdeposition;
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for(int i = 0; i < 3; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    amrex::Real max_nodepos_radius = Pulsar::m_max_nodepos_radius;
+#endif
+
     // Loop over particles and deposit into jx_fab, jy_fab and jz_fab
 #if defined(WARPX_USE_GPUCLOCK)
     amrex::Real* cost_real = nullptr;
@@ -142,17 +151,17 @@ void doDepositionShapeN(const GetParticlePosition& GetPosition,
 #ifdef PULSAR
             // temporarily adding this to check if turning off j-deposition
             // within a region that is corotating makes a difference
-            if (PulsarParm::turnoffdeposition == 1) {
-                const amrex::Real xc = PulsarParm::center_star[0];
-                const amrex::Real yc = PulsarParm::center_star[1];
-                const amrex::Real zc = PulsarParm::center_star[2];
+            if (turnoff_deposition == 1) {
+                const amrex::Real xc = center_star_arr[0];
+                const amrex::Real yc = center_star_arr[1];
+                const amrex::Real zc = center_star_arr[2];
                 // find radius of the particle
                 amrex::Real rp = std::sqrt( (xp-xc)*(xp-xc)
                                           + (yp-yc)*(yp-yc)
                                           + (zp-zc)*(zp-zc) );
                 // change the locally defined particle weight, wq, to 0
                 // within the region defined by r<=max_radius_nodepos
-                if (rp <= PulsarParm::max_nodepos_radius) {
+                if (rp <= max_nodepos_radius) {
                     wq = 0.;
                 }
             }
@@ -421,6 +430,14 @@ void doEsirkepovDepositionShapeN (const GetParticlePosition& GetPosition,
 
     Real const clightsq = 1.0_rt / ( PhysConst::c * PhysConst::c );
 
+#ifdef PULSAR
+    int turnoff_deposition = Pulsar::m_turnoffdeposition;
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for(int i = 0; i < 3; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    amrex::Real max_nodepos_radius = Pulsar::m_max_nodepos_radius;
+#endif
     // Loop over particles and deposit into Jx_arr, Jy_arr and Jz_arr
 #if defined(WARPX_USE_GPUCLOCK)
     amrex::Real* cost_real = nullptr;
@@ -454,17 +471,17 @@ void doEsirkepovDepositionShapeN (const GetParticlePosition& GetPosition,
 #ifdef PULSAR
             // temporarily adding this to check if turning off j-deposition
             // within a region that is corotating makes a difference
-            if (PulsarParm::turnoffdeposition == 1) {
-                const amrex::Real xc = PulsarParm::center_star[0];
-                const amrex::Real yc = PulsarParm::center_star[1];
-                const amrex::Real zc = PulsarParm::center_star[2];
+            if (turnoff_deposition == 1) {
+                const amrex::Real xc = center_star_arr[0];
+                const amrex::Real yc = center_star_arr[1];
+                const amrex::Real zc = center_star_arr[2];
                 // find radius of the particle
                 amrex::Real rp = std::sqrt( (xp-xc)*(xp-xc)
                                           + (yp-yc)*(yp-yc)
                                           + (zp-zc)*(zp-zc) );
                 // change the locally defined particle weight, wq, to 0
                 // within the region defined by r<=max_radius_nodepos
-                if (rp <= PulsarParm::max_nodepos_radius) {
+                if (rp <= max_nodepos_radius) {
                     wq = 0.;
                 }
             }
@@ -789,6 +806,15 @@ void doVayDepositionShapeN (const GetParticlePosition& GetPosition,
     amrex::Array4<amrex::Real> const& jy_arr = jy_fab.array();
     amrex::Array4<amrex::Real> const& jz_arr = jz_fab.array();
 
+#ifdef PULSAR
+    int turnoff_deposition = Pulsar::m_turnoffdeposition;
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for(int i = 0; i < 3; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    amrex::Real max_nodepos_radius = Pulsar::m_max_nodepos_radius;
+#endif
+
     // Loop over particles and deposit (Dx,Dy,Dz) into jx_fab, jy_fab and jz_fab
 #if defined(WARPX_USE_GPUCLOCK)
     amrex::Real* cost_real = nullptr;
@@ -819,17 +845,17 @@ void doVayDepositionShapeN (const GetParticlePosition& GetPosition,
 #ifdef PULSAR
             // temporarily adding this to check if turning off j-deposition
             // within a region that is corotating makes a difference
-            if (PulsarParm::turnoffdeposition == 1) {
-                const amrex::Real xc = PulsarParm::center_star[0];
-                const amrex::Real yc = PulsarParm::center_star[1];
-                const amrex::Real zc = PulsarParm::center_star[2];
+            if (turnoff_deposition == 1) {
+                const amrex::Real xc = center_star_arr[0];
+                const amrex::Real yc = center_star_arr[1];
+                const amrex::Real zc = center_star_arr[2];
                 // find radius of the particle
                 amrex::Real rp = std::sqrt( (xp-xc)*(xp-xc)
                                           + (yp-yc)*(yp-yc)
                                           + (zp-zc)*(zp-zc) );
                 // change the locally defined particle weight, wq, to 0
                 // within the region defined by r<=max_radius_nodepos
-                if (rp <= PulsarParm::max_nodepos_radius) {
+                if (rp <= max_nodepos_radius ) {
                     wq = 0.;
                 }
             }

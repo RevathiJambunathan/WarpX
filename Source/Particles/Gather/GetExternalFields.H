@@ -11,6 +11,7 @@
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX_Parser.H>
 #include <AMReX_REAL.H>
+#include <limits>
 
 enum ExternalFieldInitType { Constant, Parser, RepeatedPlasmaLens};
 
@@ -56,7 +57,7 @@ struct GetExternalField
             field_y += m_field_value[1];
             field_z += m_field_value[2];
         }
-        else if (m_type == Parser)
+        else if (m_type == ExternalFieldInitType::Parser)
         {
             amrex::ParticleReal x, y, z;
             m_get_position(i, x, y, z);
