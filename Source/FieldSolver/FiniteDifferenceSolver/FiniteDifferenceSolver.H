@@ -151,9 +151,11 @@ class FiniteDifferenceSolver
 
 
 #ifdef WARPX_MAG_LLG
-        void EvolveHPML ( std::array< amrex::MultiFab*, 3 > Hfield,
+        void MacroscopicEvolveHPML ( std::array< amrex::MultiFab*, 3 > Hfield,
                       std::array< amrex::MultiFab*, 3 > const Efield,
                       amrex::Real const dt,
+                      std::unique_ptr<MacroscopicProperties> const& macroscopic_properties,
+                      amrex::MultiFab* const mu_mf,
                       const bool dive_cleaning);
 #endif
 
@@ -310,10 +312,12 @@ class FiniteDifferenceSolver
 
 #ifdef WARPX_MAG_LLG
         template< typename T_Algo >
-        void EvolveHPMLCartesian (
-            std::array< amrex::MultiFab*, 3 > Bfield,
+        void MacroscopicEvolveHPMLCartesian (
+            std::array< amrex::MultiFab*, 3 > Hfield,
             std::array< amrex::MultiFab*, 3 > const Efield,
             amrex::Real const dt,
+            std::unique_ptr<MacroscopicProperties> const& macroscopic_properties,
+            amrex::MultiFab* const mu_mf,
             const bool dive_cleaning);
 #endif
 

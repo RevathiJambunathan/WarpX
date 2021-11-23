@@ -1303,7 +1303,9 @@ Numerics and algorithms
     The medium for evaluating the Maxwell solver. Available options are :
 
     - ``vacuum``: vacuum properties are used in the Maxwell solver.
-    - ``macroscopic``: macroscopic Maxwell equation is evaluated. If this option is selected, then the corresponding properties of the medium must be provided using ``macroscopic.sigma``, ``macroscopic.epsilon``, and ``macroscopic.mu`` for each case where the initialization style is ``constant``.  Otherwise if the initialization style uses the parser, ``macroscopic.sigma_function(x,y,z)``, ``macroscopic.epsilon_function(x,y,z)`` and/or ``macroscopic.mu_function(x,y,z)`` must be provided using the parser initialization style for spatially varying macroscopic properties.
+    - ``macroscopic``: macroscopic Maxwell equation is evaluated. If this option is selected, then the corresponding properties of the medium must be provided using ``macroscopic.sigma``, 
+    ``macroscopic.epsilon``, and ``macroscopic.mu`` for each case where the initialization style is ``constant``.  Otherwise if the initialization style uses the parser, ``macroscopic.sigma_function(x,y,z)``, ``macroscopic.epsilon_function(x,y,z)`` 
+    and/or ``macroscopic.mu_function(x,y,z)`` must be provided using the parser initialization style for spatially varying macroscopic properties.
 
     If ``algo.em_solver_medium`` is not specified, ``vacuum`` is the default.
 
@@ -1324,7 +1326,10 @@ Numerics and algorithms
 * ``macroscopic.sigma``, ``macroscopic.epsilon``, ``macroscopic.mu`` (`double`)
     To initialize a constant conductivity, permittivity, and permeability of the
     computational medium, respectively. The default values are the corresponding values
-    in vacuum.
+    in vacuum. 
+    In particular, if `USE_LLG=TRUE` in the GNUMakefile and `mag_Ms` is non-zero, ``macroscopic.mu`` must be set to the vacuum value (``mu0``, i.e. 1.25663706212e-06). 
+    If `USE_LLG=TRUE` in the GNUMakefile and `mag_Ms == 0`, LLG evolution is turned off and the macroscopic magnetic permeability, i.e. ``mur * mu0`` should be parsed in ``macroscopic.mu``, with 
+    the dimensionless relative permeability ``mur >=1``.
 
 * ``macroscopic.mag_normalized_error`` (`double`; default: `0.1`)
     The maximum relative amount we let M deviate from Ms before aborting for the LLG equation for saturated cases, i.e., `mag_M_normalization>0`.
@@ -2376,6 +2381,9 @@ Solving magnetization using LLG equation
     ``macroscopic.mag_Ms_function(x,y,z)`` to initialize the saturation magnetization.
     If ``algo.em_solver_medium`` is set to macroscopic, and ``USE_LLG = TRUE``,
     then this input property must be provided.
+    In addition, if `USE_LLG=TRUE` in the GNUMakefile and `mag_Ms` is non-zero, ``macroscopic.mu`` must be set to the vacuum value (``mu0``, i.e. 1.25663706212e-06). 
+    If `USE_LLG=TRUE` in the GNUMakefile and `mag_Ms == 0`, LLG evolution is turned off and the macroscopic magnetic permeability, i.e. ``mur * mu0`` should be parsed in ``macroscopic.mu``, with 
+    the dimensionless relative permeability ``mur >=1``.
 
 * ``macroscopic.mag_alpha_init_style`` (string) optional (default is "default")
     This parameter determines the type of initialization for the Gilbert damping factor

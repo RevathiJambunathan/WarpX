@@ -1,9 +1,3 @@
-/* Copyright 2020 Remi Lehe
- *
- * This file is part of WarpX.
- *
- * License: BSD-3-Clause-LBNL
- */
 
 #include "Utils/WarpXAlgorithmSelection.H"
 #include "FieldSolver/FiniteDifferenceSolver/FiniteDifferenceSolver.H"
@@ -17,36 +11,39 @@
 #include "BoundaryConditions/PMLComponent.H"
 #include <AMReX_Gpu.H>
 #include <AMReX.H>
+#include "Utils/CoarsenIO.H"
 
 using namespace amrex;
 #ifdef WARPX_MAG_LLG
 /**
- * \brief Update the H field, over one timestep
+ * \brief Update Hfield in PML region
  */
-void FiniteDifferenceSolver::EvolveHPML (
+void FiniteDifferenceSolver::MacroscopicEvolveHPML (
     std::array< amrex::MultiFab*, 3 > Hfield,
     std::array< amrex::MultiFab*, 3 > const Efield,
     amrex::Real const dt,
+    std::unique_ptr<MacroscopicProperties> const& macroscopic_properties,
+    amrex::MultiFab* const mu_mf,
     const bool dive_cleaning) {
 
    // Select algorithm (The choice of algorithm is a runtime option,
    // but we compile code for each algorithm, using templates)
 #ifdef WARPX_DIM_RZ
-    amrex::ignore_unused(Hfield, Efield, dt);
+    amrex::ignore_unused(Hfield, Efield, dt, macroscopic_properties, mu_mf);
     amrex::Abort("PML are not implemented in cylindrical geometry.");
 #else
     if (m_do_nodal) {
-
-        EvolveHPMLCartesian <CartesianNodalAlgorithm> (Hfield, Efield, dt, dive_cleaning);
+        
+        MacroscopicEvolveHPMLCartesian <CartesianNodalAlgorithm> ( Hfield, Efield, dt, macroscopic_properties, mu_mf, dive_cleaning);
 
     } else if (m_fdtd_algo == MaxwellSolverAlgo::Yee) {
 
-        EvolveHPMLCartesian <CartesianYeeAlgorithm> (Hfield, Efield, dt, dive_cleaning);
+        MacroscopicEvolveHPMLCartesian <CartesianYeeAlgorithm> ( Hfield, Efield, dt, macroscopic_properties, mu_mf, dive_cleaning);
 
     } else if (m_fdtd_algo == MaxwellSolverAlgo::CKC) {
 
-        EvolveHPMLCartesian <CartesianCKCAlgorithm> (Hfield, Efield, dt, dive_cleaning);
-
+        MacroscopicEvolveHPMLCartesian <CartesianCKCAlgorithm> ( Hfield, Efield, dt, macroscopic_properties, mu_mf, dive_cleaning);
+        
     } else {
         amrex::Abort("EvolveHPML: Unknown algorithm");
     }
@@ -57,11 +54,19 @@ void FiniteDifferenceSolver::EvolveHPML (
 #ifndef WARPX_DIM_RZ
 
 template<typename T_Algo>
-void FiniteDifferenceSolver::EvolveHPMLCartesian (
+void FiniteDifferenceSolver::MacroscopicEvolveHPMLCartesian (
     std::array< amrex::MultiFab*, 3 > Hfield,
     std::array< amrex::MultiFab*, 3 > const Efield,
     amrex::Real const dt,
+    std::unique_ptr<MacroscopicProperties> const& macroscopic_properties,
+    amrex::MultiFab* const mu_mf,
     const bool dive_cleaning) {
+
+    amrex::GpuArray<int, 3> const& mu_stag  = macroscopic_properties->mu_IndexType;
+    amrex::GpuArray<int, 3> const& Hx_stag  = macroscopic_properties->Hx_IndexType;
+    amrex::GpuArray<int, 3> const& Hy_stag  = macroscopic_properties->Hy_IndexType;
+    amrex::GpuArray<int, 3> const& Hz_stag  = macroscopic_properties->Hz_IndexType;
+    amrex::GpuArray<int, 3> const& macro_cr = macroscopic_properties->macro_cr_ratio;
 
     // Loop through the grids, and over the tiles within each grid
 #ifdef _OPENMP
@@ -90,12 +95,17 @@ void FiniteDifferenceSolver::EvolveHPMLCartesian (
         Box const& tby  = mfi.tilebox(Hfield[1]->ixType().ixType());
         Box const& tbz  = mfi.tilebox(Hfield[2]->ixType().ixType());
 
-        amrex::Real mu0_inv = 1._rt/PhysConst::mu0;
+        // starting component to interpolate macro properties to Hx, Hy, Hz locations
+        const int scomp = 0;
+        // mu_mf will be imported but will only be called at grids where Ms == 0
+        Array4<Real> const& mu_arr = mu_mf->array(mfi);
 
         // Loop over the cells and update the fields
         amrex::ParallelFor(tbx, tby, tbz,
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
+                               
+                Real mu_inv = 1._rt/CoarsenIO::Interp( mu_arr, mu_stag, Hx_stag, macro_cr, i, j, k, scomp);
 
                 amrex::Real UpwardDz_Ey_yy = 0._rt;
                 amrex::Real UpwardDy_Ez_zz = 0._rt;
@@ -105,19 +115,21 @@ void FiniteDifferenceSolver::EvolveHPMLCartesian (
                     UpwardDy_Ez_zz = T_Algo::UpwardDy(Ez, coefs_y, n_coefs_y, i, j, k, PMLComp::zz);
                 }
 
-                Hx(i, j, k, PMLComp::xz) += mu0_inv * dt * (
+                Hx(i, j, k, PMLComp::xz) += mu_inv * dt * (
                     T_Algo::UpwardDz(Ey, coefs_z, n_coefs_z, i, j, k, PMLComp::yx)
                   + T_Algo::UpwardDz(Ey, coefs_z, n_coefs_z, i, j, k, PMLComp::yz)
                   + UpwardDz_Ey_yy);
 
-                Hx(i, j, k, PMLComp::xy) -= mu0_inv * dt * (
+                Hx(i, j, k, PMLComp::xy) -= mu_inv * dt * (
                     T_Algo::UpwardDy(Ez, coefs_y, n_coefs_y, i, j, k, PMLComp::zx)
                   + T_Algo::UpwardDy(Ez, coefs_y, n_coefs_y, i, j, k, PMLComp::zy)
                   + UpwardDy_Ez_zz);
             },
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
-
+                
+                Real mu_inv = 1._rt/CoarsenIO::Interp( mu_arr, mu_stag, Hy_stag, macro_cr, i, j, k, scomp);
+                    
                 amrex::Real UpwardDx_Ez_zz = 0._rt;
                 amrex::Real UpwardDz_Ex_xx = 0._rt;
                 if (dive_cleaning)
@@ -126,18 +138,20 @@ void FiniteDifferenceSolver::EvolveHPMLCartesian (
                     UpwardDz_Ex_xx = T_Algo::UpwardDz(Ex, coefs_z, n_coefs_z, i, j, k, PMLComp::xx);
                 }
 
-                Hy(i, j, k, PMLComp::yx) += mu0_inv * dt * (
+                Hy(i, j, k, PMLComp::yx) += mu_inv * dt * (
                     T_Algo::UpwardDx(Ez, coefs_x, n_coefs_x, i, j, k, PMLComp::zx)
                   + T_Algo::UpwardDx(Ez, coefs_x, n_coefs_x, i, j, k, PMLComp::zy)
                   + UpwardDx_Ez_zz);
 
-                Hy(i, j, k, PMLComp::yz) -= mu0_inv * dt * (
+                Hy(i, j, k, PMLComp::yz) -= mu_inv * dt * (
                     UpwardDz_Ex_xx
                   + T_Algo::UpwardDz(Ex, coefs_z, n_coefs_z, i, j, k, PMLComp::xy)
                   + T_Algo::UpwardDz(Ex, coefs_z, n_coefs_z, i, j, k, PMLComp::xz));
             },
 
             [=] AMREX_GPU_DEVICE (int i, int j, int k){
+
+                Real mu_inv = 1._rt/CoarsenIO::Interp( mu_arr, mu_stag, Hz_stag, macro_cr, i, j, k, scomp);
 
                 amrex::Real UpwardDy_Ex_xx = 0._rt;
                 amrex::Real UpwardDx_Ey_yy = 0._rt;
@@ -147,12 +161,12 @@ void FiniteDifferenceSolver::EvolveHPMLCartesian (
                     UpwardDx_Ey_yy = T_Algo::UpwardDx(Ey, coefs_x, n_coefs_x, i, j, k, PMLComp::yy);
                 }
 
-                Hz(i, j, k, PMLComp::zy) += mu0_inv * dt * (
+                Hz(i, j, k, PMLComp::zy) += mu_inv * dt * (
                     UpwardDy_Ex_xx
                   + T_Algo::UpwardDy(Ex, coefs_y, n_coefs_y, i, j, k, PMLComp::xy)
                   + T_Algo::UpwardDy(Ex, coefs_y, n_coefs_y, i, j, k, PMLComp::xz) );
 
-                Hz(i, j, k, PMLComp::zx) -= mu0_inv * dt * (
+                Hz(i, j, k, PMLComp::zx) -= mu_inv * dt * (
                     T_Algo::UpwardDx(Ey, coefs_x, n_coefs_x, i, j, k, PMLComp::yx)
                   + T_Algo::UpwardDx(Ey, coefs_x, n_coefs_x, i, j, k, PMLComp::yz)
                   + UpwardDx_Ey_yy);

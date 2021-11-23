@@ -237,6 +237,9 @@ MacroscopicProperties::InitData ()
     IntVect Mx_stag = warpx.getMfield_fp(0,0).ixType().toIntVect(); // face-centered
     IntVect My_stag = warpx.getMfield_fp(0,1).ixType().toIntVect();
     IntVect Mz_stag = warpx.getMfield_fp(0,2).ixType().toIntVect();
+    IntVect Hx_stag = warpx.getHfield_fp(0,0).ixType().toIntVect(); // face-centered
+    IntVect Hy_stag = warpx.getHfield_fp(0,1).ixType().toIntVect();
+    IntVect Hz_stag = warpx.getHfield_fp(0,2).ixType().toIntVect();
 #endif
     for ( int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         sigma_IndexType[idim]   = sigma_stag[idim];
@@ -252,6 +255,9 @@ MacroscopicProperties::InitData ()
         Mx_IndexType[idim]        = Mx_stag[idim];
         My_IndexType[idim]        = My_stag[idim];
         Mz_IndexType[idim]        = Mz_stag[idim];
+        Hx_IndexType[idim]        = Hx_stag[idim];
+        Hy_IndexType[idim]        = Hy_stag[idim];
+        Hz_IndexType[idim]        = Hz_stag[idim];
 #endif
         macro_cr_ratio[idim]    = 1;
     }
@@ -269,6 +275,9 @@ MacroscopicProperties::InitData ()
         Mx_IndexType[2]        = 0;
         My_IndexType[2]        = 0;
         Mz_IndexType[2]        = 0;
+        Hx_IndexType[2]        = 0;
+        Hy_IndexType[2]        = 0;
+        Hz_IndexType[2]        = 0;
 #endif
         macro_cr_ratio[2]    = 1;
 #endif

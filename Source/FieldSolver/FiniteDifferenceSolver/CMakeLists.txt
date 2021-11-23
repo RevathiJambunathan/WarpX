@@ -20,7 +20,7 @@ if(WarpX_MAG_LLG)
         MacroscopicEvolveHM.cpp
         MacroscopicEvolveM_2nd.cpp
         MacroscopicEvolveM.cpp
-        EvolveHPML.cpp
+        MacroscopicEvolveHPML.cpp
     )
 endif()
 add_subdirectory(MacroscopicProperties)

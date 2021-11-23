@@ -58,6 +58,12 @@ public:
      amrex::GpuArray<int, 3> My_IndexType;
      /** Gpu Vector with index type of the Mz multifab */
      amrex::GpuArray<int, 3> Mz_IndexType;
+     /** Gpu Vector with index type of the Hx multifab */
+     amrex::GpuArray<int, 3> Hx_IndexType;
+     /** Gpu Vector with index type of the Hy multifab */
+     amrex::GpuArray<int, 3> Hy_IndexType;
+     /** Gpu Vector with index type of the Hz multifab */
+     amrex::GpuArray<int, 3> Hz_IndexType;
 #endif
      /** Gpu Vector with index type of coarsening ratio with default value (1,1,1) */
      amrex::GpuArray<int, 3> macro_cr_ratio;
