@@ -4,7 +4,11 @@
 #include <AMReX_RealVect.H>
 #include <AMReX_REAL.H>
 #include <AMReX_GpuQualifiers.H>
+#include "Utils/WarpXUtil.H"
 #include "WarpX.H"
+#include <AMReX_MultiFab.H>
+#include <AMReX_iMultiFab.H>
+#include <AMReX_Scan.H>
 
 
 std::string Pulsar::m_pulsar_type;
@@ -52,6 +56,11 @@ amrex::Real Pulsar::m_DipoleB_init_maxradius;
 int Pulsar::m_AddExternalMonopoleOnly = 1;
 int Pulsar::m_AddMonopoleInsideRstarOnGrid = 0;
 int Pulsar::m_EnforceTheoreticalEBInGrid = 0;
+std::string Pulsar::m_str_conductor_function;
+std::unique_ptr<amrex::Parser> Pulsar::m_conductor_parser;
+bool Pulsar::m_do_conductor = false;
+int Pulsar::m_ApplyEfieldBCusingConductor = 0;
+bool Pulsar::m_do_FilterWithConductor = false;
 
 
 Pulsar::Pulsar ()
@@ -134,7 +143,7 @@ Pulsar::ReadParameters () {
     }
     m_corotatingE_maxradius = m_R_star;
     m_enforceDipoleB_maxradius = m_R_star;
-    pp.query("corotatingE_maxradius", m_corotatingE_maxradius);
+    pp.query("corotatingE_maxradius", m_corotatingE_maxradius);  
     pp.query("enforceDipoleB_maxradius", m_enforceDipoleB_maxradius);
     pp.query("init_dipoleBfield", m_do_InitializeGrid_with_Pulsar_Bfield);
     pp.query("init_corotatingEfield", m_do_InitializeGrid_with_Pulsar_Efield);
@@ -158,6 +167,81 @@ Pulsar::ReadParameters () {
     pp.query("AddExternalMonopoleOnly", m_AddExternalMonopoleOnly);
     pp.query("AddMonopoleInsideRstarOnGrid", m_AddMonopoleInsideRstarOnGrid);
     pp.query("EnforceTheoreticalEBInGrid", m_EnforceTheoreticalEBInGrid);
+    if (pp.query("conductor_function(x,y,z)", m_str_conductor_function)) {
+        Store_parserString(pp, "conductor_function(x,y,z)", m_str_conductor_function);
+        m_conductor_parser = std::make_unique<amrex::Parser>(
+                                  makeParser(m_str_conductor_function,{"x","y","z"}));
+        m_do_conductor = true;
+        amrex::Print() << " do conductor : " << m_do_conductor << "\n";
+        pp.query("ApplyEfieldBCusingConductor", m_ApplyEfieldBCusingConductor);
+        amrex::Print() << " ApplyEfieldBCusingConductor " << m_ApplyEfieldBCusingConductor << "\n";
+        int FilterWithConductor = 0;
+        pp.query("FilterWithConductor", FilterWithConductor);
+        if (FilterWithConductor == 1) {
+            m_do_FilterWithConductor = true;
+        } else {
+            m_do_FilterWithConductor = false;
+        }
+    }
+}
+
+void
+Pulsar::InitData ()
+{
+    amrex::Print() << " in pulsar init data \n"; 
+    auto & warpx = WarpX::GetInstance();
+    const int nlevs_max = warpx.maxLevel() + 1;
+    amrex::Print() << " nlevs_max " << nlevs_max << "\n";
+    if (m_do_conductor == true) {
+        m_conductor_fp.resize(nlevs_max);
+        amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
+        const int ncomps = 1;
+        for (int lev = 0; lev < nlevs_max; ++lev) {
+            amrex::BoxArray ba = warpx.boxArray(lev);
+            amrex::DistributionMapping dm = warpx.DistributionMap(lev);
+            const amrex::IntVect ng_EB_alloc = warpx.getngE() + amrex::IntVect::TheNodeVector()*2;
+            amrex::Print() << " ng eb alloc " << ng_EB_alloc << "\n";
+            m_conductor_fp[lev] = std::make_unique<amrex::MultiFab>(
+                                    amrex::convert(ba,conductor_nodal_flag), dm, ncomps, ng_EB_alloc);
+            InitializeConductorMultifabUsingParser(m_conductor_fp[lev].get(), m_conductor_parser->compile<3>(), lev);
+        }
+    }
+}
+
+void
+Pulsar::InitializeConductorMultifabUsingParser(
+        amrex::MultiFab *mf, amrex::ParserExecutor<3> const& conductor_parser,
+        const int lev)
+{
+    WarpX& warpx = WarpX::GetInstance();
+    const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx_lev = warpx.Geom(lev).CellSizeArray();
+    const amrex::RealBox& real_box = warpx.Geom(lev).ProbDomain();
+    amrex::IntVect iv = mf->ixType().toIntVect();
+    for ( amrex::MFIter mfi(*mf, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+        //InitializeGhost Cells also
+        const amrex::Box& tb = mfi.tilebox(iv, mf->nGrowVect());
+        amrex::Array4<amrex::Real> const& conductor_fab = mf->array(mfi);
+        amrex::ParallelFor(tb,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                // Shift x, y, z position based on index type
+                amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+#if (AMREX_SPACEDIM==2)
+                amrex::Real y = 0._rt;
+                amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+#else
+                amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+#endif
+                // initialize the macroparameter
+                conductor_fab(i,j,k) = conductor_parser(x,y,z);
+                
+            }
+        );
+    }
 }
 
 /** To initialize the grid with dipole magnetic field everywhere and corotating vacuum
@@ -644,4 +728,48 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
         );
     }
 
+}
+
+void
+Pulsar::SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::MultiFab>, 3> &Efield,
+                                const int lev, const amrex::Real a_dt)
+{
+    auto & warpx = WarpX::GetInstance();
+    if (m_do_conductor == false) return;
+    amrex::IntVect x_nodal_flag = Efield[0]->ixType().toIntVect();
+    amrex::IntVect y_nodal_flag = Efield[1]->ixType().toIntVect();
+    amrex::IntVect z_nodal_flag = Efield[2]->ixType().toIntVect();
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (MFIter mfi(*Efield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box& tex = mfi.tilebox(x_nodal_flag);
+        const amrex::Box& tey = mfi.tilebox(y_nodal_flag);
+        const amrex::Box& tez = mfi.tilebox(z_nodal_flag);
+        amrex::Array4<amrex::Real> const& Ex_arr = Efield[0]->array(mfi);
+        amrex::Array4<amrex::Real> const& Ey_arr = Efield[1]->array(mfi);
+        amrex::Array4<amrex::Real> const& Ez_arr = Efield[2]->array(mfi);
+        amrex::Array4<amrex::Real> const& conductor = m_conductor_fp[lev]->array(mfi);
+        // loop over cells and set Efield for r < corotating
+        amrex::ParallelFor(tex, tey, tez,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1) {
+                    //Ex is tangential and on the conductor. Setting value to 0
+                    Ex_arr(i,j,k) = 0.;
+                }
+        },
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1) {
+                    //Ex is tangential and on the conductor. Setting value to 0
+                    Ey_arr(i,j,k) = 0.;
+                }
+        },
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                if (conductor(i,j,k)==1 and conductor(i,j,k+1)==1) {
+                    //Ex is tangential and on the conductor. Setting value to 0
+                    Ez_arr(i,j,k) = 0.;
+                }
+        });
+    }
 }

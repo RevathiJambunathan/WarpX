@@ -149,6 +149,10 @@ WarpX::InitData ()
         m_macroscopic_properties->InitData();
     }
 
+#ifdef PULSAR
+    m_pulsar->InitData();
+#endif
+
     InitDiagnostics();
 
     if (ParallelDescriptor::IOProcessor()) {

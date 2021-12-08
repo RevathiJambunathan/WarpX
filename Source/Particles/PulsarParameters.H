@@ -8,6 +8,7 @@
 #include <AMReX_Array4.H>
 #include <AMReX_Array.H>
 #include <AMReX_MultiFab.H>
+#include <AMReX_Parser.H>
 
 using namespace amrex;
 
@@ -19,12 +20,18 @@ public:
     Pulsar ();
 
     static void ReadParameters();
+    void InitData ();
+    void InitializeConductorMultifabUsingParser(amrex::MultiFab *mf,
+         amrex::ParserExecutor<3> const& conductor_parser, const int lev);
+
     static void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
         amrex::MultiFab *mfy, amrex::MultiFab *mfz, const int lev, const bool init_Bfield);
 
     static void ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
     static void ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Bfield,
+                                    const int lev, const amrex::Real a_dt);
+    void SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
 
 
@@ -314,7 +321,12 @@ public:
     static int m_AddExternalMonopoleOnly;
     static int m_AddMonopoleInsideRstarOnGrid;
     static int m_EnforceTheoreticalEBInGrid;
-
+    static std::string m_str_conductor_function;
+    static std::unique_ptr<amrex::Parser> m_conductor_parser;
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_conductor_fp;
+    static bool m_do_conductor;
+    static int m_ApplyEfieldBCusingConductor;
+    static bool m_do_FilterWithConductor;
 private:
 };
 
