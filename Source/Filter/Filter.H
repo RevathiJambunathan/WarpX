@@ -39,6 +39,57 @@ public:
     // In 2D, stencil_length_each_dir = {length(stencil_x), length(stencil_z)}
     amrex::IntVect stencil_length_each_dir;
 
+#ifdef PULSAR
+    void ApplyStencilWithConductor (amrex::MultiFab& dstmf, const amrex::MultiFab& srcmf,
+                                   const int lev, const amrex::MultiFab& conductormf,
+                                   int scomp=0, int dcomp=0, int ncomp=10000);
+    void DoJxFilterxpass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+    void DoJxFilterypass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+    void DoJxFilterzpass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+    void DoJyFilterxpass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+    void DoJyFilterypass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+    void DoJyFilterzpass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+    void DoJzFilterxpass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+    void DoJzFilterypass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+    void DoJzFilterzpass (const amrex::Box& tbx,
+                          amrex::Array4<amrex::Real const> const& tmp,
+                          amrex::Array4<amrex::Real      > const& dst,
+                          amrex::Array4<amrex::Real const> const& conductor,
+                          int scomp, int dcomp, int ncomp);
+#endif
+
 protected:
     // Stencil along each direction.
     // in 2D, stencil_y is not initialized.
