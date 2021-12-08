@@ -527,6 +527,8 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
                                               warpx.get_pointer_Bfield_aux(lev,1),
                                               warpx.get_pointer_Bfield_aux(lev,2),
                                               lev, m_crse_ratio, zcomp);
+        } else if (m_varnames[comp] == "conductor") {
+            m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(warpx.getPulsar().m_conductor_fp[lev].get(), lev, m_crse_ratio);
 #endif
         }
         else {
