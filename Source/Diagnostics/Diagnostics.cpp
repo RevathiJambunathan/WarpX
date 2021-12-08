@@ -79,6 +79,14 @@ Diagnostics::BaseReadParameters ()
             warpx.do_divb_cleaning, "G can be written to file only if warpx.do_divb_cleaning = 1");
     }
 
+#ifdef PULSAR
+    if (WarpXUtilStr::is_in(m_varnames, "conductor"))
+    {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            warpx.getPulsar().m_do_conductor, "conductor can be written to file only if conductor function is provided");
+    }
+#endif
+
     // If user requests to plot proc_number for a serial run,
     // delete proc_number from fields_to_plot
     if (amrex::ParallelDescriptor::NProcs() == 1){
