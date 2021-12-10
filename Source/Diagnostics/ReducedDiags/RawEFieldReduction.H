@@ -126,12 +126,12 @@ public:
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
 
-            for ( amrex::MFIter mfi(Ex, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+            for ( amrex::MFIter mfi(Ex, false); mfi.isValid(); ++mfi)
             {
-                const amrex::Box& tex = mfi.tilebox(Ex_nodalType);
-                const amrex::Box& tey = mfi.tilebox(Ey_nodalType);
-                const amrex::Box& tez = mfi.tilebox(Ez_nodalType);
-  
+                const amrex::Box& tex = mfi.growntilebox(Ex_nodalType - amrex::IntVect::TheNodeVector());
+                const amrex::Box& tey = mfi.growntilebox(Ey_nodalType - amrex::IntVect::TheNodeVector());
+                const amrex::Box& tez = mfi.growntilebox(Ez_nodalType - amrex::IntVect::TheNodeVector());
+ 
                 const auto& Ex_arr = Ex[mfi].array();
                 const auto& Ey_arr = Ey[mfi].array();
                 const auto& Ez_arr = Ez[mfi].array();
