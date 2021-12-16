@@ -448,7 +448,7 @@ WarpX::PushPSATD ()
         Pulsar::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
     }
     if (Pulsar::m_enforceCorotatingE == 1) {
-        Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+        m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
 
 #endif
@@ -565,7 +565,7 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
     }
 #ifdef PULSAR
     if (Pulsar::m_enforceCorotatingE == 1) {
-        Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+        m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
     if (Pulsar::m_ApplyEfieldBCusingConductor == 1) {
         m_pulsar->SetTangentialEforInternalConductor( Efield_fp[lev], lev, a_dt);
@@ -715,7 +715,7 @@ WarpX::MacroscopicEvolveE (int lev, PatchType patch_type, amrex::Real a_dt) {
     }
 #ifdef PULSAR
     if (Pulsar::m_enforceCorotatingE == 1) {
-        Pulsar::ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+        m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
     }
 #endif
 

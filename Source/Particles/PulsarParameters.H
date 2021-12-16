@@ -27,7 +27,7 @@ public:
     static void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
         amrex::MultiFab *mfy, amrex::MultiFab *mfz, const int lev, const bool init_Bfield);
 
-    static void ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Efield,
+    void ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
     static void ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Bfield,
                                     const int lev, const amrex::Real a_dt);
