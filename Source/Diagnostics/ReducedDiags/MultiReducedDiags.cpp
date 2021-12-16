@@ -20,6 +20,8 @@
 #include "ParticleNumber.H"
 #include "RhoMaximum.H"
 #include "Utils/IntervalsParser.H"
+#include "divEReduction.H"
+#include "RawEFieldReduction.H"
 
 #include <AMReX.H>
 #include <AMReX_ParallelDescriptor.H>
@@ -52,6 +54,8 @@ MultiReducedDiags::MultiReducedDiags ()
             {"FieldMomentum",         [](CS s){return std::make_unique<FieldMomentum>(s);}},
             {"FieldMaximum",          [](CS s){return std::make_unique<FieldMaximum>(s);}},
             {"FieldReduction",        [](CS s){return std::make_unique<FieldReduction>(s);}},
+            {"divEReduction",         [](CS s){return std::make_unique<divEReduction>(s);}},
+            {"RawEFieldReduction",    [](CS s){return std::make_unique<RawEFieldReduction>(s);}},
             {"RhoMaximum",            [](CS s){return std::make_unique<RhoMaximum>(s);}},
             {"BeamRelevant",          [](CS s){return std::make_unique<BeamRelevant>(s);}},
             {"LoadBalanceCosts",      [](CS s){return std::make_unique<LoadBalanceCosts>(s);}},
