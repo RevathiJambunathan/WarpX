@@ -984,18 +984,13 @@ WarpX::ApplyFilterandSumBoundaryJ (int lev, PatchType patch_type)
     auto& j = (patch_type == PatchType::fine) ? current_fp[lev] : current_cp[lev];
     for (int idim = 0; idim < 3; ++idim) {
         if (use_filter) {
-            amrex::Print() << " use filter is on \n";
             IntVect ng = j[idim]->nGrowVect();
-            amrex::Print() << " ng : " << ng << "\n";
             ng += bilinear_filter.stencil_length_each_dir-1;
-            amrex::Print() << " ng gow " << ng << " bilinear_filter.stencil_length_each_dir-1 " << bilinear_filter.stencil_length_each_dir-1 << "\n";
             MultiFab jf(j[idim]->boxArray(), j[idim]->DistributionMap(), j[idim]->nComp(), ng);
 #ifdef PULSAR
             if (Pulsar::m_do_FilterWithConductor) {
-                amrex::Print() << " new implementation\n";
                 bilinear_filter.ApplyStencilWithConductor(jf, *j[idim], lev, *m_pulsar->m_conductor_fp[lev]);
             } else {
-                amrex::Print() << " previous implementation\n";
                 bilinear_filter.ApplyStencil(jf, *j[idim], lev);
             }
 #else
@@ -1111,7 +1106,6 @@ WarpX::ApplyFilterandSumBoundaryRho (int lev, PatchType patch_type, int icomp, i
 void
 WarpX::ApplyFilterandSumBoundaryRho (int /*lev*/, int glev, amrex::MultiFab& rho, int icomp, int ncomp)
 {
-    amrex::Print() << " filter and sum boundary for rho : \n";
     const auto& period = Geom(glev).periodicity();
     if (use_filter) {
         IntVect ng = rho.nGrowVect();
