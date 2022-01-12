@@ -24,12 +24,12 @@ public:
     void InitializeConductorMultifabUsingParser(amrex::MultiFab *mf,
          amrex::ParserExecutor<3> const& conductor_parser, const int lev);
 
-    static void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
+    void InitializeExternalPulsarFieldsOnGrid (amrex::MultiFab *mfx,
         amrex::MultiFab *mfy, amrex::MultiFab *mfz, const int lev, const bool init_Bfield);
 
     void ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
-    static void ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Bfield,
+    void ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> &Bfield,
                                     const int lev, const amrex::Real a_dt);
     void SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
@@ -81,6 +81,7 @@ public:
                                   amrex::Real const Bstar, amrex::Real const Rstar,
                                   amrex::Real const corotatingE_maxradius,
                                   int const Eexternal_monopole,
+                                  int const ApplyCorotatingEField,
                                   amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
         amrex::ignore_unused(phi);
@@ -89,8 +90,8 @@ public:
         amrex::Real s_theta = std::sin(theta);
         amrex::Real r_ratio = Rstar/r;
         // inside pulsar
-        //if ( r <= max_EBcorotating_radius ) {
-        if (r <= corotatingE_maxradius) {
+        //if (r <= corotatingE_maxradius) {
+        if (ApplyCorotatingEField == 1) {
             amrex::Real r2 = r_ratio * r_ratio;
             // Michel and Li -- eq 14 , 15
             Er     =  Bstar * omega * r2 * Rstar * s_theta * s_theta;
@@ -99,8 +100,8 @@ public:
         }
 
         // outside pulsar
-        //if ( r > max_EBcorotating_radius ) {
-        if (r > corotatingE_maxradius) {
+        //if (r > corotatingE_maxradius) {
+        if (ApplyCorotatingEField == 0) {
             amrex::Real r4 = r_ratio*r_ratio*r_ratio*r_ratio;
             // Taking derivative of phi given in eq 30 of Michel and Li
             Er = Bstar * omega * Rstar * r4 * (1.0-3.0*c_theta*c_theta);
@@ -327,6 +328,7 @@ public:
     static bool m_do_conductor;
     static int m_ApplyEfieldBCusingConductor;
     static bool m_do_FilterWithConductor;
+    static int m_do_InitializeGridWithCorotatingAndExternalEField;
 private:
 };
 

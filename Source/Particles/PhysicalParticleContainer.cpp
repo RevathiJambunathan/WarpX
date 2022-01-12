@@ -2296,12 +2296,15 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 //                    amrex::AllPrintToFile("PulsarParticle") << "uxp " << ux[ip] << " uyp " << uy[ip] << " uzp " << uz[ip] << "\n";
 
                     amrex::Real Erp, Ethetap, Ephip;
+                    int ApplyExternalEField = 0;
+                    if (r_p <= corotatingE_maxradius_data) ApplyExternalEField = 1;
                     Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                                         omega_star_data,
                                                         ramp_omega_time_data,
                                                         Bstar_data, Rstar_data,
                                                         corotatingE_maxradius_data,
                                                         E_external_monopole_data,
+                                                        ApplyExternalEField,
                                                         Erp, Ethetap, Ephip);
                     amrex::Real Er_comp, Etheta_comp, Ephi_comp;
                     Pulsar::ConvertCartesianToSphericalRComponent( Exp, Eyp, Ezp,
@@ -2336,12 +2339,15 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                     amrex::Real Bxp_theory, Byp_theory, Bzp_theory;
                     if (use_theoreticalEB == 1) {
                         if (r_p < ( theory_max_rstar) ) {
+                            int ApplyExternalEField = 0;
+                            if (r_p <= corotatingE_maxradius_data) ApplyExternalEField = 1;
                             Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                                                 omega_star_data,
                                                                 ramp_omega_time_data,
                                                                 Bstar_data, Rstar_data,
                                                                 corotatingE_maxradius_data,
                                                                 E_external_monopole_data,
+                                                                ApplyExternalEField,
                                                                 Erp, Ethetap, Ephip);
                             Pulsar::ExternalBFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                                                 Bstar_data, Rstar_data,
@@ -2964,12 +2970,15 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 #ifdef PULSAR
 
         amrex::Real Erp, Ethetap, Ephip;
+        int ApplyExternalEField = 0;
+        if (r_p <= corotatingE_maxradius_data) ApplyExternalEField = 1;
         Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                         omega_star_data,
                                         ramp_omega_time_data,
                                         Bstar_data, Rstar_data,
                                         corotatingE_maxradius_data,
                                         E_external_monopole_data,
+                                        ApplyExternalEField,
                                         Erp, Ethetap, Ephip);
         amrex::Real Brp, Bthetap, Bphip;
         Pulsar::ExternalBFieldSpherical (r_p, theta_p, phi_p, cur_time,
@@ -3000,12 +3009,15 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         amrex::Real Bxp_theory, Byp_theory, Bzp_theory;
         if (use_theoreticalEB == 1) {
             if (r_p < theory_max_rstar) {
+                int ApplyExternalEField = 0;
+                if (r_p <= corotatingE_maxradius_data) ApplyExternalEField = 1;
                 Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
                                                 omega_star_data,
                                                 ramp_omega_time_data,
                                                 Bstar_data, Rstar_data,
                                                 corotatingE_maxradius_data,
                                                 E_external_monopole_data,
+                                                ApplyExternalEField,
                                                 Erp, Ethetap, Ephip);
                 Pulsar::ConvertSphericalToCartesianXComponent(Erp, Ethetap,
                                                               Ephip, r_p, theta_p,

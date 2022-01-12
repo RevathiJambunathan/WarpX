@@ -445,7 +445,7 @@ WarpX::PushPSATD ()
 #ifdef PULSAR
     amrex::Real a_dt = 0._rt;
     if (Pulsar::m_enforceDipoleB == 1) {
-        Pulsar::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+        m_pulsar->ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
     }
     if (Pulsar::m_enforceCorotatingE == 1) {
         m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
@@ -502,7 +502,7 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt, DtType a_dt_typ
 
 #ifdef PULSAR
     if (Pulsar::m_enforceDipoleB == 1) {
-        Pulsar::ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+        m_pulsar->ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
     }
 #endif
 
