@@ -614,7 +614,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                                   ramp_omega_time_data,
                                                   Bstar_data, Rstar_data, dRstar_data,
                                                   Fr, Ftheta, Fphi);
-                        ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                        ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ez_arr(i,j,k));
                     }
                 } else {
