@@ -987,15 +987,15 @@ WarpX::ApplyFilterandSumBoundaryJ (int lev, PatchType patch_type)
             IntVect ng = j[idim]->nGrowVect();
             ng += bilinear_filter.stencil_length_each_dir-1;
             MultiFab jf(j[idim]->boxArray(), j[idim]->DistributionMap(), j[idim]->nComp(), ng);
-#ifdef PULSAR
-            if (Pulsar::m_do_FilterWithConductor) {
-                bilinear_filter.ApplyStencilWithConductor(jf, *j[idim], lev, *m_pulsar->m_conductor_fp[lev]);
-            } else {
+//#ifdef PULSAR
+//            if (Pulsar::m_do_FilterWithConductor) {
+//                bilinear_filter.ApplyStencilWithConductor(jf, *j[idim], lev, *m_pulsar->m_conductor_fp[lev]);
+//            } else {
+//                bilinear_filter.ApplyStencil(jf, *j[idim], lev);
+//            }
+//#else
                 bilinear_filter.ApplyStencil(jf, *j[idim], lev);
-            }
-#else
-                bilinear_filter.ApplyStencil(jf, *j[idim], lev);
-#endif
+//#endif
             WarpXSumGuardCells(*(j[idim]), jf, period, 0, (j[idim])->nComp());
         } else {
             WarpXSumGuardCells(*(j[idim]), period, 0, (j[idim])->nComp());
