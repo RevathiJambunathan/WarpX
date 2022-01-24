@@ -38,6 +38,7 @@
 #include "Utils/IntervalsParser.H"
 #include "Utils/WarnManager_fwd.H"
 #include "Utils/WarpXAlgorithmSelection.H"
+#include "FieldSolver/London/London.H"
 
 #include <AMReX.H>
 #include <AMReX_AmrCore.H>
@@ -1147,6 +1148,8 @@ private:
 
     // Macroscopic properties
     std::unique_ptr<MacroscopicProperties> m_macroscopic_properties;
+    // London solver
+    std::unique_ptr<London> m_london;
 
     // Load balancing
     /** Load balancing intervals that reads the "load_balance_intervals" string int the input file
