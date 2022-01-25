@@ -329,6 +329,7 @@ public:
     static int m_ApplyEfieldBCusingConductor;
     static bool m_do_FilterWithConductor;
     static int m_do_InitializeGridWithCorotatingAndExternalEField;
+    static int m_AddBdipoleExternal;
 private:
 };
 

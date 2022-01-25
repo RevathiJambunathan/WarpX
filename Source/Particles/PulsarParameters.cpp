@@ -62,6 +62,7 @@ bool Pulsar::m_do_conductor = false;
 int Pulsar::m_ApplyEfieldBCusingConductor = 0;
 bool Pulsar::m_do_FilterWithConductor = false;
 int Pulsar::m_do_InitializeGridWithCorotatingAndExternalEField = 0;
+int Pulsar::m_AddBdipoleExternal = 0;
 
 
 Pulsar::Pulsar ()
@@ -167,6 +168,7 @@ Pulsar::ReadParameters () {
        pp.query("DipoleB_init_maxradius", m_DipoleB_init_maxradius);
     }
     pp.query("AddExternalMonopoleOnly", m_AddExternalMonopoleOnly);
+    pp.query("AddBdipoleExternal", m_AddBdipoleExternal);
     pp.query("AddMonopoleInsideRstarOnGrid", m_AddMonopoleInsideRstarOnGrid);
     pp.query("EnforceTheoreticalEBInGrid", m_EnforceTheoreticalEBInGrid);
     if (pp.query("conductor_function(x,y,z)", m_str_conductor_function)) {
