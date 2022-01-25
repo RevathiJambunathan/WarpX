@@ -12,7 +12,7 @@
 #include <AMReX_Parser.H>
 #include <AMReX_REAL.H>
 
-enum ExternalFieldInitType { None, Constant, Parser, RepeatedPlasmaLens, Unknown };
+enum ExternalFieldInitType { None, Constant, ParserType, RepeatedPlasmaLens, Unknown };
 
 /** \brief Functor class that assigns external
  *         field values (E and B) to particles.
@@ -82,7 +82,7 @@ struct GetExternalEBField
             Ey = m_Efield_value[1];
             Ez = m_Efield_value[2];
         }
-        else if (m_Etype == Parser)
+        else if (m_Etype == ParserType)
         {
             amrex::ParticleReal x, y, z;
             m_get_position(i, x, y, z);
@@ -102,7 +102,7 @@ struct GetExternalEBField
             By = m_Bfield_value[1];
             Bz = m_Bfield_value[2];
         }
-        else if (m_Btype == Parser)
+        else if (m_Btype == ParserType)
         {
             amrex::ParticleReal x, y, z;
             m_get_position(i, x, y, z);
