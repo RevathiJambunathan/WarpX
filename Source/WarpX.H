@@ -147,6 +147,7 @@ public:
 
     MultiParticleContainer& GetPartContainer () { return *mypc; }
     MacroscopicProperties& GetMacroscopicProperties () { return *m_macroscopic_properties; }
+    London& getLondon () { return *m_london; }
 
     ParticleBoundaryBuffer& GetParticleBoundaryBuffer () { return *m_particle_boundary_buffer; }
 
@@ -198,6 +199,7 @@ public:
     static amrex::Vector<int> field_boundary_hi;
     static amrex::Vector<ParticleBoundaryType> particle_boundary_lo;
     static amrex::Vector<ParticleBoundaryType> particle_boundary_hi;
+    static int yee_coupled_solver_algo;
 
 
     // If true, the current is deposited on a nodal grid and then centered onto a staggered grid

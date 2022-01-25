@@ -31,6 +31,7 @@
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/WarpXUtil.H"
+#include "FieldSolver/London/London.H"
 
 #include <AMReX.H>
 #include <AMReX_Array.H>
@@ -152,8 +153,10 @@ WarpX::Evolve (int numsteps)
                 FillBoundaryAux(guard_cells.ng_UpdateAux);
             }
         }
-        EvolveLondonJ(-0.5_rt*dt[0]); // J^(n-1/2) to J^(n+1/2) using E^(n)
-        // Fill Boundary J should come here
+        if (WarpX::yee_coupled_solver_algo == CoupledYeeSolver::MaxwellLondon) {
+            m_london->EvolveLondonJ(-0.5_rt*dt[0]); // J^(n-1/2) to J^(n+1/2) using E^(n)
+            // Fill Boundary J should come here
+        }
 
 
         // Run multi-physics modules:
@@ -380,8 +383,10 @@ WarpX::OneStep_nosub (Real cur_time)
     ExecutePythonCallback("beforedeposition");
 
     PushParticlesandDepose(cur_time);
-    EvolveLondonJ(dt[0]); // J^(n-1/2) to J^(n+1/2) using E^(n)
+    if (WarpX::yee_coupled_solver_algo == CoupledYeeSolver::MaxwellLondon) {
+        m_london->EvolveLondonJ(dt[0]); // J^(n-1/2) to J^(n+1/2) using E^(n)
     // Fill Boundary J should come here
+    }
 
     ExecutePythonCallback("afterdeposition");
 

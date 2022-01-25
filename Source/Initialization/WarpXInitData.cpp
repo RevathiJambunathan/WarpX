@@ -148,6 +148,11 @@ WarpX::InitData ()
         m_macroscopic_properties->InitData();
     }
 
+    if (WarpX::yee_coupled_solver_algo == CoupledYeeSolver::MaxwellLondon) {
+        amrex::Print() << " calling london \n";
+        m_london->InitData();
+    }
+
     InitDiagnostics();
 
     if (ParallelDescriptor::IOProcessor()) {
