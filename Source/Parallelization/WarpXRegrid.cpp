@@ -203,6 +203,13 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
             rho_fp[lev] = std::move(pmf);
         }
 
+#ifdef PULSAR
+        const int nc = m_pulsar->m_conductor_fp[lev]->nComp();
+        const IntVect& ng = m_pulsar->m_conductor_fp[lev]->nGrowVect();
+        auto pmf = std::make_unique<MultiFab>(m_pulsar->m_conductor_fp[lev]->boxArray(), dm, nc, ng);
+        m_pulsar->m_conductor_fp[lev] = std::move(pmf);
+#endif
+
 #ifdef WARPX_USE_PSATD
         if (maxwell_solver_id == MaxwellSolverAlgo::PSATD) {
             if (spectral_solver_fp[lev] != nullptr) {
