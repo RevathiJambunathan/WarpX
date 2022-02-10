@@ -246,6 +246,12 @@ Pulsar::InitData ()
 }
 
 void
+Pulsar::InitializeConductorMultifabUsingParser(const int lev)
+{
+    InitializeConductorMultifabUsingParser(m_conductor_fp[lev].get(), m_conductor_parser->compile<3>(), lev);
+}
+
+void
 Pulsar::InitializeConductorMultifabUsingParser(
         amrex::MultiFab *mf, amrex::ParserExecutor<3> const& conductor_parser,
         const int lev)

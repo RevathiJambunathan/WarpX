@@ -33,6 +33,7 @@ public:
                                     const int lev, const amrex::Real a_dt);
     void SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
+    void InitializeConductorMultifabUsingParser(const int lev);
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE

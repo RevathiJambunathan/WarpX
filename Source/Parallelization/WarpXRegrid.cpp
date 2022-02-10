@@ -208,6 +208,7 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
         const IntVect& ng = m_pulsar->m_conductor_fp[lev]->nGrowVect();
         auto pmf = std::make_unique<MultiFab>(m_pulsar->m_conductor_fp[lev]->boxArray(), dm, nc, ng);
         m_pulsar->m_conductor_fp[lev] = std::move(pmf);
+        m_pulsar->InitializeConductorMultifabUsingParser(lev);
 #endif
 
 #ifdef WARPX_USE_PSATD
