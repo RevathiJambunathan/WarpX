@@ -331,6 +331,8 @@ public:
     static bool m_do_FilterWithConductor;
     static int m_do_InitializeGridWithCorotatingAndExternalEField;
     static int m_AddBdipoleExternal;
+    static int m_AddVacuumEFieldsIntAndExt;
+    static int m_AddVacuumBFieldsIntAndExt;
 private:
 };
 

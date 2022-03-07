@@ -63,6 +63,8 @@ int Pulsar::m_ApplyEfieldBCusingConductor = 0;
 bool Pulsar::m_do_FilterWithConductor = false;
 int Pulsar::m_do_InitializeGridWithCorotatingAndExternalEField = 0;
 int Pulsar::m_AddBdipoleExternal = 0;
+int Pulsar::m_AddVacuumEFieldsIntAndExt = 0;
+int Pulsar::m_AddVacuumBFieldsIntAndExt = 0;
 
 
 Pulsar::Pulsar ()
@@ -187,6 +189,8 @@ Pulsar::ReadParameters () {
             m_do_FilterWithConductor = false;
         }
     }
+    pp.query("AddVacuumEFieldsIntAndExt", m_AddVacuumEFieldsIntAndExt );
+    pp.query("AddVacuumBFieldsIntAndExt", m_AddVacuumBFieldsIntAndExt );
 }
 
 void

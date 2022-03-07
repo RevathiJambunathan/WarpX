@@ -2137,6 +2137,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     amrex::Real theory_max_rstar = Pulsar::m_theory_max_rstar;
     int singleParticleTest = Pulsar::m_singleParticleTest;
     int AddBDipoleOutsideRstar = Pulsar::m_AddBdipoleExternal;
+    int AddPulsarVacuumEFields = Pulsar::m_AddVacuumEFieldsIntAndExt;
+    int AddPulsarVacuumBFields = Pulsar::m_AddVacuumBFieldsIntAndExt;
 
 //    amrex::AllPrintToFile("PulsarParticle") << " step : " << warpx.getistep(0) << " time : " << cur_time << "\n";
 #endif
@@ -2276,6 +2278,31 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                             Eyp += Ey_monopole;
                             Ezp += Ez_monopole;
                         }
+                    } else if (AddPulsarVacuumEFields == 1) {
+                        amrex::Real Erp, Ethetap, Ephip;
+                        amrex::Real r_p, theta_p, phi_p;
+                        Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                                  r_p, theta_p, phi_p);
+                        int ApplyExternalEField = 0;
+                        if (r_p <= corotatingE_maxradius_data) ApplyExternalEField = 1;
+                        Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                            omega_star_data,
+                                                            ramp_omega_time_data,
+                                                            Bstar_data, Rstar_data,
+                                                            corotatingE_maxradius_data,
+                                                            E_external_monopole_data,
+                                                            ApplyExternalEField,
+                                                            Erp, Ethetap, Ephip);
+                        amrex::Real Ex_vac, Ey_vac, Ez_vac;
+                        Pulsar::ConvertSphericalToCartesianXComponent(Erp, Ethetap, Ephip,
+                                                                      r_p, theta_p, phi_p, Ex_vac);
+                        Pulsar::ConvertSphericalToCartesianYComponent(Erp, Ethetap, Ephip,
+                                                                      r_p, theta_p, phi_p, Ey_vac);
+                        Pulsar::ConvertSphericalToCartesianZComponent(Erp, Ethetap, Ephip,
+                                                                      r_p, theta_p, phi_p, Ez_vac);
+                        Exp += Ex_vac;
+                        Eyp += Ey_vac;
+                        Ezp += Ez_vac;
                     }
                     if (AddBDipoleOutsideRstar == 1) {
                         amrex::Real Brp, Bthetap, Bphip;
@@ -2300,6 +2327,28 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                             Byp += By_dipole;
                             Bzp += Bz_dipole;
                         }
+                    }
+                    else if (AddPulsarVacuumBFields == 1) {
+                        amrex::Real Brp, Bthetap, Bphip;
+                        amrex::Real r_p, theta_p, phi_p;
+                        Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                                  r_p, theta_p, phi_p);
+                        Pulsar::ExternalBFieldSpherical (r_p, theta_p, phi_p, cur_time,
+                                                         Bstar_data, Rstar_data, dRstar_data,
+                                                         Brp, Bthetap, Bphip);
+                        amrex::Real Bx_dipole, By_dipole, Bz_dipole;
+                        Pulsar::ConvertSphericalToCartesianXComponent(Brp, Bthetap,
+                                                              Bphip, r_p, theta_p,
+                                                              phi_p, Bx_dipole);
+                        Pulsar::ConvertSphericalToCartesianYComponent(Brp, Bthetap,
+                                                              Bphip, r_p, theta_p,
+                                                              phi_p, By_dipole);
+                        Pulsar::ConvertSphericalToCartesianZComponent(Brp, Bthetap,
+                                                              Bphip, r_p, theta_p,
+                                                              phi_p, Bz_dipole);
+                        Bxp += Bx_dipole;
+                        Byp += By_dipole;
+                        Bzp += Bz_dipole;
                     }
 #endif
                 }
@@ -2843,6 +2892,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Gpu::synchronize();
     amrex::Gpu::ManagedVector<amrex::Real> PulsarParticleDiag(55,0.0);
     amrex::Real * PulsarParticleDiagData = PulsarParticleDiag.data();
+    int AddPulsarVacuumEFields = Pulsar::m_AddVacuumEFieldsIntAndExt;
+    int AddPulsarVacuumBFields = Pulsar::m_AddVacuumBFieldsIntAndExt;
 #endif
 
     bool galerkin_interpolation = WarpX::galerkin_interpolation;
@@ -2984,6 +3035,31 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                      Eyp += Ey_monopole;
                      Ezp += Ez_monopole;
                  }
+             } else if (AddPulsarVacuumEFields == 1) {
+                 amrex::Real Erp, Ethetap, Ephip;
+                 amrex::Real r_p, theta_p, phi_p;
+                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                           r_p, theta_p, phi_p);
+                 int ApplyExternalEField = 0;
+                 if (r_p <= corotatingE_maxradius_data) ApplyExternalEField = 1;
+                 Pulsar::ExternalEFieldSpherical(r_p, theta_p, phi_p, cur_time,
+                                                     omega_star_data,
+                                                     ramp_omega_time_data,
+                                                     Bstar_data, Rstar_data,
+                                                     corotatingE_maxradius_data,
+                                                     E_external_monopole_data,
+                                                     ApplyExternalEField,
+                                                     Erp, Ethetap, Ephip);
+                 amrex::Real Ex_vac, Ey_vac, Ez_vac;
+                 Pulsar::ConvertSphericalToCartesianXComponent(Erp, Ethetap, Ephip,
+                                                               r_p, theta_p, phi_p, Ex_vac);
+                 Pulsar::ConvertSphericalToCartesianYComponent(Erp, Ethetap, Ephip,
+                                                               r_p, theta_p, phi_p, Ey_vac);
+                 Pulsar::ConvertSphericalToCartesianZComponent(Erp, Ethetap, Ephip,
+                                                               r_p, theta_p, phi_p, Ez_vac);
+                 Exp += Ex_vac;
+                 Eyp += Ey_vac;
+                 Ezp += Ez_vac;
              }
              if (AddBDipoleOutsideRstar == 1) {
                  amrex::Real Brp, Bthetap, Bphip;
@@ -3008,6 +3084,27 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                      Byp += By_dipole;
                      Bzp += Bz_dipole;
                  }
+             } else if (AddPulsarVacuumBFields == 1) {
+                 amrex::Real Brp, Bthetap, Bphip;
+                 amrex::Real r_p, theta_p, phi_p;
+                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                           r_p, theta_p, phi_p);
+                 Pulsar::ExternalBFieldSpherical (r_p, theta_p, phi_p, cur_time,
+                                                  Bstar_data, Rstar_data, dRstar_data,
+                                                  Brp, Bthetap, Bphip);
+                 amrex::Real Bx_dipole, By_dipole, Bz_dipole;
+                 Pulsar::ConvertSphericalToCartesianXComponent(Brp, Bthetap,
+                                                       Bphip, r_p, theta_p,
+                                                       phi_p, Bx_dipole);
+                 Pulsar::ConvertSphericalToCartesianYComponent(Brp, Bthetap,
+                                                       Bphip, r_p, theta_p,
+                                                       phi_p, By_dipole);
+                 Pulsar::ConvertSphericalToCartesianZComponent(Brp, Bthetap,
+                                                       Bphip, r_p, theta_p,
+                                                       phi_p, Bz_dipole);
+                 Bxp += Bx_dipole;
+                 Byp += By_dipole;
+                 Bzp += Bz_dipole;
              }
 #endif
         }
