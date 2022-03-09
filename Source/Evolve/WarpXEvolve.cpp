@@ -135,7 +135,7 @@ WarpX::Evolve (int numsteps)
                 }
             }
         } else {
-            if ( cur_time >= Pulsar::m_injection_time) {
+            if ( cur_time >= Pulsar::m_injection_time and cur_time <= Pulsar::m_injection_endtime) {
                 mypc->PulsarParticleInjection();
                 mypc->Redistribute();
         }

@@ -333,6 +333,7 @@ public:
     static int m_AddBdipoleExternal;
     static int m_AddVacuumEFieldsIntAndExt;
     static int m_AddVacuumBFieldsIntAndExt;
+    static amrex::Real m_injection_endtime;
 private:
 };
 

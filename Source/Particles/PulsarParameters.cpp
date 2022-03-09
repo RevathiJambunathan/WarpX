@@ -65,6 +65,7 @@ int Pulsar::m_do_InitializeGridWithCorotatingAndExternalEField = 0;
 int Pulsar::m_AddBdipoleExternal = 0;
 int Pulsar::m_AddVacuumEFieldsIntAndExt = 0;
 int Pulsar::m_AddVacuumBFieldsIntAndExt = 0;
+amrex::Real Pulsar::m_injection_endtime;
 
 
 Pulsar::Pulsar ()
@@ -191,6 +192,8 @@ Pulsar::ReadParameters () {
     }
     pp.query("AddVacuumEFieldsIntAndExt", m_AddVacuumEFieldsIntAndExt );
     pp.query("AddVacuumBFieldsIntAndExt", m_AddVacuumBFieldsIntAndExt );
+    m_injection_endtime = 1000; // 1000 s upper limit 
+    pp.query("ParticleInjectionEndTime",m_injection_endtime);
 }
 
 void
