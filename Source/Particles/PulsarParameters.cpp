@@ -152,7 +152,7 @@ Pulsar::ReadParameters () {
     pp.query("enforceDipoleB_maxradius", m_enforceDipoleB_maxradius);
     pp.query("init_dipoleBfield", m_do_InitializeGrid_with_Pulsar_Bfield);
     pp.query("init_corotatingEfield", m_do_InitializeGrid_with_Pulsar_Efield);
-    pp.query("init_corortatingAndExternalEField", m_do_InitializeGridWithCorotatingAndExternalEField);
+    pp.query("init_corotatingAndExternalEField", m_do_InitializeGridWithCorotatingAndExternalEField);
     pp.query("enforceCorotatingE", m_enforceCorotatingE);
     pp.query("enforceDipoleB", m_enforceDipoleB);
     pp.query("singleParticleTest", m_singleParticleTest);
