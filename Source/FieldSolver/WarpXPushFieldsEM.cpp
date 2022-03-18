@@ -26,6 +26,9 @@
 #include "Utils/WarpXProfilerWrapper.H"
 #include "WarpXPushFieldsEM_K.H"
 #include "WarpX_FDTD.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #ifdef AMREX_USE_SENSEI_INSITU
@@ -538,6 +541,20 @@ WarpX::PushPSATD ()
     // Evolve the fields in the PML boxes
     for (int lev = 0; lev <= finest_level; ++lev)
     {
+#ifdef PULSAR
+        amrex::Real a_dt = 0._rt; // unused for pulsar BC
+        // Apply Pulsar boundary condition before domain boundary condition
+        if (Pulsar::m_enforceDipoleB == 1) {
+            // Enforce dipole magnetic field boundary condition
+            m_pulsar->ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+            if (lev > 0) m_pulsar->ApplyDipoleBfield_BC( Bfield_cp[lev], lev, a_dt);
+        }
+        if (Pulsar::m_enforceCorotatingE == 1) {
+            // Enforce corotating electric field boundary condition
+            m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+            if (lev > 0) m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+        }
+#endif
         if (pml[lev] && pml[lev]->ok())
         {
             pml[lev]->PushPSATD(lev);
@@ -547,7 +564,7 @@ WarpX::PushPSATD ()
         ApplyBfieldBoundary(lev, PatchType::fine, DtType::FirstHalf);
         if (lev > 0) ApplyBfieldBoundary(lev, PatchType::coarse, DtType::FirstHalf);
     }
-#endif
+#endif // ifdef PSATD
 }
 
 void
@@ -583,6 +600,15 @@ WarpX::EvolveB (int lev, PatchType patch_type, amrex::Real a_dt, DtType a_dt_typ
                                        m_face_areas[lev], m_area_mod[lev], ECTRhofield[lev], Venl[lev],
                                        m_flag_info_face[lev], m_borrowing[lev], lev, a_dt);
     }
+
+#ifdef PULSAR
+    // Enforce pulsar boundary condition before domain boundary condition
+    if (Pulsar::m_enforceDipoleB == 1) {
+        // Enforce dipole magnetic field boundary condition
+        m_pulsar->ApplyDipoleBfield_BC( Bfield_fp[lev], lev, a_dt);
+        if (lev > 0) m_pulsar->ApplyDipoleBfield_BC( Bfield_cp[lev], lev, a_dt);
+    }
+#endif
 
     // Evolve B field in PML cells
     if (do_pml && pml[lev]->ok()) {
@@ -634,6 +660,15 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
                                        m_face_areas[lev], ECTRhofield[lev],
                                        F_cp[lev], lev, a_dt );
     }
+
+#ifdef PULSAR
+    // Apply pulsar boundary condition before domain boundary condition
+    if (Pulsar::m_enforceCorotatingE == 1) {
+        // Enforce corotating electric field boundary condition
+        m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+        if (lev > 0) m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+#endif
 
     // Evolve E field in PML cells
     if (do_pml && pml[lev]->ok()) {
@@ -794,6 +829,16 @@ WarpX::MacroscopicEvolveE (int lev, PatchType patch_type, amrex::Real a_dt) {
     else {
         amrex::Abort("Macroscopic EvolveE is not implemented for lev > 0, yet.");
     }
+
+#ifdef PULSAR
+    // Apply pulsar boundary condition before domain boundary condition
+    if (Pulsar::m_enforceCorotatingE == 1) {
+        // Enforce corotating electric field boundary condition
+        m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+        if (lev > 0) m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    }
+#endif
+
     if (do_pml && pml[lev]->ok()) {
         if (patch_type == PatchType::fine) {
             m_fdtd_solver_fp[lev]->EvolveEPML(
