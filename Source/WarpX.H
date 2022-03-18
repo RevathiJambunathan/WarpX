@@ -38,6 +38,9 @@
 #include "Utils/IntervalsParser.H"
 #include "Utils/WarnManager_fwd.H"
 #include "Utils/WarpXAlgorithmSelection.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_AmrCore.H>
@@ -904,6 +907,9 @@ public:
     //! Tagging cells for refinement
     virtual void ErrorEst (int lev, amrex::TagBoxArray& tags, amrex::Real time, int /*ngrow*/) final;
 
+#ifdef PULSAR
+    Pulsar& getPulsar() {return *m_pulsar;}
+#endif
 protected:
 
     /**
@@ -1293,6 +1299,11 @@ private:
 
     // Macroscopic properties
     std::unique_ptr<MacroscopicProperties> m_macroscopic_properties;
+
+#ifdef PULSAR
+    // Object of pulsar class containing pulsar parameters and functions
+    std::unique_ptr<Pulsar> m_pulsar;
+#endif
 
     // Load balancing
     /** Load balancing intervals that reads the "load_balance_intervals" string int the input file

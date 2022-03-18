@@ -28,6 +28,9 @@
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/WarpXUtil.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_AmrCore.H>
@@ -373,6 +376,10 @@ WarpX::InitData ()
     if (WarpX::em_solver_medium==1) {
         m_macroscopic_properties->InitData();
     }
+
+#ifdef PULSAR
+    m_pulsar->InitData();
+#endif
 
     InitDiagnostics();
 
