@@ -717,14 +717,16 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
-                    if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1 and conductor(i,j,k+1)==1 and conductor(i,j+1,k+1)==1) {
-                        // Enforce magnetic field boundary condition (dipole field) if face-centered
-                        // Bfield location is completely embedded in the conductor
-                        ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                Bstar_data, Rstar_data, dRstar_data,
-                                                Fr, Ftheta, Fphi);
-                        ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
-                                                               r, theta, phi, Bx_arr(i,j,k));
+                    if ( r <= enforceDipoleB_maxradius_data ) {
+                        if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1 and conductor(i,j,k+1)==1 and conductor(i,j+1,k+1)==1) {
+                            // Enforce magnetic field boundary condition (dipole field) if face-centered
+                            // Bfield location is completely embedded in the conductor
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                    Bstar_data, Rstar_data, dRstar_data,
+                                                    Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Bx_arr(i,j,k));
+                        }
                     }
                     else if ( r > enforceDipoleB_maxradius_data && r <= corotatingE_maxradius_data) {
                         // Dipole magnetic field applied for r < corotating radius and then
@@ -770,14 +772,16 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
-                    if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 and conductor(i,j,k+1)==1 and conductor(i+1,j,k+1)==1) {
-                        // Enforce magnetic field boundary condition (dipole field) if face-centered
-                        // Bfield location is completely embedded in the conductor
-                        ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                Bstar_data, Rstar_data, dRstar_data,
-                                               Fr, Ftheta, Fphi);
-                        ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
-                                                               r, theta, phi, By_arr(i,j,k));
+                    if ( r <= enforceDipoleB_maxradius_data ) {
+                        if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 and conductor(i,j,k+1)==1 and conductor(i+1,j,k+1)==1) {
+                            // Enforce magnetic field boundary condition (dipole field) if face-centered
+                            // Bfield location is completely embedded in the conductor
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                    Bstar_data, Rstar_data, dRstar_data,
+                                                   Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, By_arr(i,j,k));
+                        }
                     } else if ( r > enforceDipoleB_maxradius_data && r <= corotatingE_maxradius_data) {
                         // Dipole magnetic field applied for r < corotating radius and then
                         // a smoothening function tanh damping is applied between radius of star
@@ -817,14 +821,16 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
-                    if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 and conductor(i,j+1,k)==1 and conductor(i+1,j+1,k)==1) {
-                        // Enforce magnetic field boundary condition (dipole field) if face-centered
-                        // Bfield location is completely embedded in the conductor
-                        ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                               Bstar_data, Rstar_data, dRstar_data,
-                                               Fr, Ftheta, Fphi);
-                        ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
-                                                               r, theta, phi, Bz_arr(i,j,k));
+                    if ( r <= enforceDipoleB_maxradius_data ) {
+                        if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 and conductor(i,j+1,k)==1 and conductor(i+1,j+1,k)==1) {
+                            // Enforce magnetic field boundary condition (dipole field) if face-centered
+                            // Bfield location is completely embedded in the conductor
+                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                                                   Bstar_data, Rstar_data, dRstar_data,
+                                                   Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Bz_arr(i,j,k));
+                        }
                     } else if ( r > enforceDipoleB_maxradius_data && r <= corotatingE_maxradius_data) {
                         // Dipole magnetic field applied for r < corotating radius and then
                         // a smoothening function tanh damping is applied between radius of star
