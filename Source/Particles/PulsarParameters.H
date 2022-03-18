@@ -156,7 +156,6 @@ public:
         Bphi   = 0.0;
     }
 
-
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static void getExternalEBOnParticle( amrex::Real const r, amrex::Real const theta, amrex::Real const phi,
                                          const int AddExternalMonopoleOnly, const int AddPulsarVacuumEFields,
