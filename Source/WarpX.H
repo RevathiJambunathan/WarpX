@@ -38,6 +38,9 @@
 #include "AcceleratorLattice/AcceleratorLattice.H"
 #include "Utils/Parser/IntervalsParser.H"
 #include "Utils/WarpXAlgorithmSelection.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_AmrCore.H>
@@ -983,6 +986,9 @@ public:
     // Return the accelerator lattice instance defined at the given refinement level
     const AcceleratorLattice& get_accelerator_lattice (int lev) {return *(m_accelerator_lattice[lev]);}
 
+#ifdef PULSAR
+    Pulsar& getPulsar() {return *m_pulsar;}
+#endif
 protected:
 
     /**
@@ -1371,6 +1377,11 @@ private:
 
     // Macroscopic properties
     std::unique_ptr<MacroscopicProperties> m_macroscopic_properties;
+
+#ifdef PULSAR
+    // Object of pulsar class containing pulsar parameters and functions
+    std::unique_ptr<Pulsar> m_pulsar;
+#endif
 
     // Load balancing
     /** Load balancing intervals that reads the "load_balance_intervals" string int the input file
