@@ -504,7 +504,6 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                 }
                 ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                     r, theta, phi, mfz_arr(i,j,k));
-                }
             }
         );
     } // mfiter loop
