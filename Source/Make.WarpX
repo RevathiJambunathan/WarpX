@@ -68,6 +68,10 @@ ifeq ($(DIM),1)
   DEFINES += -DWARPX_DIM_1D_Z -DWARPX_ZINDEX=0
 endif
 
+ifeq ($(PULSAR),TRUE)
+  DEFINES += -DPULSAR
+endif
+
 -include Make.package
 include $(WARPX_HOME)/Source/Make.package
 include $(WARPX_HOME)/Source/ablastr/Make.package
