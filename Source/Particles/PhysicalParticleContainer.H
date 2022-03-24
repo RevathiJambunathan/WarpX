@@ -22,6 +22,9 @@
 #include "Particles/Gather/ScaleFields.H"
 #include "Particles/Resampling/Resampling.H"
 #include "WarpXParticleContainer.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX_GpuContainers.H>
 #include <AMReX_Particles.H>
@@ -338,6 +341,11 @@ public:
     PhotonEmissionFilterFunc getPhotonEmissionFilterFunc ();
 
     PairGenerationFilterFunc getPairGenerationFilterFunc ();
+#endif
+
+#ifdef PULSAR
+    virtual void PulsarParticleRemoval () override;
+    virtual void PulsarParticleInjection () override;
 #endif
 
 protected:

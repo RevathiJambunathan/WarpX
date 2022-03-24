@@ -1692,3 +1692,23 @@ void MultiParticleContainer::CheckQEDProductSpecies()
 }
 
 #endif
+
+#ifdef PULSAR
+void
+MultiParticleContainer::PulsarParticleInjection ()
+{
+    amrex::Print() << " pulsar injection is on \n";
+    for (auto& pc : allcontainers) {
+        pc->PulsarParticleInjection();
+    }
+}
+
+void
+MultiParticleContainer::PulsarParticleRemoval()
+{
+    amrex::Print() << " particle removed from inside pulsar \n";
+    for (auto& pc : allcontainers) {
+        pc->PulsarParticleRemoval();
+    }
+}
+#endif

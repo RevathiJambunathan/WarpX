@@ -361,6 +361,11 @@ public:
      */
      void defineAllParticleTiles () noexcept;
 
+#ifdef PULSAR
+    virtual void PulsarParticleInjection () {};
+    virtual void PulsarParticleRemoval () {};
+#endif
+
 protected:
     int species_id;
 
