@@ -25,6 +25,9 @@
 #include "Utils/WarpXUtil.H"
 #include "WarpXParticleContainer.H"
 #include "ParticleBoundaries.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX_BLassert.H>
 #include <AMReX_Box.H>
@@ -331,6 +334,13 @@ public:
 #endif
 
     int getSpeciesID (std::string product_str) const;
+
+#ifdef PULSAR
+    // Remove particles from inside the pulsar with user-defined radius
+    void PulsarParticleRemoval ();
+    // plasma injection
+    void PulsarParticleInjection ();
+#endif
 
 protected:
 

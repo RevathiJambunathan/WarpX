@@ -32,6 +32,9 @@
 #include "Utils/WarpXConst.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/WarpXUtil.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <ablastr/utils/SignalHandling.H>
 
@@ -117,6 +120,39 @@ WarpX::Evolve (int numsteps)
                 }
             }
         }
+
+#ifdef PULSAR
+        // inject particles for pulsar simulation
+        if (Pulsar::m_singleParticleTest == 1) {
+            if (Pulsar::m_continuous_injection == 0) {
+                // particles injected only at user-defined injection time
+                if ( cur_time >= Pulsar::m_injection_time &&
+                     cur_time <= Pulsar::m_injection_time + 0.5_rt*dt[0]) {
+                    // inject single particle-pair
+                    mypc->PulsarParticleInjection();
+                    // call redistribute
+                    mypc->Redistribute();
+                }
+            } else {
+                //particle injected every timestep after user-defined injection time
+                if (cur_time > Pulsar::m_injection_time) {
+                    // particle injection call
+                    mypc->PulsarParticleInjection();
+                    // redistribute
+                    mypc->Redistribute();
+                }
+            }
+        } else {
+            // Particle-pair injected from user-defined start to end time
+            if (cur_time >= Pulsar::m_injection_time &&
+                cur_time <= Pulsar::m_injection_endtime) {
+                    // particle injection call
+                    mypc->PulsarParticleInjection();
+                    // redistribute
+                    mypc->Redistribute();
+            }
+        }
+#endif
 
         // At the beginning, we have B^{n} and E^{n}.
         // Particles have p^{n} and x^{n}.
@@ -218,6 +254,9 @@ WarpX::Evolve (int numsteps)
             // B : guard cells are NOT up-to-date
         }
 
+#ifdef PULSAR
+        // Damp EB fields inside the pulsar radius with a user-defined damping factor
+#endif
         if (cur_time + dt[0] >= stop_time - 1.e-3*dt[0] || step == numsteps_max-1) {
             // At the end of last step, push p by 0.5*dt to synchronize
             FillBoundaryE(guard_cells.ng_FieldGather);
@@ -270,6 +309,11 @@ WarpX::Evolve (int numsteps)
         mypc->ContinuousFluxInjection(cur_time, dt[0]);
 
         mypc->ApplyBoundaryConditions();
+
+#ifdef PULSAR
+        // call PulsarParticleBoundaryCondition before redistribute
+        mypc->PulsarParticleRemoval();
+#endif
 
         // interact the particles with EB walls (if present)
 #ifdef AMREX_USE_EB
