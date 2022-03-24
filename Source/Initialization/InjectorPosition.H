@@ -21,7 +21,8 @@ struct InjectorPositionRandom
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int /*i_part*/, int /*ref_fac*/,
-                        amrex::RandomEngine const& engine) const noexcept
+                        amrex::RandomEngine const& engine
+                       ) const noexcept
     {
         return amrex::XDim3{amrex::Random(engine), amrex::Random(engine), amrex::Random(engine)};
     }
@@ -36,7 +37,8 @@ struct InjectorPositionRandomPlane
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int /*i_part*/, int /*ref_fac*/,
-                        amrex::RandomEngine const& engine) const noexcept
+                        amrex::RandomEngine const& engine
+                        ) const noexcept
     {
         using namespace amrex::literals;
 #if ((defined WARPX_DIM_3D) || (defined WARPX_DIM_RZ))
@@ -73,10 +75,43 @@ struct InjectorPositionRegular
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int const i_part, int const ref_fac,
-                        amrex::RandomEngine const&) const noexcept
+                        amrex::RandomEngine const&
+#ifdef PULSAR
+                       , const int modify_particle_wt_at_injection = 0,
+                         amrex::Real Ninj_fraction = 1.
+#endif
+                       ) const noexcept
     {
         using namespace amrex;
+#ifdef PULSAR
+#if (defined WARPX_DIM_3D) || (defined WARPX_DIM_RZ)
+        int nx = 1;
+        int ny = 1;
+        int nz = 1;
+        if (modify_particle_wt_at_injection == 1) {
+            // particle wt is modified if Ninjection fraction !=1
+            // So we dont have to change the number of particles injected per cell
+            nx = ref_fac*ppc.x;
+            ny = ref_fac*ppc.y;
+            nz = ref_fac*ppc.z;
+        } else if (modify_particle_wt_at_injection == 0) {
+            // for Ninjection fraction !=1, we modify the particles injected per cell
+            const amrex::Real ninj_per_dim = std::cbrt(Ninj_fraction);
+            nx = static_cast<int>(ceil(ref_fac*ppc.x*ninj_per_dim));
+            ny = static_cast<int>(ceil(ref_fac*ppc.y*ninj_per_dim));
+            nz = static_cast<int>(ceil(ref_fac*ppc.z*ninj_per_dim));
+        }
+#endif //ifdef 3D or RZ
+        int const ix_part = i_part / (ny*nz);  // written this way backward compatibility
+        int const iz_part = (i_part-ix_part*(ny*nz)) / ny;
+        int const iy_part = (i_part-ix_part*(ny*nz)) - ny*iz_part;
+        return XDim3{
+            (0.5_rt + ix_part) / nx,
+            (0.5_rt + iy_part) / ny,
+            (0.5_rt + iz_part) / nz
+        };
 
+#else // ifndef PULSAR
         int const nx = ref_fac*ppc.x;
         int const ny = ref_fac*ppc.y;
 #if (defined WARPX_DIM_3D) || (defined WARPX_DIM_RZ)
@@ -92,7 +127,19 @@ struct InjectorPositionRegular
             (0.5_rt + iy_part) / ny,
             (0.5_rt + iz_part) / nz
         };
+#endif // ifdef PULSAR
     }
+
+#ifdef PULSAR
+    AMREX_GPU_HOST_DEVICE
+    amrex::XDim3
+    getppcInEachDim () const noexcept
+    {
+        using namespace amrex;
+        return XDim3{ppc.x*1._rt, ppc.y*1._rt, ppc.z*1._rt};
+    }
+#endif
+
 private:
     amrex::Dim3 ppc;
 };
@@ -156,17 +203,28 @@ struct InjectorPosition
     AMREX_GPU_HOST_DEVICE
     amrex::XDim3
     getPositionUnitBox (int const i_part, int const ref_fac,
-                        amrex::RandomEngine const& engine) const noexcept
+                        amrex::RandomEngine const& engine
+#ifdef PULSAR
+                       , const int modify_particle_wt_at_injection = 0,
+                         amrex::Real Ninj_fraction = 1.
+#endif
+                       ) const noexcept
     {
         switch (type)
         {
         case Type::regular:
         {
+#ifdef PULSAR
+            return object.regular.getPositionUnitBox(i_part, ref_fac, engine,
+                                                     modify_particle_wt_at_injection, Ninj_fraction);
+#else
             return object.regular.getPositionUnitBox(i_part, ref_fac, engine);
+#endif
         }
         case Type::randomplane:
         {
             return object.randomplane.getPositionUnitBox(i_part, ref_fac, engine);
+
         }
         default:
         {
@@ -174,6 +232,25 @@ struct InjectorPosition
         }
         };
     }
+
+#ifdef PULSAR
+    AMREX_GPU_HOST_DEVICE
+    amrex::XDim3
+    getppcInEachDim () const noexcept
+    {
+        switch (type)
+        {
+        case Type::regular:
+        {
+            return object.regular.getppcInEachDim();
+        }
+        default:
+        {
+            return object.regular.getppcInEachDim();
+        }
+        };
+    }
+#endif
 
     // bool: whether position specified is within bounds.
     AMREX_GPU_HOST_DEVICE
@@ -194,6 +271,29 @@ struct InjectorPosition
                   || (ymin > hi.y) || (ymax < lo.y)
                   || (zmin > hi.z) || (zmax < lo.z) );
     }
+
+#ifdef PULSAR
+    // bool: whether cell-center position specified is within pulsar injection region
+    // So that these cells can inject particles
+    // a buffer factor is used to ensure cells partially cut by sphere
+    // inject particles
+    AMREX_GPU_HOST_DEVICE
+    bool
+    insidePulsarBoundsCC (amrex::Real r_cell, amrex::Real r_min, amrex::Real r_max, amrex::Real dR_factor) const noexcept
+    {
+        return (r_cell<=(r_max + dR_factor) and r_cell>=(r_min-dR_factor));
+    }
+
+    // bool: whether particle position specified is within pulsar injection region
+    // So that these cells can inject particles
+    AMREX_GPU_HOST_DEVICE
+    bool
+    insidePulsarBounds (amrex::Real rp, amrex::Real r_min, amrex::Real r_max) const noexcept
+    {
+        return (rp<=(r_max) and rp>=(r_min));
+    }
+
+#endif
 
 private:
     enum struct Type { random, randomplane, regular };

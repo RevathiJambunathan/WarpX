@@ -38,6 +38,9 @@
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/WarpXUtil.H"
 #include "WarpX.H"
+#ifdef PULSAR
+#    include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX.H>
 #include <AMReX_Algorithm.H>
@@ -735,6 +738,22 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     Real rmax = std::min(plasma_injector->xmax, part_realbox.hi(0));
 #endif
 
+#ifdef PULSAR
+    const amrex::Real pulsar_injection_fraction = Pulsar::m_Ninj_fraction;
+    const int pulsar_modifyParticleWtAtInjection = Pulsar::m_ModifyParticleWtAtInjection;
+    const amrex::Real dt = WarpX::GetInstance().getdt(0);
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int i = 0; i < 3; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    const amrex::Real pulsar_particle_inject_rmin = Pulsar::m_particle_inject_rmin;
+    const amrex::Real pulsar_particle_inject_rmax = Pulsar::m_particle_inject_rmax;
+    const amrex::Real pulsar_dR_star = Pulsar::m_dR_star;
+    const amrex::Real pulsar_removeparticle_theta_min = Pulsar::m_removeparticle_theta_min;
+    const amrex::Real pulsar_removeparticle_theta_max = Pulsar::m_removeparticle_theta_max;
+
+#endif
+
     const auto dx = geom.CellSizeArray();
     const auto problo = geom.ProbLoArray();
 
@@ -849,6 +868,43 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             lo.z = applyBallisticCorrection(lo, inj_mom, gamma_boost, beta_boost, t);
             hi.z = applyBallisticCorrection(hi, inj_mom, gamma_boost, beta_boost, t);
 
+#ifdef PULSAR
+            // Only inject particles in cells wherein the cell-center is inside
+            // the pulsar bounds. Some +/- buffer is added since the cell-center
+            // for some cells may be cut with a small portion inside/outside the pulsar radius
+
+            // First obtain pulsar center
+            const amrex::Real xc = center_star_arr[0];
+            const amrex::Real yc = center_star_arr[1];
+            const amrex::Real zc = center_star_arr[2];
+            // cell-center coordinates
+            const amrex::Real x = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
+            const amrex::Real y = overlap_corner[1] + i*dx[1] + 0.5*dx[1];
+            const amrex::Real z = overlap_corner[2] + i*dx[2] + 0.5*dx[2];
+            // cell-center radius
+            const amrex::Real rad = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
+            // Buffer-factor to ensure all cells that intersect the ring inject particles
+            const amrex::Real buffer_factor = 0.75;
+            // is cell-center within user-defined particle injection radius
+            if (inj_pos->insidePulsarBoundsCC( rad, pulsar_particle_inject_rmin,
+                                                    pulsar_particle_inject_rmax,
+                                                    pulsar_dR_star*buffer_factor) )
+            {
+                auto index = overlap_box.index(iv);
+                if (pulsar_modifyParticleWtAtInjection == 1) {
+                    // instead of modiying number of particles, the weight is changed
+                    pcounts[index] = num_ppc;
+                } else if (pulsar_modifyParticleWtAtInjection == 0) {
+		    const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
+                    // Modiying number of particles injected
+                    // (could lead to round-off errors)
+                    pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
+                                   * static_cast<int>(ppc_per_dim.y*std::cbrt(pulsar_injection_fraction))
+                                   * static_cast<int>(ppc_per_dim.z*std::cbrt(pulsar_injection_fraction));
+                }
+            }
+            amrex::ignore_unused(lrefine_injection, lfine_box, lrrfac);
+#else // not PULSAR
             if (inj_pos->overlapsWith(lo, hi))
             {
                 auto index = overlap_box.index(iv);
@@ -863,6 +919,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     pcounts[index] = num_ppc;
                 }
             }
+#endif //ifdef PULSAR
+
 #if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
             amrex::ignore_unused(k);
 #endif
@@ -992,6 +1050,13 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 scale_fac = dx[0]/pcounts[index];
 #endif
             }
+#ifdef PULSAR
+            // modifying particle weight to achieve fraction injection
+            // and keeping user-defined number of particles
+            if (pulsar_modifyParticleWtAtInjection == 1) {
+                scale_fac = scale_fac*pulsar_injection_fraction;
+            }
+#endif
 
             for (int i_part = 0; i_part < pcounts[index]; ++i_part)
             {
@@ -1001,7 +1066,12 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 p.cpu() = cpuid;
 
                 const XDim3 r =
-                    inj_pos->getPositionUnitBox(i_part, lrrfac, engine);
+                    inj_pos->getPositionUnitBox(i_part, lrrfac, engine
+#ifdef PULSAR
+                                                , pulsar_modifyParticleWtAtInjection,
+                                                  pulsar_injection_fraction
+#endif
+                                               );
                 auto pos = getCellCoords(overlap_corner, dx, r, iv);
 
 #if defined(WARPX_DIM_3D)
@@ -1078,6 +1148,28 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                    );
                         continue;
                     }
+
+#ifdef PULSAR
+                    // Remove particles that are not bounded by the user-defined
+                    // (rmin, rmax)
+                    const amrex::Real xc = center_star_arr[0];
+                    const amrex::Real yc = center_star_arr[1];
+                    const amrex::Real zc = center_star_arr[2];
+                    const amrex::Real rad = std::sqrt( (xb-xc)*(xb-xc) + (yb-yc)*(yb-yc) + (z0-zc)*(z0-zc));
+                    if ( !inj_pos->insidePulsarBounds(rad,pulsar_particle_inject_rmin,
+                                                          pulsar_particle_inject_rmax))
+                    {
+                        p.id() = -1;
+                        continue;
+                    }
+                    // Remove particles within user-defined theta bounds
+                    amrex::Real theta_p = 0.0_rt;
+                    if (rad > 0) theta_p = std::acos(amrex::Math::abs(z0-zc)/rad);
+                    if (amrex::Math::abs(theta_p) > pulsar_removeparticle_theta_min*MathConst::pi/180. and
+                        amrex::Math::abs(theta_p) < pulsar_removeparticle_theta_max*MathConst::pi/180.) {
+                        p.id() = -1;
+                    }
+#endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
                     dens = inj_rho->getDensity(pos.x, pos.y, z0);
@@ -1202,6 +1294,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             amrex::HostDevice::Atomic::Add( &(*cost)[mfi.index()], wt);
         }
     }
+    amrex::Print() << " total number of particles :  " << TotalNumberOfParticles() << "\n";
 
     // The function that calls this is responsible for redistributing particles.
 }
@@ -2867,3 +2960,71 @@ PhysicalParticleContainer::getPairGenerationFilterFunc ()
 }
 
 #endif
+
+#ifdef PULSAR
+
+void PhysicalParticleContainer::PulsarParticleInjection ()
+{
+    if (Pulsar::m_singleParticleTest == 1) {
+        AddParticles(0); // add particle on level 0
+    } else {
+        AddPlasma(0);  // add plasma on level 0
+    }
+}
+
+void PhysicalParticleContainer::PulsarParticleRemoval ()
+{
+    amrex::Gpu::DeviceScalar<int> sumParticles(0);
+    amrex::Gpu::DeviceScalar<amrex::Real> sumWeight(0.0);
+    const amrex::Real q = this->charge;
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        center_star_arr[i_dim] = Pulsar::m_center_star[i_dim];
+    }
+    amrex::Real max_particle_absorption_radius = Pulsar::m_max_particle_absorption_radius;
+    // Remove Particles From inside sphere
+    for (int lev = 0; lev <= finestLevel(); lev++)
+    {
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+       for (WarpXParIter pti(*this, lev); pti.isValid(); ++pti)
+       {
+           const auto GetPosition = GetParticlePosition(pti);
+           Real xc = center_star_arr[0];
+           Real yc = center_star_arr[1];
+           Real zc = center_star_arr[2];
+           ParticleType* pp = pti.GetArrayOfStructs()().data();
+           auto& attribs = pti.GetAttribs();
+           auto&  wp = attribs[PIdx::w];
+           int* pSum_d = sumParticles.dataPtr();
+           amrex::Real* wSum_d = sumWeight.dataPtr();
+           amrex::Real* wp_d = wp.dataPtr();
+
+           amrex::ParallelFor(pti.numParticles(),
+                 [=] AMREX_GPU_DEVICE (long i) {
+                     ParticleReal x, y, z;
+                     GetPosition(i, x, y, z);
+                     Real r = std::sqrt((x-xc)*(x-xc)
+                                      + (y-yc)*(y-yc)
+                                      + (z-zc)*(z-zc));
+                     if (r <= (max_particle_absorption_radius)) {
+                         pp[i].id() = -1;
+                         // atomic add
+                         int const unity = 1;
+                         amrex::Gpu::Atomic::AddNoRet(pSum_d,unity);
+                         amrex::Gpu::Atomic::AddNoRet(wSum_d,wp_d[i]);
+                     }
+           });
+       }
+       amrex::Gpu::synchronize();
+   }
+   auto& warpx = WarpX::GetInstance();
+   if (q > 0) {
+       amrex::AllPrintToFile("TotalPositronsEnteringStar") << warpx.gett_new(0) <<  " " << sumParticles.dataValue() << " " << sumWeight.dataValue() << "\n";
+   } else {
+       amrex::AllPrintToFile("TotalElectronsEnteringStar") << warpx.gett_new(0) << " " << sumParticles.dataValue() << " " << sumWeight.dataValue() << "\n";
+   }
+
+}
+#endif // endif PULSAR
