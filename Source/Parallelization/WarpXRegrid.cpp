@@ -194,6 +194,11 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
         // the last step as the initial guess for the next solve
         RemakeMultiFab(phi_fp[lev], dm, true);
 
+#ifdef PULSAR
+        RemakeMultiFab(m_pulsar->m_conductor_fp[lev], dm, false);
+        m_pulsar->InitializeConductorMultifabUsingParser(lev);
+#endif
+
 #ifdef AMREX_USE_EB
         RemakeMultiFab(m_distance_to_eb[lev], dm, false);
 
