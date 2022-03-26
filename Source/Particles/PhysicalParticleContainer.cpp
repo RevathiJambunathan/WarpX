@@ -741,7 +741,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 #ifdef PULSAR
     const amrex::Real pulsar_injection_fraction = Pulsar::m_Ninj_fraction;
     const int pulsar_modifyParticleWtAtInjection = Pulsar::m_ModifyParticleWtAtInjection;
-    const amrex::Real dt = WarpX::GetInstance().getdt(0);
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for (int i = 0; i < 3; ++i) {
         center_star_arr[i] = Pulsar::m_center_star[i];
@@ -2285,6 +2284,28 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 
     const std::array<amrex::Real,3>& dx = WarpX::CellSize(std::max(lev,0));
 
+#ifdef PULSAR
+    auto &warpx = WarpX::GetInstance();
+    amrex::Real cur_time = warpx.gett_new(lev);
+    amrex::Real omega_star_data = Pulsar::m_omega_star;
+    amrex::Real ramp_omega_time_data = Pulsar::m_omega_ramp_time;
+    amrex::Real Bstar_data = Pulsar::m_B_star;
+    amrex::Real Rstar_data = Pulsar::m_R_star;
+    amrex::Real dRstar_data = Pulsar::m_dR_star;
+    amrex::Real corotatingE_maxradius_data = Pulsar::m_corotatingE_maxradius;
+    int E_external_monopole_data = Pulsar::m_do_E_external_monopole;
+    int AddExternalMonopoleOnly = Pulsar::m_AddExternalMonopoleOnly;
+    int use_theoreticalEB = Pulsar::m_use_theoreticalEB;
+    amrex::Real theory_max_rstar = Pulsar::m_theory_max_rstar;
+    int AddBDipoleOutsideRstar = Pulsar::m_AddBdipoleExternal;
+    int AddPulsarVacuumEFields = Pulsar::m_AddVacuumEFieldsIntAndExt;
+    int AddPulsarVacuumBFields = Pulsar::m_AddVacuumBFieldsIntAndExt;
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int idim = 0; idim < 3; ++idim) {
+        center_star_arr[idim] = Pulsar::m_center_star[idim];
+    }
+#endif
+
 #ifdef AMREX_USE_OMP
 #pragma omp parallel
 #endif
@@ -2370,6 +2391,32 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                 }
                 // Externally applied E and B-field in Cartesian co-ordinates
                 getExternalEB(ip, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+
+#ifdef PULSAR
+                // Convert particle position from (x,y,z) to (r,theta,phi)
+                amrex::ParticleReal r_p, theta_p, phi_p;
+                Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                          r_p, theta_p, phi_p);
+                Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p,
+                                    AddExternalMonopoleOnly,
+                                    AddPulsarVacuumEFields,
+                                    AddBDipoleOutsideRstar,
+                                    AddPulsarVacuumBFields,
+                                    corotatingE_maxradius_data,
+                                    E_external_monopole_data,
+                                    cur_time, omega_star_data, ramp_omega_time_data,
+                                    Bstar_data, Rstar_data, dRstar_data,
+                                    Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+                if (use_theoreticalEB == 1) {
+                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p,
+                                    theory_max_rstar,
+                                    corotatingE_maxradius_data,
+                                    E_external_monopole_data,
+                                    cur_time, omega_star_data, ramp_omega_time_data,
+                                    Bstar_data, Rstar_data, dRstar_data,
+                                    Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+                }
+#endif
 
                 if (do_crr) {
                     amrex::Real qp = q;
@@ -2664,6 +2711,28 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     const std::array<amrex::Real, 3>& xyzmin = WarpX::LowerCorner(box, gather_lev, 0._rt);
 
     const Dim3 lo = lbound(box);
+#ifdef PULSAR
+    auto &warpx = WarpX::GetInstance();
+    amrex::Real cur_time = warpx.gett_new(lev);
+    amrex::Real omega_star_data = Pulsar::m_omega_star;
+    amrex::Real ramp_omega_time_data = Pulsar::m_omega_ramp_time;
+    amrex::Real Bstar_data = Pulsar::m_B_star;
+    amrex::Real Rstar_data = Pulsar::m_R_star;
+    amrex::Real dRstar_data = Pulsar::m_dR_star;
+    amrex::Real corotatingE_maxradius_data = Pulsar::m_corotatingE_maxradius;
+    int E_external_monopole_data = Pulsar::m_do_E_external_monopole;
+    int AddExternalMonopoleOnly = Pulsar::m_AddExternalMonopoleOnly;
+    int use_theoreticalEB = Pulsar::m_use_theoreticalEB;
+    amrex::Real theory_max_rstar = Pulsar::m_theory_max_rstar;
+    int AddBDipoleOutsideRstar = Pulsar::m_AddBdipoleExternal;
+    int AddPulsarVacuumEFields = Pulsar::m_AddVacuumEFieldsIntAndExt;
+    int AddPulsarVacuumBFields = Pulsar::m_AddVacuumBFieldsIntAndExt;
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int idim = 0; idim < 3; ++idim) {
+        center_star_arr[idim] = Pulsar::m_center_star[idim];
+    }
+#endif
+
 
     bool galerkin_interpolation = WarpX::galerkin_interpolation;
     int nox = WarpX::nox;
@@ -2775,6 +2844,32 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         getExternalEB(ip, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
 
         scaleFields(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+
+#ifdef PULSAR
+                // Convert particle position from (x,y,z) to (r,theta,phi)
+                amrex::ParticleReal r_p, theta_p, phi_p;
+                Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                          r_p, theta_p, phi_p);
+                Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p,
+                                    AddExternalMonopoleOnly,
+                                    AddPulsarVacuumEFields,
+                                    AddBDipoleOutsideRstar,
+                                    AddPulsarVacuumBFields,
+                                    corotatingE_maxradius_data,
+                                    E_external_monopole_data,
+                                    cur_time, omega_star_data, ramp_omega_time_data,
+                                    Bstar_data, Rstar_data, dRstar_data,
+                                    Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+                if (use_theoreticalEB == 1) {
+                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p,
+                                    theory_max_rstar,
+                                    corotatingE_maxradius_data,
+                                    E_external_monopole_data,
+                                    cur_time, omega_star_data, ramp_omega_time_data,
+                                    Bstar_data, Rstar_data, dRstar_data,
+                                    Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+                }
+#endif
 
         doParticlePush(getPosition, setPosition, copyAttribs, ip,
                        ux[ip], uy[ip], uz[ip],

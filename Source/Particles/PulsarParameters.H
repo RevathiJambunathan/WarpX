@@ -156,6 +156,158 @@ public:
         Bphi   = 0.0;
     }
 
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    static void getExternalEBOnParticle( amrex::Real const r, amrex::Real const theta, amrex::Real const phi,
+                                         const int AddExternalMonopoleOnly, const int AddPulsarVacuumEFields,
+                                         const int AddBDipoleOutsideRstar, const int AddPulsarVacuumBFields,
+                                         amrex::Real const corotatingE_maxradius,
+                                         const int E_external_monopole,
+                                         amrex::Real const cur_time, amrex::Real const omega_star,
+                                         amrex::Real const ramp_omega_time, amrex::Real const Bstar,
+                                         amrex::Real const Rstar, amrex::Real dR_star,
+                                         amrex::ParticleReal &Exp, amrex::ParticleReal &Eyp, amrex::ParticleReal &Ezp,
+                                         amrex::ParticleReal &Bxp, amrex::ParticleReal &Byp, amrex::ParticleReal &Bzp)
+    {
+        // Adding external electric fields
+        if (AddExternalMonopoleOnly == 1) {
+            // only add the monopole electric field external to the conductive boundary surface
+            if (r > corotatingE_maxradius) {
+                amrex::Real Er = 0.0_rt;
+                amrex::Real Etheta = 0.0_rt;
+                amrex::Real Ephi = 0.0_rt;
+                ExternalEMonopoleSpherical(r, theta, phi, cur_time, omega_star,
+                                           ramp_omega_time, Bstar, Rstar,
+                                           Er, Etheta, Ephi);
+                amrex::Real Ex_monopole = 0._rt;
+                amrex::Real Ey_monopole = 0._rt;
+                amrex::Real Ez_monopole = 0._rt;
+                ConvertSphericalToCartesianXComponent(Er, Etheta, Ephi, r, theta, phi, Ex_monopole);
+                ConvertSphericalToCartesianYComponent(Er, Etheta, Ephi, r, theta, phi, Ey_monopole);
+                ConvertSphericalToCartesianZComponent(Er, Etheta, Ephi, r, theta, phi, Ez_monopole);
+                Exp += Ex_monopole;
+                Eyp += Ey_monopole;
+                Ezp += Ez_monopole;
+            } // if r > corotatingE_radius
+        } else if (AddPulsarVacuumEFields == 1) {
+            // Add the full pulsar vacuum fields at all locations
+            // corotating inside the conducting boundary and
+            // quadrapolar + monopole outside the conducting boundary
+            amrex::Real Er = 0.0_rt;
+            amrex::Real Etheta = 0.0_rt;
+            amrex::Real Ephi = 0.0_rt;
+            int ApplyCorotatingEField = 0;
+            if (r <= corotatingE_maxradius) ApplyCorotatingEField = 1;
+            ExternalEFieldSpherical(r, theta, phi, cur_time, omega_star,
+                                    ramp_omega_time, Bstar, Rstar,
+                                    corotatingE_maxradius,
+                                    E_external_monopole,
+                                    ApplyCorotatingEField,
+                                    Er, Etheta, Ephi);
+            amrex::Real Ex_pulsar_vacuum = 0._rt;
+            amrex::Real Ey_pulsar_vacuum = 0._rt;
+            amrex::Real Ez_pulsar_vacuum = 0._rt;
+            ConvertSphericalToCartesianXComponent(Er, Etheta, Ephi, r, theta, phi, Ex_pulsar_vacuum);
+            ConvertSphericalToCartesianYComponent(Er, Etheta, Ephi, r, theta, phi, Ey_pulsar_vacuum);
+            ConvertSphericalToCartesianZComponent(Er, Etheta, Ephi, r, theta, phi, Ez_pulsar_vacuum);
+            Exp += Ex_pulsar_vacuum;
+            Eyp += Ey_pulsar_vacuum;
+            Ezp += Ez_pulsar_vacuum;
+        }
+        // Adding external magnetic fields
+        if (AddBDipoleOutsideRstar == 1) {
+            if (r > corotatingE_maxradius) {
+                // Add dipole magnetic field outside the conducting boundary
+                amrex::Real Br = 0._rt;
+                amrex::Real Btheta = 0._rt;
+                amrex::Real Bphi = 0._rt;
+                ExternalBFieldSpherical (r, theta, phi, cur_time, Bstar, Rstar, dR_star,
+                                         Br, Btheta, Bphi);
+                amrex::Real Bx_dipole = 0._rt;
+                amrex::Real By_dipole = 0._rt;
+                amrex::Real Bz_dipole = 0._rt;
+                ConvertSphericalToCartesianXComponent(Br, Btheta, Bphi, r, theta, phi, Bx_dipole);
+                ConvertSphericalToCartesianYComponent(Br, Btheta, Bphi, r, theta, phi, By_dipole);
+                ConvertSphericalToCartesianZComponent(Br, Btheta, Bphi, r, theta, phi, Bz_dipole);
+                Bxp += Bx_dipole;
+                Byp += By_dipole;
+                Bzp += Bz_dipole;
+            }
+        } else if (AddPulsarVacuumBFields == 1) {
+            // Add dipole magnetic field at all locations in the domain
+            amrex::Real Br = 0._rt;
+            amrex::Real Btheta = 0._rt;
+            amrex::Real Bphi = 0._rt;
+            ExternalBFieldSpherical (r, theta, phi, cur_time, Bstar, Rstar, dR_star,
+                                     Br, Btheta, Bphi);
+            amrex::Real Bx_dipole = 0._rt;
+            amrex::Real By_dipole = 0._rt;
+            amrex::Real Bz_dipole = 0._rt;
+            ConvertSphericalToCartesianXComponent(Br, Btheta, Bphi, r, theta, phi, Bx_dipole);
+            ConvertSphericalToCartesianYComponent(Br, Btheta, Bphi, r, theta, phi, By_dipole);
+            ConvertSphericalToCartesianZComponent(Br, Btheta, Bphi, r, theta, phi, Bz_dipole);
+            Bxp += Bx_dipole;
+            Byp += By_dipole;
+            Bzp += Bz_dipole;
+        }
+    }
+
+
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    static void EnforceTheoreticalEBOnParticle( amrex::Real const r, amrex::Real const theta, amrex::Real const phi,
+                                         amrex::Real const theory_max_radius,
+                                         amrex::Real const corotatingE_maxradius,
+                                         const int E_external_monopole,
+                                         amrex::Real const cur_time, amrex::Real const omega_star,
+                                         amrex::Real const ramp_omega_time, amrex::Real const Bstar,
+                                         amrex::Real const Rstar, amrex::Real const dR_star,
+                                         amrex::ParticleReal &Exp, amrex::ParticleReal &Eyp,
+                                         amrex::ParticleReal &Ezp, amrex::ParticleReal &Bxp,
+                                         amrex::ParticleReal &Byp, amrex::ParticleReal &Bzp)
+    {
+        // enfore theory on particle for r <= theory_max_radius
+        if (r <= theory_max_radius) {            
+            int ApplyCorotatingEField = 0;
+            // for r inside conducting boundary, apply corotating efield
+            if (r <= corotatingE_maxradius) ApplyCorotatingEField = 1;
+            // Compute theoretical Efield in spherical coordinates
+            amrex::Real Er = 0._rt;
+            amrex::Real Etheta = 0._rt;
+            amrex::Real Ephi = 0._rt;
+            amrex::Real Ex_theory = 0._rt;
+            amrex::Real Ey_theory = 0._rt;
+            amrex::Real Ez_theory = 0._rt;
+            ExternalEFieldSpherical(r, theta, phi, cur_time, omega_star, ramp_omega_time,
+                                    Bstar, Rstar, corotatingE_maxradius, E_external_monopole,
+                                    ApplyCorotatingEField, Er, Etheta, Ephi);
+            // Compute theoretical Bfield in spherical coordinates
+            amrex::Real Br = 0._rt;
+            amrex::Real Btheta = 0._rt;
+            amrex::Real Bphi = 0._rt;
+            amrex::Real Bx_theory = 0._rt;
+            amrex::Real By_theory = 0._rt;
+            amrex::Real Bz_theory = 0._rt;
+            ExternalBFieldSpherical(r, theta, phi, cur_time, Bstar, Rstar, dR_star, Br, Btheta, Bphi);
+            // Convert Efield from spherical to Cartesian
+            ConvertSphericalToCartesianXComponent(Er, Etheta, Ephi, r, theta, phi, Ex_theory);
+            ConvertSphericalToCartesianYComponent(Er, Etheta, Ephi, r, theta, phi, Ey_theory);
+            ConvertSphericalToCartesianZComponent(Er, Etheta, Ephi, r, theta, phi, Ez_theory);
+            // Convert Bfield from spherical to Cartesian
+            ConvertSphericalToCartesianXComponent(Br, Btheta, Bphi, r, theta, phi, Bx_theory);
+            ConvertSphericalToCartesianYComponent(Br, Btheta, Bphi, r, theta, phi, By_theory);
+            ConvertSphericalToCartesianZComponent(Br, Btheta, Bphi, r, theta, phi, Bz_theory);
+            // enforce electric field
+            Exp = Ex_theory;
+            Eyp = Ey_theory;
+            Ezp = Ez_theory;
+            // enforce magnetic field
+            Bxp = Bx_theory;
+            Byp = By_theory;
+            Bzp = Bz_theory;
+        }           
+    }
+   
+
     /** Compute Cartesian components corresponding to i, j, k based on the staggering,
         ixType, and the domain_lo and cell size, dx.
      */
