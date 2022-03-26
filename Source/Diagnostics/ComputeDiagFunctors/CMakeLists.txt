@@ -9,4 +9,7 @@ target_sources(WarpX
     BackTransformFunctor.cpp
     BackTransformParticleFunctor.cpp
     ParticleReductionFunctor.cpp
+    SphericalComponentFunctor.cpp
+    EdotBFunctor.cpp
+    PoyntingVectorFunctor.cpp
 )

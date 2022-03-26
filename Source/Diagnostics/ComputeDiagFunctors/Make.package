@@ -7,5 +7,8 @@ CEXE_sources += RhoFunctor.cpp
 CEXE_sources += BackTransformFunctor.cpp
 CEXE_sources += BackTransformParticleFunctor.cpp
 CEXE_sources += ParticleReductionFunctor.cpp
+CEXE_sources += SphericalComponentFunctor.cpp
+CEXE_sources += EdotBFunctor.cpp
+CEXE_sources += PoyntingVectorFunctor.cpp
 
 VPATH_LOCATIONS   += $(WARPX_HOME)/Source/Diagnostics/ComputeDiagFunctors

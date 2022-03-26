@@ -7,6 +7,11 @@
 #include "ComputeDiagFunctors/PartPerGridFunctor.H"
 #include "ComputeDiagFunctors/ParticleReductionFunctor.H"
 #include "ComputeDiagFunctors/RhoFunctor.H"
+#ifdef PULSAR
+#    include "ComputeDiagFunctors/SphericalComponentFunctor.H"
+#    include "ComputeDiagFunctors/EdotBFunctor.H"
+#    include "ComputeDiagFunctors/PoyntingVectorFunctor.H"
+#endif
 #include "Diagnostics/Diagnostics.H"
 #include "Diagnostics/ParticleDiag/ParticleDiag.H"
 #include "FlushFormats/FlushFormat.H"
@@ -624,6 +629,91 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
             m_all_field_functors[lev][comp] = std::make_unique<DivBFunctor>(warpx.get_array_Bfield_aux(lev), lev, m_crse_ratio);
         } else if ( m_varnames[comp] == "divE" ){
             m_all_field_functors[lev][comp] = std::make_unique<DivEFunctor>(warpx.get_array_Efield_aux(lev), lev, m_crse_ratio);
+#ifdef PULSAR
+        } else if ( m_varnames[comp] == "Er") {
+            int rcomp = 0;
+            m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev, 0),
+                                              warpx.get_pointer_Efield_aux(lev, 1),
+                                              warpx.get_pointer_Efield_aux(lev, 2),
+                                              lev, m_crse_ratio, rcomp, 1);
+        } else if ( m_varnames[comp] == "Etheta") {
+            int thetacomp = 1;
+            m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev, 0),
+                                              warpx.get_pointer_Efield_aux(lev, 1),
+                                              warpx.get_pointer_Efield_aux(lev, 2),
+                                              lev, m_crse_ratio, thetacomp, 1);
+        } else if ( m_varnames[comp] == "Ephi" ) {
+            int phicomp = 2;
+            m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev, 0),
+                                              warpx.get_pointer_Efield_aux(lev, 1),
+                                              warpx.get_pointer_Efield_aux(lev, 2),
+                                              lev, m_crse_ratio, phicomp, 1);
+        } else if ( m_varnames[comp] == "Br" ) {
+            int rcomp = 0;
+            m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
+                                              warpx.get_pointer_Bfield_aux(lev, 0),
+                                              warpx.get_pointer_Bfield_aux(lev, 1),
+                                              warpx.get_pointer_Bfield_aux(lev, 2),
+                                              lev, m_crse_ratio, rcomp, 0);
+        } else if ( m_varnames[comp] == "Btheta" ) {
+            int thetacomp = 1;
+            m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
+                                              warpx.get_pointer_Bfield_aux(lev, 0),
+                                              warpx.get_pointer_Bfield_aux(lev, 1),
+                                              warpx.get_pointer_Bfield_aux(lev, 2),
+                                              lev, m_crse_ratio, thetacomp, 0);
+        } else if ( m_varnames[comp] == "Bphi" ) {
+            int phicomp = 2;
+            m_all_field_functors[lev][comp] = std::make_unique<SphericalComponentFunctor>(
+                                              warpx.get_pointer_Bfield_aux(lev, 0),
+                                              warpx.get_pointer_Bfield_aux(lev, 1),
+                                              warpx.get_pointer_Bfield_aux(lev, 2),
+                                              lev, m_crse_ratio, phicomp, 0);
+        } else if (m_varnames[comp] == "EdotB") {
+            m_all_field_functors[lev][comp] = std::make_unique<EdotBFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_Bfield_aux(lev,0),
+                                              warpx.get_pointer_Bfield_aux(lev,1),
+                                              warpx.get_pointer_Bfield_aux(lev,2),
+                                              lev, m_crse_ratio);
+        } else if (m_varnames[comp] == "Sx") {
+            int xcomp = 0;
+            m_all_field_functors[lev][comp] = std::make_unique<PoyntingVectorFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_Bfield_aux(lev,0),
+                                              warpx.get_pointer_Bfield_aux(lev,1),
+                                              warpx.get_pointer_Bfield_aux(lev,2),
+                                              lev, m_crse_ratio, xcomp);
+        } else if (m_varnames[comp] == "Sy") {
+            int ycomp = 1;
+            m_all_field_functors[lev][comp] = std::make_unique<PoyntingVectorFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_Bfield_aux(lev,0),
+                                              warpx.get_pointer_Bfield_aux(lev,1),
+                                              warpx.get_pointer_Bfield_aux(lev,2),
+                                              lev, m_crse_ratio, ycomp);
+        } else if (m_varnames[comp] == "Sz") {
+            int zcomp = 2;
+            m_all_field_functors[lev][comp] = std::make_unique<PoyntingVectorFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_Bfield_aux(lev,0),
+                                              warpx.get_pointer_Bfield_aux(lev,1),
+                                              warpx.get_pointer_Bfield_aux(lev,2),
+                                              lev, m_crse_ratio, zcomp);
+        } else if (m_varnames[comp] == "conductor") {
+            m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(warpx.getPulsar().m_conductor_fp[lev].get(), lev, m_crse_ratio);
+#endif
         }
         else {
             amrex::Abort("Error: " + m_varnames[comp] + " is not a known field output type");
