@@ -69,7 +69,7 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
     amrex::GpuArray<int,3> sfz; // staggering of source zfield
     amrex::GpuArray<int,3> s_dst;
     amrex::GpuArray<int,3> cr;
-    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         sfx[i] = stag_xsrc[i];
         sfy[i] = stag_ysrc[i];
