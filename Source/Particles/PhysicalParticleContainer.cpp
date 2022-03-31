@@ -1008,8 +1008,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             const amrex::Real zc = center_star_arr[2];
             // cell-center coordinates
             const amrex::Real x = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
-            const amrex::Real y = overlap_corner[1] + i*dx[1] + 0.5*dx[1];
-            const amrex::Real z = overlap_corner[2] + i*dx[2] + 0.5*dx[2];
+            const amrex::Real y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
+            const amrex::Real z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
             // cell-center radius
             const amrex::Real rad = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
             // Buffer-factor to ensure all cells that intersect the ring inject particles
