@@ -353,8 +353,6 @@ private:
     void ResetTotalParticlesInBuffer(int i_buffer);
     /** Clear particle data stored in the particle buffer */
     void ClearParticleBuffer(int i_buffer);
-    /** Redistributes particles to the buffer box array in the lab-frame */
-    void RedistributeParticleBuffer (const int i_buffer);
 
 };
 #endif // WARPX_BTDIAGNOSTICS_H_

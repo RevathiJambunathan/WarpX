@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #
-# Copyright 2021-2022 The WarpX Community
+# Copyright 2021 Axel Huebl
 #
-# Author: Axel Huebl
 # License: BSD-3-Clause-LBNL
 
 set -eu -o pipefail
@@ -20,16 +19,17 @@ sudo apt-get install -y \
     pkg-config          \
     wget
 
-echo 'deb [trusted=yes] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | \
-  sudo tee /etc/apt/sources.list.d/nvhpc.list
-sudo apt-get update -y
-sudo apt-get install -y --no-install-recommends nvhpc-21-11
+wget -q https://developer.download.nvidia.com/hpc-sdk/21.9/nvhpc-21-9_21.9_amd64.deb \
+        https://developer.download.nvidia.com/hpc-sdk/21.9/nvhpc-2021_21.9_amd64.deb
+sudo apt-get update
+sudo apt-get install -y ./nvhpc-21-9_21.9_amd64.deb ./nvhpc-2021_21.9_amd64.deb
+rm -rf ./nvhpc-21-9_21.9_amd64.deb ./nvhpc-2021_21.9_amd64.deb
 
 # things should reside in /opt/nvidia/hpc_sdk now
 
 # activation via:
 #   source /etc/profile.d/modules.sh
-#   module load /opt/nvidia/hpc_sdk/modulefiles/nvhpc/21.11
+#   module load /opt/nvidia/hpc_sdk/modulefiles/nvhpc/21.9
 
 # cmake-easyinstall
 #
