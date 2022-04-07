@@ -375,8 +375,10 @@ void PhysicalParticleContainer::InitData ()
     // Init ionization module here instead of in the PhysicalParticleContainer
     // constructor because dt is required
     if (do_field_ionization) {InitIonizationModule();}
+#ifndef PULSAR
     AddParticles(0); // Note - add on level 0
     Redistribute();  // We then redistribute
+#endif
 }
 
 void PhysicalParticleContainer::MapParticletoBoostedFrame (
@@ -750,7 +752,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const amrex::Real pulsar_dR_star = Pulsar::m_dR_star;
     const amrex::Real pulsar_removeparticle_theta_min = Pulsar::m_removeparticle_theta_min;
     const amrex::Real pulsar_removeparticle_theta_max = Pulsar::m_removeparticle_theta_max;
-
+    amrex::Real Sigma0_threshold = Pulsar::m_Sigma0_threshold;
+    const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -809,6 +812,14 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 
         const Box& tile_box = mfi.tilebox();
         const RealBox tile_realbox = WarpX::getRealBox(tile_box, lev);
+
+#ifdef PULSAR
+        const GpuArray<int, AMREX_SPACEDIM> lo_tile_index
+            {AMREX_D_DECL(tile_box.smallEnd(0), tile_box.smallEnd(1), tile_box.smallEnd(2))};
+        amrex::Real Rstar = Pulsar::m_R_star;
+        const FArrayBox& mag_fab = magnetization_mf[mfi];
+        amrex::Array4<const amrex::Real> const& mag = mag_fab.array();
+#endif
 
         // Find the cells of part_box that overlap with tile_realbox
         // If there is no overlap, just go to the next tile in the loop
@@ -889,18 +900,25 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                     pulsar_particle_inject_rmax,
                                                     pulsar_dR_star*buffer_factor) )
             {
-                auto index = overlap_box.index(iv);
-                if (pulsar_modifyParticleWtAtInjection == 1) {
-                    // instead of modiying number of particles, the weight is changed
-                    pcounts[index] = num_ppc;
-                } else if (pulsar_modifyParticleWtAtInjection == 0) {
-            const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
-                    // Modiying number of particles injected
-                    // (could lead to round-off errors)
-                    pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
-                                   * static_cast<int>(ppc_per_dim.y*std::cbrt(pulsar_injection_fraction))
-                                   * static_cast<int>(ppc_per_dim.z*std::cbrt(pulsar_injection_fraction));
-                }
+                // compute threshold magnetization Sigma = Sigma0 * (Rstar/r)^3
+                amrex::Real Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+ 
+                // inject particles if magnetization sigma > threshold magnetization Sigma
+                if (mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) > Sigma_threshold )
+                {
+                    auto index = overlap_box.index(iv);
+                    if (pulsar_modifyParticleWtAtInjection == 1) {
+                        // instead of modiying number of particles, the weight is changed
+                        pcounts[index] = num_ppc;
+                    } else if (pulsar_modifyParticleWtAtInjection == 0) {
+		        const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
+                        // Modiying number of particles injected
+                        // (could lead to round-off errors)
+                        pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
+                                       * static_cast<int>(ppc_per_dim.y*std::cbrt(pulsar_injection_fraction))
+                                       * static_cast<int>(ppc_per_dim.z*std::cbrt(pulsar_injection_fraction));
+                    }
+                } // if sigma_local > threshold
             }
             amrex::ignore_unused(lrefine_injection, lfine_box, lrrfac);
 #else // not PULSAR
