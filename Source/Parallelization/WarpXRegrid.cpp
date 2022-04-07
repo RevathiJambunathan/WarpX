@@ -204,8 +204,14 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
         RemakeMultiFab(phi_fp[lev], dm, true);
 
 #ifdef PULSAR
+        // Need not redistribute conductor multifab as this can be initialized
+        // with user-defined parser function
         RemakeMultiFab(m_pulsar->m_conductor_fp[lev], dm, false);
         m_pulsar->InitializeConductorMultifabUsingParser(lev);
+        // Redistributing number density multifab as it is used in AddPlasma
+        RemakeMultiFab(m_pulsar->m_plasma_number_density[lev], dm, true);
+        // Redistributing magnetization multifab as it is used in AddPlasma
+        RemakeMultiFab(m_pulsar->m_magnetization[lev], dm, true);
 #endif
 
 #ifdef AMREX_USE_EB

@@ -1,6 +1,7 @@
 #ifndef PULSAR_PARAMETERS_H
 #define PULSAR_PARAMETERS_H
 
+#include "Utils/IntervalsParser.H"
 #include <AMReX_RealVect.H>
 #include <AMReX_REAL.H>
 #include <AMReX_GpuQualifiers.H>
@@ -35,6 +36,10 @@ public:
     void SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
     void InitializeConductorMultifabUsingParser(const int lev);
+    void ComputePlasmaNumberDensity ();
+    void ComputePlasmaMagnetization ();
+    void TuneSigma0Threshold ();
+    void TotalParticles ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -442,6 +447,10 @@ public:
     static amrex::Array<amrex::Real, 3> m_center_star;
     static amrex::Real m_max_ndens;
     static amrex::Real m_Ninj_fraction;
+    static amrex::Real m_injection_rate;
+    static amrex::Real m_GJ_injection_rate;
+    static amrex::Real m_Sigma0_threshold;
+    static amrex::Real m_min_Sigma0;
     static int m_ModifyParticleWtAtInjection;
     static amrex::Real m_rhoGJ_scale;
     static int m_do_damp_EB_internal;
@@ -486,6 +495,16 @@ public:
     static int m_AddVacuumEFieldsIntAndExt;
     static int m_AddVacuumBFieldsIntAndExt;
     static amrex::Real m_injection_endtime;
+    static IntervalsParser m_injection_tuning_interval;
+    /** Number density of the species, one for electrons and one for positrons for pair-plasma simulations*/
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_plasma_number_density;
+    /** Magnetization of plasma, sigma = B^2/mu_0m_e(ne+ni)*c^2 */
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_magnetization;
+    /** get pointer to number density */
+    amrex::MultiFab* get_pointer_ndens (int lev) const{return m_plasma_number_density[lev].get();}
+    /** get pointer to number magnetization */
+    amrex::MultiFab* get_pointer_magnetization (int lev) const{return m_magnetization[lev].get();}
+    amrex::MultiFab& get_magnetization  (int lev) {return *m_magnetization[lev];}
 private:
 };
 
