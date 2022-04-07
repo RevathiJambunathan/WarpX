@@ -121,7 +121,7 @@ Pulsar::ReadParameters () {
                             * m_omega_star * m_omega_star * m_R_star * m_R_star * m_R_star
                           ) / PhysConst::q_e;
     // the factor of 2 is because B at pole = 2*B at equator
-    m_Sigma0_threshold = 2. * m_B_star / (m_max_ndens * 2. * PhysConst::mu0 * PhysConst::m_e
+    m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_max_ndens * 2. * PhysConst::mu0 * PhysConst::m_e
                                          * PhysConst::c * PhysConst::c);
 //    pp.get("Sigma0_threshold_init", m_Sigma0_threshold);
     amrex::Print() << " injection rate : " << m_injection_rate << " GJ injection rate " << m_GJ_injection_rate << " Sigma0 " << m_Sigma0_threshold << "\n";
@@ -1100,10 +1100,10 @@ Pulsar::ComputePlasmaMagnetization ()
                     // ensure that there is no 0 in the denominator when number density is 0
                     // due to absence of particles
                     if (total_ndens > 0.) {
-                        mag(i, j, k) = B_mag * mu0_m_c2_inv /total_ndens;
+                        mag(i, j, k) = (B_mag * B_mag) * mu0_m_c2_inv /total_ndens;
                     } else {
                         // using minimum number density if there are no particles in the cell
-                        mag(i, j, k) = B_mag * mu0_m_c2_inv /min_ndens;
+                        mag(i, j, k) = (B_mag * B_mag) * mu0_m_c2_inv /min_ndens;
                     }
                 }
             );
