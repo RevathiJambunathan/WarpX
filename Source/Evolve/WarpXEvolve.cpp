@@ -354,6 +354,12 @@ WarpX::Evolve (int numsteps)
             }
         }
 
+#ifdef PULSAR
+        m_pulsar->ComputePlasmaNumberDensity();
+        m_pulsar->ComputePlasmaMagnetization();
+#endif
+
+
         if (sort_intervals.contains(step+1)) {
             if (verbose) {
                 amrex::Print() << Utils::TextMsg::Info("re-sorting particles");
