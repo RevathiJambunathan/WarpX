@@ -10,5 +10,6 @@ CEXE_sources += ParticleReductionFunctor.cpp
 CEXE_sources += SphericalComponentFunctor.cpp
 CEXE_sources += EdotBFunctor.cpp
 CEXE_sources += PoyntingVectorFunctor.cpp
+CEXE_sources += NumberDensityFunctor.cpp
 
 VPATH_LOCATIONS   += $(WARPX_HOME)/Source/Diagnostics/ComputeDiagFunctors
