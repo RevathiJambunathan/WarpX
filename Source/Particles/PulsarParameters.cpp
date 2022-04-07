@@ -230,6 +230,54 @@ Pulsar::ReadParameters () {
     m_injection_tuning_interval = IntervalsParser(intervals_string_vec);
 }
 
+
+void
+Pulsar::InitDataAtRestart ()
+{
+    amrex::Print() << " pulsar init data at restart \n";
+    auto & warpx = WarpX::GetInstance();
+    const int nlevs_max = warpx.finestLevel() + 1;
+    //allocate number density multifab
+    m_plasma_number_density.resize(nlevs_max);
+    m_magnetization.resize(nlevs_max);
+    amrex::ParmParse pp_particles("particles");
+    std::vector<std::string> species_names;
+    pp_particles.queryarr("species_names", species_names);
+    const int ndensity_comps = species_names.size();
+    const int magnetization_comps = 1;
+
+    for (int lev = 0; lev < nlevs_max; ++lev) {
+        amrex::BoxArray ba = warpx.boxArray(lev);
+        amrex::DistributionMapping dm = warpx.DistributionMap(lev);
+        const amrex::IntVect ng_EB_alloc = warpx.getngEB();
+        // allocate cell-centered number density multifab
+        m_plasma_number_density[lev] = std::make_unique<amrex::MultiFab>(
+                                     ba, dm, ndensity_comps, ng_EB_alloc);
+        // allocate cell-centered magnetization multifab
+        m_magnetization[lev] = std::make_unique<amrex::MultiFab>(
+                               ba, dm, magnetization_comps, ng_EB_alloc);
+        // initialize number density
+        m_plasma_number_density[lev]->setVal(0._rt);
+        // initialize magnetization
+        m_magnetization[lev]->setVal(0._rt);
+    }
+
+    if (m_do_conductor == true) {
+        m_conductor_fp.resize(nlevs_max);
+        amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
+        const int ncomps = 1;
+        for (int lev = 0; lev < nlevs_max; ++lev) {
+            amrex::BoxArray ba = warpx.boxArray(lev);
+            amrex::DistributionMapping dm = warpx.DistributionMap(lev);
+            const amrex::IntVect ng_EB_alloc = warpx.getngEB() + amrex::IntVect::TheNodeVector()*2;
+            m_conductor_fp[lev] = std::make_unique<amrex::MultiFab>(
+                                    amrex::convert(ba,conductor_nodal_flag), dm, ncomps, ng_EB_alloc);
+            InitializeConductorMultifabUsingParser(m_conductor_fp[lev].get(), m_conductor_parser->compile<3>(), lev);
+        }
+    }
+
+}
+
 void
 Pulsar::InitDataAtRestart ()
 {
@@ -1147,14 +1195,14 @@ Pulsar::TuneSigma0Threshold ()
         amrex::ParallelDescriptor::ReduceRealSum(ws_total, ParallelDescriptor::IOProcessorNumber());
         total_weight_allspecies += ws_total;
     }
-
+    amrex::Real current_injection_rate = total_weight_allspecies / dt;
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
-    amrex::Print() << " species rate is :  " << specified_injection_rate << " current rate : " << total_weight_allspecies << "\n";
+    amrex::Print() << " species rate is :  " << specified_injection_rate << " current rate : " << current_injection_rate << "\n";
     amrex::Print() << " Sigma0 before mod : " << m_Sigma0_threshold << "\n";
-    if (total_weight_allspecies < specified_injection_rate) {
+    if (current_injection_rate < specified_injection_rate) {
         // reduce sigma0 so more particles can be injected
         m_Sigma0_threshold *= total_weight_allspecies/specified_injection_rate;
-    } else if (total_weight_allspecies > specified_injection_rate ) {
+    } else if (current_injection_rate > specified_injection_rate ) {
         m_Sigma0_threshold *= specified_injection_rate/total_weight_allspecies;
     }
     if (m_Sigma0_threshold < m_min_Sigma0) m_Sigma0_threshold = m_min_Sigma0;
