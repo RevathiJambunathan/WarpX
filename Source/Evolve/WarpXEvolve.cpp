@@ -122,6 +122,7 @@ WarpX::Evolve (int numsteps)
         }
 
 #ifdef PULSAR
+        m_pulsar->TotalParticles();
         // inject particles for pulsar simulation
         if (Pulsar::m_singleParticleTest == 1) {
             if (Pulsar::m_continuous_injection == 0) {
@@ -151,6 +152,10 @@ WarpX::Evolve (int numsteps)
                     // redistribute
                     mypc->Redistribute();
             }
+        }
+        m_pulsar->TotalParticles();
+        if (Pulsar::m_injection_tuning_interval.contains(step+1) ) {
+            m_pulsar->TuneSigma0Threshold();
         }
 #endif
 
@@ -345,6 +350,12 @@ WarpX::Evolve (int numsteps)
                 mypc->Redistribute();
             }
         }
+
+#ifdef PULSAR
+        m_pulsar->ComputePlasmaNumberDensity();
+        m_pulsar->ComputePlasmaMagnetization();
+#endif
+
 
         if (sort_intervals.contains(step+1)) {
             if (verbose) {
