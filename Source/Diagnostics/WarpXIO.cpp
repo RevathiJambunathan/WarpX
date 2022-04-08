@@ -224,6 +224,11 @@ WarpX::InitFromCheckpoint ()
 
         is >> time_of_last_gal_shift;
         GotoNextLine(is);
+
+#ifdef PULSAR
+        is >> m_pulsar->m_Sigma0_threshold;
+        GotoNextLine(is);
+#endif
     }
 
     const int nlevs = finestLevel()+1;
@@ -347,7 +352,13 @@ WarpX::InitFromCheckpoint ()
 
 #ifdef PULSAR
     m_pulsar->InitDataAtRestart();
+    for (int lev = 0; lev < nlevs; ++lev) {
+        // write magnetization multifab
+        VisMF::Read(m_pulsar->get_magnetization(lev),
+                     amrex::MultiFabFileFullPrefix(lev, restart_chkfile, level_prefix, "magnetization"));
+    }
 #endif
+
     InitializeEBGridData(maxLevel());
 
     // Initialize particles

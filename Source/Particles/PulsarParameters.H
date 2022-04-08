@@ -451,6 +451,7 @@ public:
     static amrex::Real m_GJ_injection_rate;
     static amrex::Real m_Sigma0_threshold;
     static amrex::Real m_min_Sigma0;
+    static amrex::Real m_max_Sigma0;
     static int m_ModifyParticleWtAtInjection;
     static amrex::Real m_rhoGJ_scale;
     static int m_do_damp_EB_internal;

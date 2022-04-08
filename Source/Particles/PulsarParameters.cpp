@@ -81,6 +81,7 @@ amrex::Real Pulsar::m_GJ_injection_rate;
 amrex::Real Pulsar::m_Sigma0_threshold;
 IntervalsParser Pulsar::m_injection_tuning_interval;
 amrex::Real Pulsar::m_min_Sigma0;
+amrex::Real Pulsar::m_max_Sigma0;
 
 
 Pulsar::Pulsar ()
@@ -125,6 +126,7 @@ Pulsar::ReadParameters () {
                                          * PhysConst::c * PhysConst::c);
 //    pp.get("Sigma0_threshold_init", m_Sigma0_threshold);
     amrex::Print() << " injection rate : " << m_injection_rate << " GJ injection rate " << m_GJ_injection_rate << " Sigma0 " << m_Sigma0_threshold << "\n";
+    m_max_Sigma0 = m_Sigma0_threshold * 10;
     pp.get("minimum_Sigma0", m_min_Sigma0);
 
     m_particle_inject_rmin = m_R_star - m_dR_star;
@@ -1206,6 +1208,7 @@ Pulsar::TuneSigma0Threshold ()
         m_Sigma0_threshold *= specified_injection_rate/total_weight_allspecies;
     }
     if (m_Sigma0_threshold < m_min_Sigma0) m_Sigma0_threshold = m_min_Sigma0;
+    if (m_Sigma0_threshold > m_max_Sigma0) m_Sigma0_threshold = m_max_Sigma0;
     amrex::Print() << " Simg0 modified to : " << m_Sigma0_threshold << "\n";
 }
 
