@@ -1166,6 +1166,7 @@ Pulsar::TuneSigma0Threshold ()
     std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
     const int nspecies = species_names.size();
     amrex::Real total_weight_allspecies = 0._rt;
+    amrex::Real dt = warpx.getdt(0);
 
     using PTDType = typename WarpXParticleContainer::ParticleTileType::ConstParticleTileDataType;
     for (int isp = 0; isp < nspecies; ++isp) {
@@ -1173,7 +1174,6 @@ Pulsar::TuneSigma0Threshold ()
         auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
         amrex::ReduceOps<ReduceOpSum> reduce_ops;
         amrex::Real cur_time = warpx.gett_new(0);
-        amrex::Real dt = warpx.getdt(0);
         auto ws_r = amrex::ParticleReduce<
                         amrex::ReduceData < amrex::ParticleReal> >
                     ( pc,
