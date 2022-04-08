@@ -291,6 +291,10 @@ FlushFormatPlotfile::WriteWarpXHeader(
         HeaderFile << warpx.getdo_moving_window() << "\n";
 
         HeaderFile << warpx.time_of_last_gal_shift << "\n";
+
+#ifdef PULSAR
+        HeaderFile << warpx.getPulsar().m_Sigma0_threshold << "\n";
+#endif
     }
 }
 
