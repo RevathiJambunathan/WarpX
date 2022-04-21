@@ -1226,7 +1226,13 @@ Pulsar::TuneSigma0Threshold (const int step)
                     m_Sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
                 } else {
                     amrex::Real rel_diff = (specified_injection_rate - avg_injection_rate)/specified_injection_rate;
-                    m_Sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
+                    if (rel_diff < 0.1) {
+                        amrex::Print() << " rel_diff " << rel_diff << "\n";
+                        m_Sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
+                    } else {
+                        amrex::Print() << " rel_diff " << rel_diff << " using upper bound 10%"<< "\n";
+                        m_Sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+                    }
                 }
             }
         } else if (avg_injection_rate > specified_injection_rate ) {
@@ -1236,7 +1242,13 @@ Pulsar::TuneSigma0Threshold (const int step)
             }
             if (m_sigma_tune_method == "relative_difference") {
                 amrex::Real rel_diff = (avg_injection_rate - specified_injection_rate)/specified_injection_rate;
-                m_Sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
+                if (rel_diff < 0.1) {
+                    amrex::Print() << " rel_diff " << rel_diff << "\n";
+                    m_Sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
+                } else {
+                    amrex::Print() << " rel_diff " << rel_diff << " using upper bound 10%"<< "\n";
+                    m_Sigma0_threshold = m_Sigma0_threshold + 0.1 * m_Sigma0_threshold;
+                }
             }
         }
         if (m_Sigma0_threshold < m_min_Sigma0) m_Sigma0_threshold = m_min_Sigma0;
