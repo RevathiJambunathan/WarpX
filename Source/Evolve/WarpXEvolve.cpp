@@ -154,9 +154,7 @@ WarpX::Evolve (int numsteps)
             }
         }
         m_pulsar->TotalParticles();
-        if (Pulsar::m_injection_tuning_interval.contains(step+1) ) {
-            m_pulsar->TuneSigma0Threshold();
-        }
+        m_pulsar->TuneSigma0Threshold(step);
 #endif
 
         // At the beginning, we have B^{n} and E^{n}.

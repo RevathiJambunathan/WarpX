@@ -38,7 +38,7 @@ public:
     void InitializeConductorMultifabUsingParser(const int lev);
     void ComputePlasmaNumberDensity ();
     void ComputePlasmaMagnetization ();
-    void TuneSigma0Threshold ();
+    void TuneSigma0Threshold (const int step);
     void TotalParticles ();
 
 
@@ -450,6 +450,7 @@ public:
     static amrex::Real m_injection_rate;
     static amrex::Real m_GJ_injection_rate;
     static amrex::Real m_Sigma0_threshold;
+    static amrex::Real m_Sigma0_baseline;
     static amrex::Real m_min_Sigma0;
     static amrex::Real m_max_Sigma0;
     static int m_ModifyParticleWtAtInjection;
@@ -497,6 +498,7 @@ public:
     static int m_AddVacuumBFieldsIntAndExt;
     static amrex::Real m_injection_endtime;
     static IntervalsParser m_injection_tuning_interval;
+    static amrex::Real m_sum_injection_rate;
     /** Number density of the species, one for electrons and one for positrons for pair-plasma simulations*/
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_plasma_number_density;
     /** Magnetization of plasma, sigma = B^2/mu_0m_e(ne+ni)*c^2 */
@@ -506,6 +508,7 @@ public:
     /** get pointer to number magnetization */
     amrex::MultiFab* get_pointer_magnetization (int lev) const{return m_magnetization[lev].get();}
     amrex::MultiFab& get_magnetization  (int lev) {return *m_magnetization[lev];}
+    static std::string m_sigma_tune_method;
 private:
 };
 
