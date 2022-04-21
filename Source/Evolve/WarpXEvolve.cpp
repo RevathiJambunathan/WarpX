@@ -154,8 +154,10 @@ WarpX::Evolve (int numsteps)
             }
         }
         m_pulsar->TotalParticles();
-        if (Pulsar::m_injection_tuning_interval.contains(step+1) ) {
-            m_pulsar->TuneSigma0Threshold();
+        if (cur_time >= Pulsar::m_injection_time &&
+            cur_time <= Pulsar::m_injection_endtime) {
+            // Tune sigma for injection only after injection time
+            m_pulsar->TuneSigma0Threshold(step);
         }
 #endif
 
