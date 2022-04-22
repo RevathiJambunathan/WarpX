@@ -85,6 +85,7 @@ amrex::Real Pulsar::m_min_Sigma0;
 amrex::Real Pulsar::m_max_Sigma0;
 amrex::Real Pulsar::m_sum_injection_rate = 0.;
 std::string Pulsar::m_sigma_tune_method;
+int Pulsar::ROI_avg_window_size = 50;
 
 
 Pulsar::Pulsar ()
@@ -237,6 +238,7 @@ Pulsar::ReadParameters () {
     m_injection_tuning_interval = IntervalsParser(intervals_string_vec);
     pp.get("sigma_tune_method",m_sigma_tune_method);
     amrex::Print() << " sigma tune method " << m_sigma_tune_method << "\n";
+    pp.get("ROI_avg_size",ROI_avg_window_size);
 }
 
 
@@ -1205,7 +1207,18 @@ Pulsar::TuneSigma0Threshold (const int step)
         total_weight_allspecies += ws_total;
     }
     amrex::Real current_injection_rate = total_weight_allspecies / dt;
-    m_sum_injection_rate += current_injection_rate;
+    if (list_size < ROI_avg_window_size) {
+        ROI_list.push_back(current_injection_rate);
+        m_sum_injection_rate += current_injection_rate;
+        list_size++;
+    } else {
+        amrex::Print() << " front : " << ROI_list.front() << "\n";
+        m_sum_injection_rate -= ROI_list.front();
+        ROI_list.pop_front();
+        ROI_list.push_back(current_injection_rate);
+        amrex::Print() << " current injection rate : " << current_injection_rate << " list back " << ROI_list.back() << "\n";
+        m_sum_injection_rate += ROI_list.back();
+    }
     amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
     if (m_injection_tuning_interval.contains(step+1) ) {
         amrex::Print() << " period for injection tuning : " << m_injection_tuning_interval.localPeriod(step+1) << "\n";
@@ -1213,7 +1226,10 @@ Pulsar::TuneSigma0Threshold (const int step)
         amrex::Print() << " species rate is :  " << specified_injection_rate << " current rate : " << current_injection_rate << "\n";
         amrex::Print() << " Sigma0 before mod : " << m_Sigma0_threshold << "\n";
         amrex::Real m_Sigma0_pre = m_Sigma0_threshold;
-        amrex::Real avg_injection_rate = m_sum_injection_rate/(m_injection_tuning_interval.localPeriod(step+1) * 1.);
+//        amrex::Real avg_injection_rate = m_sum_injection_rate/(m_injection_tuning_interval.localPeriod(step+1) * 1.);
+        amrex::Print() << " list size : " << list_size << "\n";
+        amrex::Real avg_injection_rate = m_sum_injection_rate/(list_size * 1.);
+        amrex::Print() << " avg inj rate " << avg_injection_rate << "\n";
         if (avg_injection_rate < specified_injection_rate) {
             // reduce sigma0 so more particles can be injected
             //m_Sigma0_threshold *= total_weight_allspecies/specified_injection_rate;
@@ -1255,7 +1271,7 @@ Pulsar::TuneSigma0Threshold (const int step)
         if (m_Sigma0_threshold > m_max_Sigma0) m_Sigma0_threshold = m_max_Sigma0;
         amrex::Print() << " Simg0 modified to : " << m_Sigma0_threshold << "\n";
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline<< "\n";
-        m_sum_injection_rate = 0.;
+//        m_sum_injection_rate = 0.;
     }
 }
 

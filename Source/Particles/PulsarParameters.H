@@ -10,6 +10,7 @@
 #include <AMReX_Array.H>
 #include <AMReX_MultiFab.H>
 #include <AMReX_Parser.H>
+#include <list>
 
 using namespace amrex;
 
@@ -509,6 +510,9 @@ public:
     amrex::MultiFab* get_pointer_magnetization (int lev) const{return m_magnetization[lev].get();}
     amrex::MultiFab& get_magnetization  (int lev) {return *m_magnetization[lev];}
     static std::string m_sigma_tune_method;
+    std::list<amrex::Real> ROI_list;
+    int list_size = 0;
+    static int ROI_avg_window_size;
 private:
 };
 
