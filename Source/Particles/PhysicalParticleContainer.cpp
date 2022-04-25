@@ -754,7 +754,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const amrex::Real pulsar_removeparticle_theta_max = Pulsar::m_removeparticle_theta_max;
     amrex::Real Sigma0_threshold = Pulsar::m_Sigma0_threshold;
     const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
-    MultiFab& injection_flag_mf = WarpX::GetInstance().getPulsar().get_injection_flag(lev);
+    amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -820,8 +820,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         amrex::Real Rstar = Pulsar::m_R_star;
         const FArrayBox& mag_fab = magnetization_mf[mfi];
         amrex::Array4<const amrex::Real> const& mag = mag_fab.array();
-        FArrayBox& injection_fab = injection_flag_mf[mfi];
-        amrex::Array4<amrex::Real> const& injection = injection_fab.array();
+        amrex::Array4<amrex::Real> const& injection = injection_flag_mf->array(mfi);
 #endif
 
         // Find the cells of part_box that overlap with tile_realbox
