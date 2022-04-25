@@ -754,6 +754,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const amrex::Real pulsar_removeparticle_theta_max = Pulsar::m_removeparticle_theta_max;
     amrex::Real Sigma0_threshold = Pulsar::m_Sigma0_threshold;
     const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
+    MultiFab& injection_flag_mf = WarpX::GetInstance().getPulsar().get_injection_flag(lev);
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -819,6 +820,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         amrex::Real Rstar = Pulsar::m_R_star;
         const FArrayBox& mag_fab = magnetization_mf[mfi];
         amrex::Array4<const amrex::Real> const& mag = mag_fab.array();
+        FArrayBox& injection_fab = injection_flag_mf[mfi];
+        amrex::Array4<amrex::Real> const& injection = injection_fab.array();
 #endif
 
         // Find the cells of part_box that overlap with tile_realbox
@@ -918,7 +921,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                        * static_cast<int>(ppc_per_dim.y*std::cbrt(pulsar_injection_fraction))
                                        * static_cast<int>(ppc_per_dim.z*std::cbrt(pulsar_injection_fraction));
                     }
+                    injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
                 } // if sigma_local > threshold
+                else {
+                    injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 0;
+                }
             }
             amrex::ignore_unused(lrefine_injection, lfine_box, lrrfac);
 #else // not PULSAR

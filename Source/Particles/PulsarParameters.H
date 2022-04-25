@@ -504,11 +504,15 @@ public:
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_plasma_number_density;
     /** Magnetization of plasma, sigma = B^2/mu_0m_e(ne+ni)*c^2 */
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_magnetization;
+    /** Flagging 1 where plasma is injected */
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_flag;
     /** get pointer to number density */
     amrex::MultiFab* get_pointer_ndens (int lev) const{return m_plasma_number_density[lev].get();}
     /** get pointer to number magnetization */
     amrex::MultiFab* get_pointer_magnetization (int lev) const{return m_magnetization[lev].get();}
     amrex::MultiFab& get_magnetization  (int lev) {return *m_magnetization[lev];}
+    amrex::MultiFab* get_pointer_injection_flag (int lev) const{return m_injection_flag[lev].get();}
+    amrex::MultiFab& get_injection_flag (int lev) {return *m_injection_flag[lev];}
     static std::string m_sigma_tune_method;
     std::list<amrex::Real> ROI_list;
     int list_size = 0;

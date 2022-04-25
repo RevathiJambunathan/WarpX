@@ -251,6 +251,7 @@ Pulsar::InitDataAtRestart ()
     //allocate number density multifab
     m_plasma_number_density.resize(nlevs_max);
     m_magnetization.resize(nlevs_max);
+    m_injection_flag.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -267,10 +268,15 @@ Pulsar::InitDataAtRestart ()
         // allocate cell-centered magnetization multifab
         m_magnetization[lev] = std::make_unique<amrex::MultiFab>(
                                ba, dm, magnetization_comps, ng_EB_alloc);
+        // allocate multifab to store flag for cells injected with particles
+        m_injection_flag[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
         m_magnetization[lev]->setVal(0._rt);
+        // initialize flag for plasma injection
+        m_injection_flag[lev]->setVal(0._rt);
     }
 
     if (m_do_conductor == true) {
@@ -319,6 +325,7 @@ Pulsar::InitData ()
     //allocate number density multifab
     m_plasma_number_density.resize(nlevs_max);
     m_magnetization.resize(nlevs_max);
+    m_injection_flag.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -335,10 +342,14 @@ Pulsar::InitData ()
         // allocate cell-centered magnetization multifab
         m_magnetization[lev] = std::make_unique<amrex::MultiFab>(
                                ba, dm, magnetization_comps, ng_EB_alloc);
+        // allocate multifab to store flag for cells injected with particles
+        m_injection_flag[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
         m_magnetization[lev]->setVal(0._rt);
+        m_injection_flag[lev]->setVal(0._rt);
     }
 
 
