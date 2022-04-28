@@ -1231,9 +1231,9 @@ Pulsar::TuneSigma0Threshold (const int step)
         m_sum_injection_rate += ROI_list.back();
     }
     amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
+    amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     if (m_injection_tuning_interval.contains(step+1) ) {
         amrex::Print() << " period for injection tuning : " << m_injection_tuning_interval.localPeriod(step+1) << "\n";
-        amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
         amrex::Print() << " species rate is :  " << specified_injection_rate << " current rate : " << current_injection_rate << "\n";
         amrex::Print() << " Sigma0 before mod : " << m_Sigma0_threshold << "\n";
         amrex::Real m_Sigma0_pre = m_Sigma0_threshold;
@@ -1282,8 +1282,8 @@ Pulsar::TuneSigma0Threshold (const int step)
         if (m_Sigma0_threshold > m_max_Sigma0) m_Sigma0_threshold = m_max_Sigma0;
         amrex::Print() << " Simg0 modified to : " << m_Sigma0_threshold << "\n";
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline<< "\n";
-//        m_sum_injection_rate = 0.;
     }
+    amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << "\n";
 }
 
 void
