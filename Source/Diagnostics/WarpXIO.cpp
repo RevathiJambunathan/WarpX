@@ -228,7 +228,7 @@ WarpX::InitFromCheckpoint ()
 #ifdef PULSAR
         is >> m_pulsar->m_Sigma0_threshold;
         GotoNextLine(is);
-        is << m_pulsar->m_sum_injection_rate;
+        is >> m_pulsar->m_sum_injection_rate;
         GotoNextLine(is);
         is >> m_pulsar->list_size;
         GotoNextLine(is);
