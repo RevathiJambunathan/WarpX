@@ -228,6 +228,14 @@ WarpX::InitFromCheckpoint ()
 #ifdef PULSAR
         is >> m_pulsar->m_Sigma0_threshold;
         GotoNextLine(is);
+        is >> m_pulsar->list_size;
+        GotoNextLine(is);
+        for (int i = 0; i < m_pulsar->list_size; ++i) {
+            amrex::Real injection_rate;
+            is >> injection_rate;
+            m_pulsar->ROI_list.push_back(injection_rate);
+            GotoNextLine(is);
+        }
 #endif
     }
 
