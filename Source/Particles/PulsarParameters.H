@@ -21,6 +21,7 @@ public:
 
     static void ReadParameters();
     void InitData ();
+    void InitDataAtRestart ();
     void InitializeConductorMultifabUsingParser(amrex::MultiFab *mf,
          amrex::ParserExecutor<3> const& conductor_parser, const int lev);
 
