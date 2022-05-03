@@ -26,7 +26,7 @@ RawEFieldReduction::RawEFieldReduction (std::string rd_name)
 : ReducedDiags{rd_name}
 {
     using namespace amrex::literals;
-
+    amrex::ignore_unused(m_surface_normal);
     // RZ coordinate is not working
 #if (defined WARPX_DIM_RZ)
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(false,
