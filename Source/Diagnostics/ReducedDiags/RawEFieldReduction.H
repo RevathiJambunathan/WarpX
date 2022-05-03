@@ -77,6 +77,7 @@ public:
     template<typename ReduceOp>
     void ComputeRawEFieldReduction()
     {
+#ifndef WARPX_DIM_RZ
         using namespace amrex::literals;
 
         auto & warpx = WarpX::GetInstance();
@@ -256,8 +257,8 @@ public:
             m_data[index_Ez] = reducedEz_value;
 
         }
+#endif
     }
-
 };
 
 #endif
