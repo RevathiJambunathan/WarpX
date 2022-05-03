@@ -203,7 +203,6 @@ Pulsar::ReadParameters () {
 void
 Pulsar::InitDataAtRestart ()
 {
-    amrex::Print() << " initialize data at restar \n";
     auto & warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.maxLevel() + 1;
     if (m_do_conductor == true) {
@@ -225,7 +224,6 @@ Pulsar::InitDataAtRestart ()
 void
 Pulsar::InitData ()
 {
-    amrex::Print() << " init data at begining \n";
     auto & warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.maxLevel() + 1;
     if (m_do_conductor == true) {
