@@ -2757,6 +2757,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 
     const Dim3 lo = lbound(box);
 #ifdef PULSAR
+    auto &warpx = WarpX::GetInstance();
+    amrex::Real cur_time = warpx.gett_new(lev);
     amrex::Real omega_star_data = Pulsar::m_omega_star;
     amrex::Real ramp_omega_time_data = Pulsar::m_omega_ramp_time;
     amrex::Real Bstar_data = Pulsar::m_B_star;
