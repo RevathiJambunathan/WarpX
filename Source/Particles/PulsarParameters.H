@@ -21,6 +21,7 @@ public:
 
     static void ReadParameters();
     void InitData ();
+    void InitDataAtRestart ();
     void InitializeConductorMultifabUsingParser(amrex::MultiFab *mf,
          amrex::ParserExecutor<3> const& conductor_parser, const int lev);
 
@@ -156,7 +157,6 @@ public:
         Bphi   = 0.0;
     }
 
-
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static void getExternalEBOnParticle( amrex::Real const r, amrex::Real const theta, amrex::Real const phi,
                                          const int AddExternalMonopoleOnly, const int AddPulsarVacuumEFields,
@@ -266,7 +266,7 @@ public:
                                          amrex::ParticleReal &Byp, amrex::ParticleReal &Bzp)
     {
         // enfore theory on particle for r <= theory_max_radius
-        if (r <= theory_max_radius) {            
+        if (r <= theory_max_radius) {
             int ApplyCorotatingEField = 0;
             // for r inside conducting boundary, apply corotating efield
             if (r <= corotatingE_maxradius) ApplyCorotatingEField = 1;
@@ -304,9 +304,9 @@ public:
             Bxp = Bx_theory;
             Byp = By_theory;
             Bzp = Bz_theory;
-        }           
+        }
     }
-   
+
 
     /** Compute Cartesian components corresponding to i, j, k based on the staggering,
         ixType, and the domain_lo and cell size, dx.

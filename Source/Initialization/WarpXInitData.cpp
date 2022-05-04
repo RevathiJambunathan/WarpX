@@ -378,7 +378,10 @@ WarpX::InitData ()
     }
 
 #ifdef PULSAR
-    m_pulsar->InitData();
+    if (restart_chkfile.empty()) {
+        // Inititalize pulsar data
+        m_pulsar->InitData();
+    }
 #endif
 
     InitDiagnostics();
