@@ -894,7 +894,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     // instead of modiying number of particles, the weight is changed
                     pcounts[index] = num_ppc;
                 } else if (pulsar_modifyParticleWtAtInjection == 0) {
-		    const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
+            const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
                     // Modiying number of particles injected
                     // (could lead to round-off errors)
                     pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))

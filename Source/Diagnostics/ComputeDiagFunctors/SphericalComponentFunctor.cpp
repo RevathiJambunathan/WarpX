@@ -22,7 +22,9 @@ SphericalComponentFunctor::SphericalComponentFunctor (amrex::MultiFab const * mf
     : ComputeDiagFunctor(ncomp, crse_ratio), m_mfx_src(mfx_src),
       m_mfy_src(mfy_src), m_mfz_src(mfz_src), m_lev(lev), m_sphericalcomp(sphericalcomp),
       m_Efield(Efield)
-{}
+{
+    amrex::ignore_unused(m_lev, m_sphericalcomp, m_Efield);
+}
 
 
 void
