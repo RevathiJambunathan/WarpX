@@ -296,27 +296,6 @@ Pulsar::InitDataAtRestart ()
 }
 
 void
-Pulsar::InitDataAtRestart ()
-{
-    auto & warpx = WarpX::GetInstance();
-    const int nlevs_max = warpx.maxLevel() + 1;
-    if (m_do_conductor == true) {
-        m_conductor_fp.resize(nlevs_max);
-        amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
-        const int ncomps = 1;
-        for (int lev = 0; lev < nlevs_max; ++lev) {
-            amrex::BoxArray ba = warpx.boxArray(lev);
-            amrex::DistributionMapping dm = warpx.DistributionMap(lev);
-            const amrex::IntVect ng_EB_alloc = warpx.getngEB() + amrex::IntVect::TheNodeVector()*2;
-            m_conductor_fp[lev] = std::make_unique<amrex::MultiFab>(
-                                    amrex::convert(ba,conductor_nodal_flag), dm, ncomps, ng_EB_alloc);
-            InitializeConductorMultifabUsingParser(m_conductor_fp[lev].get(), m_conductor_parser->compile<3>(), lev);
-        }
-    }
-}
-
-
-void
 Pulsar::InitData ()
 {
     amrex::Print() << " pulsar init data \n";
