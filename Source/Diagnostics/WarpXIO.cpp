@@ -13,6 +13,7 @@
 #endif
 #include "FieldIO.H"
 #include "Particles/MultiParticleContainer.H"
+#include "Particles/PulsarParameters.H"
 #include "Utils/TextMsg.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #include "WarpX.H"
@@ -344,6 +345,9 @@ WarpX::InitFromCheckpoint ()
         }
     }
 
+#ifdef PULSAR
+    m_pulsar->InitDataAtRestart();
+#endif
     InitializeEBGridData(maxLevel());
 
     // Initialize particles

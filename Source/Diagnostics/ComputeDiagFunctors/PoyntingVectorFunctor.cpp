@@ -18,7 +18,9 @@ PoyntingVectorFunctor::PoyntingVectorFunctor (
     : ComputeDiagFunctor(ncomp, crse_ratio), m_Ex_src(Ex_src), m_Ey_src(Ey_src),
       m_Ez_src(Ez_src), m_Bx_src(Bx_src), m_By_src(By_src), m_Bz_src(Bz_src),
       m_lev(lev), m_vectorcomp(vectorcomp)
-{}
+{
+    amrex::ignore_unused(m_lev);
+}
 
 void
 PoyntingVectorFunctor::operator ()(amrex::MultiFab& mf_dst,

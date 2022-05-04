@@ -149,7 +149,7 @@ Pulsar::ReadParameters () {
     }
     m_corotatingE_maxradius = m_R_star;
     m_enforceDipoleB_maxradius = m_R_star;
-    pp.query("corotatingE_maxradius", m_corotatingE_maxradius);  
+    pp.query("corotatingE_maxradius", m_corotatingE_maxradius);
     pp.query("enforceDipoleB_maxradius", m_enforceDipoleB_maxradius);
     pp.query("init_dipoleBfield", m_do_InitializeGrid_with_Pulsar_Bfield);
     amrex::Print() << " init dipole : " << m_do_InitializeGrid_with_Pulsar_Bfield << "\n";
@@ -196,9 +196,30 @@ Pulsar::ReadParameters () {
     }
     pp.query("AddVacuumEFieldsIntAndExt", m_AddVacuumEFieldsIntAndExt );
     pp.query("AddVacuumBFieldsIntAndExt", m_AddVacuumBFieldsIntAndExt );
-    m_injection_endtime = 1000; // 1000 s upper limit 
+    m_injection_endtime = 1000; // 1000 s upper limit
     pp.query("ParticleInjectionEndTime",m_injection_endtime);
 }
+
+void
+Pulsar::InitDataAtRestart ()
+{
+    auto & warpx = WarpX::GetInstance();
+    const int nlevs_max = warpx.maxLevel() + 1;
+    if (m_do_conductor == true) {
+        m_conductor_fp.resize(nlevs_max);
+        amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
+        const int ncomps = 1;
+        for (int lev = 0; lev < nlevs_max; ++lev) {
+            amrex::BoxArray ba = warpx.boxArray(lev);
+            amrex::DistributionMapping dm = warpx.DistributionMap(lev);
+            const amrex::IntVect ng_EB_alloc = warpx.getngEB() + amrex::IntVect::TheNodeVector()*2;
+            m_conductor_fp[lev] = std::make_unique<amrex::MultiFab>(
+                                    amrex::convert(ba,conductor_nodal_flag), dm, ncomps, ng_EB_alloc);
+            InitializeConductorMultifabUsingParser(m_conductor_fp[lev].get(), m_conductor_parser->compile<3>(), lev);
+        }
+    }
+}
+
 
 void
 Pulsar::InitData ()
@@ -344,7 +365,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
         amrex::Array4<amrex::Real> const& mfy_arr = mfy->array(mfi);
         amrex::Array4<amrex::Real> const& mfz_arr = mfz->array(mfi);
         amrex::Array4<amrex::Real> const& conductor = m_conductor_fp[lev]->array(mfi);
- 
+
         amrex::ParallelFor (tbx, tby, tbz,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 amrex::Real x, y, z;
@@ -868,7 +889,7 @@ void
 Pulsar::SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                 const int lev, const amrex::Real a_dt)
 {
-    amrex::ignore_unused(a_dt); 
+    amrex::ignore_unused(a_dt);
     if (m_do_conductor == false) return;
     amrex::IntVect x_nodal_flag = Efield[0]->ixType().toIntVect();
     amrex::IntVect y_nodal_flag = Efield[1]->ixType().toIntVect();
