@@ -42,6 +42,7 @@ public:
     void TuneSigma0Threshold (const int step);
     void TotalParticles ();
     amrex::Real SumInjectionFlag ();
+    void PrintInjectedCellValues ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -518,6 +519,16 @@ public:
     std::list<amrex::Real> ROI_list;
     int list_size = 0;
     static int ROI_avg_window_size;
+    static int modify_sigma_threshold;
+    static int m_print_injected_celldata;
+    static int m_print_celldata_starttime;
+    /** Lower bound for number density to compute magnetization (Default is 1.e-16)*/
+    static amrex::Real m_lbound_ndens_magnetization;
+    /** Upeer bound for relative difference sigma tune method, such that,
+     ** if relative_difference > upper bound, then sigma is modified by upper bound.
+     ** Upper bound specified must be less than 1, and default is 0.1 (10%)
+     */
+    static amrex::Real m_ubound_reldiff_sigma0;
 private:
 };
 

@@ -583,9 +583,10 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
 
     // Species index to loop over species that dump rho per species
     int i = 0;
+#ifdef PULSAR
     // Species index to loop over species that dump number density per species
     int isp_nd = 0;
-
+#endif
     const auto nvar = static_cast<int>(m_varnames_fields.size());
     const auto nspec = static_cast<int>(m_pfield_species.size());
     const auto ntot = static_cast<int>(nvar + m_pfield_varnames.size() * nspec);
