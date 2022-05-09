@@ -42,6 +42,7 @@ public:
     void TuneSigma0Threshold (const int step);
     void TotalParticles ();
     amrex::Real SumInjectionFlag ();
+    void PrintInjectedCellValues ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
