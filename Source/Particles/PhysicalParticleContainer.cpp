@@ -755,6 +755,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::Real Sigma0_threshold = Pulsar::m_Sigma0_threshold;
     const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
     amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
+    const int modify_sigma_threshold = Pulsar::modify_sigma_threshold;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -903,8 +904,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                     pulsar_dR_star*buffer_factor) )
             {
                 // compute threshold magnetization Sigma = Sigma0 * (Rstar/r)^3
-                amrex::Real Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
- 
+                amrex::Real Sigma_threshold = Sigma0_threshold;
+                if (modify_sigma_threshold == 1) {
+                    Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                }
+
                 // inject particles if magnetization sigma > threshold magnetization Sigma
                 if (mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) > Sigma_threshold )
                 {
@@ -913,7 +917,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                         // instead of modiying number of particles, the weight is changed
                         pcounts[index] = num_ppc;
                     } else if (pulsar_modifyParticleWtAtInjection == 0) {
-		        const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
+                const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
                         // Modiying number of particles injected
                         // (could lead to round-off errors)
                         pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
