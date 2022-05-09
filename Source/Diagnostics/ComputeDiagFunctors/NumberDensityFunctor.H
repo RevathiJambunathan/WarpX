@@ -19,7 +19,7 @@ public:
      * \param[in] crse_ratio for interpolating field values from the simulation MultiFab, src_mf,
                   to the output diagnostic MultiFab, mf_dst.
      * \param[in] species_index index of species for which number density is computed
-     * \param[in] scomp starting component of mf_src 
+     * \param[in] scomp starting component of mf_src
      * \param[in] ncomp Number of component of mf_src to cell-center in dst multifab.
      */
     NumberDensityFunctor(const amrex::MultiFab * const mf_src, const int lev,

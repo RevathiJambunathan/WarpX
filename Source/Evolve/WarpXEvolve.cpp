@@ -121,7 +121,6 @@ WarpX::Evolve (int numsteps)
         }
 
 #ifdef PULSAR
-        m_pulsar->TotalParticles();
         m_pulsar->ComputePlasmaNumberDensity();
         m_pulsar->ComputePlasmaMagnetization();
         // inject particles for pulsar simulation
