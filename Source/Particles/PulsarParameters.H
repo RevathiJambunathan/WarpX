@@ -41,6 +41,7 @@ public:
     void ComputePlasmaMagnetization ();
     void TuneSigma0Threshold (const int step);
     void TotalParticles ();
+    amrex::Real SumInjectionFlag ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
