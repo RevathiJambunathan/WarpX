@@ -519,6 +519,9 @@ public:
     std::list<amrex::Real> ROI_list;
     int list_size = 0;
     static int ROI_avg_window_size;
+    static int modify_sigma_threshold;
+    static int m_print_injected_celldata;
+    static int m_print_celldata_starttime;
 private:
 };
 

@@ -86,6 +86,9 @@ amrex::Real Pulsar::m_max_Sigma0;
 amrex::Real Pulsar::m_sum_injection_rate = 0.;
 std::string Pulsar::m_sigma_tune_method;
 int Pulsar::ROI_avg_window_size = 50;
+int Pulsar::modify_sigma_threshold = 0.;
+int Pulsar::m_print_injected_celldata;
+int Pulsar::m_print_celldata_starttime;
 
 
 Pulsar::Pulsar ()
@@ -239,6 +242,9 @@ Pulsar::ReadParameters () {
     pp.get("sigma_tune_method",m_sigma_tune_method);
     amrex::Print() << " sigma tune method " << m_sigma_tune_method << "\n";
     pp.get("ROI_avg_size",ROI_avg_window_size);
+    pp.get("modify_sigma_threshold", modify_sigma_threshold);
+    pp.get("print_injected_celldata", m_print_injected_celldata);
+    pp.get("print_celldata_starttime", m_print_celldata_starttime);
 }
 
 
@@ -1182,8 +1188,10 @@ Pulsar::TuneSigma0Threshold (const int step)
     amrex::Real dt = warpx.getdt(0);
     // Total number of cells that have injected particles
     amrex::Real total_injected_cells = SumInjectionFlag();
-    if (warpx.getistep(0) >=4380 and warpx.getistep(0) <=4500) {
-        PrintInjectedCellValues();
+    if (m_print_injected_celldata == 1) {
+        if (warpx.getistep(0) >= m_print_celldata_starttime) {
+            PrintInjectedCellValues();
+        }
     }
 
     using PTDType = typename WarpXParticleContainer::ParticleTileType::ConstParticleTileDataType;
