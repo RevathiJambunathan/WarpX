@@ -1499,11 +1499,13 @@ Pulsar::PrintInjectedCellValues ()
     amrex::Print() << " counter : " << cell_counter.dataValue() << " total cells injected " << total_injected_cells << "\n";
     std::stringstream ss;
     ss << Concatenate("InjectionCellData", warpx.getistep(0), 5);
-    amrex::AllPrintToFile(ss.str()) << " cell_index x y z r theta phi injection magnetization ndens_p ndens_e Bx By Bz Bmag rho " ;
+    amrex::AllPrintToFile(ss.str()) << " cell_index x y z r theta phi injection magnetization ndens_p ndens_e Bx By Bz Bmag rho \n" ;
     for (int icell = 0; icell < total_injected_cells; ++icell ) {
+        if (InjectedCellDiagData[icell*total_diags + 6] == 1) {
             amrex::AllPrintToFile(ss.str()) << icell << " ";
-        for (int idata = 0; idata < total_diags; ++idata) {
-            amrex::AllPrintToFile(ss.str()) << InjectedCellDiagData[icell * total_diags + idata] << " ";
+            for (int idata = 0; idata < total_diags; ++idata) {
+                amrex::AllPrintToFile(ss.str()) << InjectedCellDiagData[icell * total_diags + idata] << " ";
+            }
         }
         amrex::AllPrintToFile(ss.str()) << "\n";
     }
