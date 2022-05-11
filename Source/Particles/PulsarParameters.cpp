@@ -1221,7 +1221,9 @@ Pulsar::TuneSigma0Threshold (const int step)
         amrex::ParallelDescriptor::ReduceRealSum(ws_total, ParallelDescriptor::IOProcessorNumber());
         total_weight_allspecies += ws_total;
     }
+    amrex::ParallelDescriptor::Barrier();
     amrex::Real current_injection_rate = total_weight_allspecies / dt;
+    amrex::ParallelDescriptor::Barrier();
     if (list_size < ROI_avg_window_size) {
         ROI_list.push_back(current_injection_rate);
         m_sum_injection_rate += current_injection_rate;
@@ -1234,6 +1236,7 @@ Pulsar::TuneSigma0Threshold (const int step)
         amrex::Print() << " current injection rate : " << current_injection_rate << " list back " << ROI_list.back() << "\n";
         m_sum_injection_rate += ROI_list.back();
     }
+    amrex::ParallelDescriptor::Barrier();
     amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     if (m_injection_tuning_interval.contains(step+1) ) {
@@ -1245,45 +1248,49 @@ Pulsar::TuneSigma0Threshold (const int step)
         amrex::Print() << " list size : " << list_size << "\n";
         amrex::Real avg_injection_rate = m_sum_injection_rate/(list_size * 1.);
         amrex::Print() << " avg inj rate " << avg_injection_rate << "\n";
+        amrex::Real m_new_sigma0_threshold = m_Sigma0_threshold;
         if (avg_injection_rate < specified_injection_rate) {
             // reduce sigma0 so more particles can be injected
             //m_Sigma0_threshold *= total_weight_allspecies/specified_injection_rate;
             if (m_sigma_tune_method == "10percent") {
-                m_Sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+                //m_Sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+                m_new_sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
             }
             if (m_sigma_tune_method == "relative_difference") {
                 if (avg_injection_rate == 0.) {
                     // if no particles are injection only change the threshold sigma by 10%
-                    m_Sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+                    m_new_sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
                 } else {
                     amrex::Real rel_diff = (specified_injection_rate - avg_injection_rate)/specified_injection_rate;
                     if (rel_diff < 0.1) {
                         amrex::Print() << " rel_diff " << rel_diff << "\n";
-                        m_Sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
+                        m_new_sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
                     } else {
                         amrex::Print() << " rel_diff " << rel_diff << " using upper bound 10%"<< "\n";
-                        m_Sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+                        m_new_sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
                     }
                 }
             }
         } else if (avg_injection_rate > specified_injection_rate ) {
             //m_Sigma0_threshold *= specified_injection_rate/total_weight_allspecies;
             if (m_sigma_tune_method == "10percent") {
-                m_Sigma0_threshold = m_Sigma0_threshold + 0.1 * m_Sigma0_threshold;
+                m_new_sigma0_threshold = m_Sigma0_threshold + 0.1 * m_Sigma0_threshold;
             }
             if (m_sigma_tune_method == "relative_difference") {
                 amrex::Real rel_diff = (avg_injection_rate - specified_injection_rate)/specified_injection_rate;
                 if (rel_diff < 0.1) {
                     amrex::Print() << " rel_diff " << rel_diff << "\n";
-                    m_Sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
+                    m_new_sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
                 } else {
                     amrex::Print() << " rel_diff " << rel_diff << " using upper bound 10%"<< "\n";
-                    m_Sigma0_threshold = m_Sigma0_threshold + 0.1 * m_Sigma0_threshold;
+                    m_new_sigma0_threshold = m_Sigma0_threshold + 0.1 * m_Sigma0_threshold;
                 }
             }
         }
-        if (m_Sigma0_threshold < m_min_Sigma0) m_Sigma0_threshold = m_min_Sigma0;
-        if (m_Sigma0_threshold > m_max_Sigma0) m_Sigma0_threshold = m_max_Sigma0;
+        if (m_new_sigma0_threshold < m_min_Sigma0) m_new_sgima0_threshold = m_min_Sigma0;
+        if (m_new_sigma0_threshold > m_max_Sigma0) m_new_sigma0_threshold = m_max_Sigma0;
+        amrex::ParallelDescriptor::Barrier();
+        m_Sigma0_threshold = m_new_sigma0_threshold;
         amrex::Print() << " Simg0 modified to : " << m_Sigma0_threshold << "\n";
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline<< "\n";
     }
