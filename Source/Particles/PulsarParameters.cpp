@@ -1170,15 +1170,6 @@ Pulsar::ComputePlasmaMagnetization ()
             );
         } // mfiter loop
     } // loop over levels
-    if (warpx.getistep(0)>=4398) {
-        std::stringstream ss;
-        ss << Concatenate("./diags/sigma_",warpx.getistep(0),5);
-        VisMF::Write( *m_magnetization[0], ss.str());
-        VisMF::Write( *m_plasma_number_density[0], ss.str());
-        VisMF::Write( warpx.getBfield(0,0), ss.str());
-        VisMF::Write( warpx.getBfield(0,1), ss.str());
-        VisMF::Write( warpx.getBfield(0,2), ss.str());
-    }
 }
 
 void
@@ -1227,7 +1218,6 @@ Pulsar::TuneSigma0Threshold (const int step)
     }
     // injection rate is sum of particle weight over all species per timestep
     amrex::Real current_injection_rate = total_weight_allspecies / dt;
-    amrex::ParallelDescriptor::Barrier();
     if (list_size < ROI_avg_window_size) {
         ROI_list.push_back(current_injection_rate);
         m_sum_injection_rate += current_injection_rate;
@@ -1238,7 +1228,6 @@ Pulsar::TuneSigma0Threshold (const int step)
         ROI_list.push_back(current_injection_rate);
         m_sum_injection_rate += ROI_list.back();
     }
-    amrex::ParallelDescriptor::Barrier();
     amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     if (m_injection_tuning_interval.contains(step+1) ) {
