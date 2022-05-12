@@ -1167,15 +1167,6 @@ Pulsar::ComputePlasmaMagnetization ()
             );
         } // mfiter loop
     } // loop over levels
-    if (warpx.getistep(0)>=4398) {
-        std::stringstream ss;
-        ss << Concatenate("./diags/sigma_",warpx.getistep(0),5);
-        VisMF::Write( *m_magnetization[0], ss.str());
-        VisMF::Write( *m_plasma_number_density[0], ss.str());
-        VisMF::Write( warpx.getBfield(0,0), ss.str());
-        VisMF::Write( warpx.getBfield(0,1), ss.str());
-        VisMF::Write( warpx.getBfield(0,2), ss.str());
-    }
 }
 
 void
@@ -1218,12 +1209,10 @@ Pulsar::TuneSigma0Threshold (const int step)
                         reduce_ops
                     );
         ws_total = amrex::get<0>(ws_r);
-        amrex::ParallelDescriptor::ReduceRealSum(ws_total, ParallelDescriptor::IOProcessorNumber());
+        amrex::ParallelDescriptor::ReduceRealSum(ws_total);
         total_weight_allspecies += ws_total;
     }
-    amrex::ParallelDescriptor::Barrier();
     amrex::Real current_injection_rate = total_weight_allspecies / dt;
-    amrex::ParallelDescriptor::Barrier();
     if (list_size < ROI_avg_window_size) {
         ROI_list.push_back(current_injection_rate);
         m_sum_injection_rate += current_injection_rate;
@@ -1236,7 +1225,6 @@ Pulsar::TuneSigma0Threshold (const int step)
         amrex::Print() << " current injection rate : " << current_injection_rate << " list back " << ROI_list.back() << "\n";
         m_sum_injection_rate += ROI_list.back();
     }
-    amrex::ParallelDescriptor::Barrier();
     amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     if (m_injection_tuning_interval.contains(step+1) ) {
@@ -1289,7 +1277,6 @@ Pulsar::TuneSigma0Threshold (const int step)
         }
         if (m_new_sigma0_threshold < m_min_Sigma0) m_new_sgima0_threshold = m_min_Sigma0;
         if (m_new_sigma0_threshold > m_max_Sigma0) m_new_sigma0_threshold = m_max_Sigma0;
-        amrex::ParallelDescriptor::Barrier();
         m_Sigma0_threshold = m_new_sigma0_threshold;
         amrex::Print() << " Simg0 modified to : " << m_Sigma0_threshold << "\n";
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline<< "\n";
