@@ -100,7 +100,6 @@ Pulsar::Pulsar ()
 
 void
 Pulsar::ReadParameters () {
-    amrex::Print() << " pulsar read data \n";
     amrex::ParmParse pp("pulsar");
     pp.query("pulsarType",m_pulsar_type);
 
@@ -310,7 +309,6 @@ Pulsar::InitDataAtRestart ()
 void
 Pulsar::InitData ()
 {
-    amrex::Print() << " pulsar init data \n";
     auto & warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.finestLevel() + 1;
     //allocate number density multifab
