@@ -91,6 +91,7 @@ int Pulsar::m_print_injected_celldata;
 int Pulsar::m_print_celldata_starttime;
 amrex::Real Pulsar::m_lbound_ndens_magnetization = 1.e-16;
 amrex::Real Pulsar::m_ubound_reldiff_sigma0 = 0.1;
+amrex::Real Pulsar::m_Chi;
 
 
 Pulsar::Pulsar ()
@@ -251,6 +252,11 @@ Pulsar::ReadParameters () {
     if (m_sigma_tune_method == "relative_difference") {
         pp.query("upperBound_reldiff_sigma0", m_ubound_reldiff_sigma0);
     }
+    // Obliquity of the pulsar
+    pp.get("Chi", m_Chi);
+    // convert degrees to radians
+    m_Chi = m_Chi * MathConst::pi / 180._rt;
+    amrex::Print() << "Oblique angle between B-axis and Omega-axis " << m_Chi << " radians \n";
 }
 
 

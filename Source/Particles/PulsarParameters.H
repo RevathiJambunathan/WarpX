@@ -529,6 +529,10 @@ public:
      ** Upper bound specified must be less than 1, and default is 0.1 (10%)
      */
     static amrex::Real m_ubound_reldiff_sigma0;
+    /** Oblique angle between magnetic field axis and pulsar rotation axis.
+     ** (Read in degrees and converted to radians)
+     */
+    static amrex::Real m_Chi;
 private:
 };
 
