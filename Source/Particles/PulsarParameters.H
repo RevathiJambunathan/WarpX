@@ -58,7 +58,8 @@ public:
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static void CorotatingEfieldSpherical (amrex::Real const r, amrex::Real const theta,
-                                    amrex::Real const phi, amrex::Real const time,
+                                    amrex::Real const phi, amrex::Real const chi,
+                                    amrex::Real const time,
                                     amrex::Real const omega_star_data,
                                     amrex::Real const ramp_omega_time_data,
                                     amrex::Real const Bstar,
@@ -66,10 +67,18 @@ public:
                                     amrex::Real const dRstar,
                                     amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
-        amrex::ignore_unused(phi);
         amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
+        // Polar angle
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
+        // Oblique angle
+        amrex::Real c_chi = std::cos(chi);
+        amrex::Real s_chi = std::sin(chi);
+        // Instantaneous phase, psi = phi - Omega*t (phi is the azimuthal angle)
+        // Refer to Pg. 6 of Jeromi Petri's 2016 paper
+        amrex::Real psi = phi - omega*time;
+        amrex::Real c_psi = std::cos(psi);
+        // Ratio : Rstar/r
         amrex::Real r_ratio;
         if (r > 0) {
             r_ratio = Rstar/r;
@@ -77,15 +86,21 @@ public:
             r_ratio = Rstar/(dRstar*0.5);
         }
         amrex::Real r2 = r_ratio * r_ratio;
-        // Michel and Li -- eq 14 , 15
-        Er     =  Bstar * omega * r2 * Rstar * s_theta * s_theta;
-        Etheta = -Bstar * omega * r2 * Rstar * 2.0 * s_theta * c_theta;
-        Ephi   = 0.0; // aligned magnetic and rotation axis
+        // Corotating electric field inside the pulsar that corresponds to dipole magnetic field
+        // Eq 2.9 (a-c) Jeromi Petri 2016
+        Er = Bstar * omega * r2 * Rstar *
+             ( c_chi * s_theta * s_theta
+             - s_chi * c_theta * s_theta * c_psi);
+        Etheta = -Bstar * omega * r2 * Rstar *
+                 ( c_chi * 2._rt * s_theta * c_theta
+                 + s_chi * 2._rt * s_theta * s_theta * c_psi);
+        Ephi = 0._rt;
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static void ExternalEFieldSpherical (amrex::Real const r, amrex::Real const theta,
-                                  amrex::Real const phi, amrex::Real const time,
+                                  amrex::Real const phi, amrex::Real const chi,
+                                  amrex::Real const time,
                                   amrex::Real const omega_star_data,
                                   amrex::Real const ramp_omega_time_data,
                                   amrex::Real const Bstar, amrex::Real const Rstar,
@@ -94,38 +109,59 @@ public:
                                   int const ApplyCorotatingEField,
                                   amrex::Real &Er, amrex::Real &Etheta, amrex::Real &Ephi)
     {
-        amrex::ignore_unused(phi, corotatingE_maxradius);
+        amrex::ignore_unused(corotatingE_maxradius);
         amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
+        // Polar angle
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
+        // Oblique angle
+        amrex::Real c_chi = std::cos(chi);
+        amrex::Real s_chi = std::sin(chi);
+        // Instantaneous phase, psi = phi - Omega*t (phi is the azimuthal angle)
+        // Refer to Pg. 6 of Jeromi Petri's 2016 paper
+        amrex::Real psi = phi - omega*time;
+        amrex::Real c_psi = std::cos(psi);
+        amrex::Real s_psi = std::sin(psi);
+
         amrex::Real r_ratio = Rstar/r;
         // inside pulsar
-        //if (r <= corotatingE_maxradius) {
         if (ApplyCorotatingEField == 1) {
             amrex::Real r2 = r_ratio * r_ratio;
-            // Michel and Li -- eq 14 , 15
-            Er     =  Bstar * omega * r2 * Rstar * s_theta * s_theta;
-            Etheta = -Bstar * omega * r2 * Rstar * 2.0 * s_theta * c_theta;
-            Ephi = 0.0; // aligned magnetic and rotation axis
+            // Corotating electric field inside the pulsar that corresponds to dipole magnetic field
+            // Eq 2.9 (a-c) Jeromi Petri 2016
+            Er = Bstar * omega * r2 * Rstar *
+                 ( c_chi * s_theta * s_theta
+                 - s_chi * c_theta * s_theta * c_psi);
+            Etheta = -Bstar * omega * r2 * Rstar *
+                     ( c_chi * 2._rt * s_theta * c_theta
+                     + s_chi * 2._rt * s_theta * s_theta * c_psi);
+            Ephi = 0._rt;
         }
 
         // outside pulsar
-        //if (r > corotatingE_maxradius) {
         if (ApplyCorotatingEField == 0) {
-            amrex::Real r4 = r_ratio*r_ratio*r_ratio*r_ratio;
-            // Taking derivative of phi given in eq 30 of Michel and Li
-            Er = Bstar * omega * Rstar * r4 * (1.0-3.0*c_theta*c_theta);
+            amrex::Real r2 = r_ratio * r_ratio;
+            amrex::Real r4 = r2 * r2;
+            // Equations 2.8(a) - 2.8(c)
+            Er = Bstar * omega * Rstar * r4 *
+                 ( c_chi * (1._rt - 3._rt * c_theta * c_theta)
+                 - 3._rt * s_chi * c_theta * s_theta * c_psi );
             if (Eexternal_monopole == 1) {
-                 Er += (2.0/3.0) * omega * Bstar * Rstar * r_ratio * r_ratio;
+                // Monopole term from central charge = Qc/(4*pi*eps0*r^2)
+                // For dipolar magnetic field, Qc = 8pi/3 * eps0*Omega*Bstar*Rstar^3*c_chi
+                Er += (2._rt/3._rt) * omega * Bstar * Rstar * r2 * c_chi;
             }
-            Etheta = (-1.0) * Bstar * omega * Rstar * r4 * (2.0*s_theta*c_theta);
-            Ephi = 0.0;
+            Etheta = Bstar * omega * Rstar *
+                     ( r2 * s_chi * (r2*std::cos(2._rt*theta) - 1._rt) * c_psi
+                     - r4 * c_chi * std::sin(2._rt*theta) );
+            Ephi = Bstar * omega * Rstar * r2 * (1._rt - r2) * s_chi * c_theta * s_psi;
         }
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static void ExternalEMonopoleSpherical (amrex::Real const r, amrex::Real const theta,
-                                     amrex::Real const phi, amrex::Real const time,
+                                     amrex::Real const phi, amrex::Real const chi,
+                                     amrex::Real const time,
                                      amrex::Real const omega_star_data,
                                      amrex::Real const ramp_omega_time_data,
                                      amrex::Real const Bstar, amrex::Real const Rstar,
@@ -134,8 +170,10 @@ public:
         amrex::ignore_unused(phi, theta);
         amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
         amrex::Real r_ratio = Rstar/r;
+        amrex::Real r2 = r_ratio * r_ratio;
+        amrex::Real c_chi = std::cos(chi);
 
-        Er = (2.0/3.0) * omega * Bstar * Rstar * r_ratio * r_ratio;
+        Er = (2._rt/3._rt) * omega * Bstar * Rstar * r2 * c_chi;
         Etheta = 0.;
         Ephi = 0.;
 
@@ -143,14 +181,27 @@ public:
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static void ExternalBFieldSpherical (amrex::Real const r, amrex::Real const theta,
-                                  amrex::Real const phi, amrex::Real const time,
+                                  amrex::Real const phi, amrex::Real const chi,
+                                  amrex::Real const time,
+                                  amrex::Real const omega_star_data,
+                                  amrex::Real const ramp_omega_time_data,
                                   amrex::Real const Bstar, amrex::Real const Rstar,
                                   amrex::Real const dRstar,
                                   amrex::Real &Br, amrex::Real &Btheta, amrex::Real &Bphi)
     {
-        amrex::ignore_unused(phi, time);
+        // Polar angle
         amrex::Real c_theta = std::cos(theta);
         amrex::Real s_theta = std::sin(theta);
+        // Oblique angle
+        amrex::Real c_chi = std::cos(chi);
+        amrex::Real s_chi = std::sin(chi);
+        // Instantaneous phase, psi = phi - Omega*t (phi is the azimuthal angle)
+        // Refer to Pg. 6 of Jeromi Petri's 2016 paper
+        amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
+        amrex::Real psi = phi - omega*time;
+        amrex::Real c_psi = std::cos(psi);
+        amrex::Real s_psi = std::sin(psi);
+
         amrex::Real r_ratio;
         if (r > 0) {
             r_ratio = Rstar/r;
@@ -158,15 +209,16 @@ public:
             r_ratio = Rstar/(dRstar*0.5);
         }
         amrex::Real r3 = r_ratio*r_ratio*r_ratio;
-        // Michel and Li -- eq 14 and 15 from michel and li
-        // dipole B field inside and outside the pulsar
-        Br     = 2.0*Bstar*r3*c_theta;
-        Btheta = Bstar*r3*s_theta;
-        Bphi   = 0.0;
+        // The full dipole magnetic field as f(theta, phi, omega, t, and Chi)
+        // Eqs 2.7(a) - 2.7(c) from Jeromi Petri 2016 paper
+        Br = 2._rt * Bstar * r3 * ( c_chi * c_theta + s_chi * s_theta * c_psi);
+        Btheta = Bstar * r3 * ( c_chi * s_theta - s_chi * c_theta * c_psi);
+        Bphi = Bstar * r3 * s_chi * s_psi;
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    static void getExternalEBOnParticle( amrex::Real const r, amrex::Real const theta, amrex::Real const phi,
+    static void getExternalEBOnParticle( amrex::Real const r, amrex::Real const theta,
+                                         amrex::Real const phi, amrex::Real const chi,
                                          const int AddExternalMonopoleOnly, const int AddPulsarVacuumEFields,
                                          const int AddBDipoleOutsideRstar, const int AddPulsarVacuumBFields,
                                          amrex::Real const corotatingE_maxradius,
@@ -184,7 +236,7 @@ public:
                 amrex::Real Er = 0.0_rt;
                 amrex::Real Etheta = 0.0_rt;
                 amrex::Real Ephi = 0.0_rt;
-                ExternalEMonopoleSpherical(r, theta, phi, cur_time, omega_star,
+                ExternalEMonopoleSpherical(r, theta, phi, chi, cur_time, omega_star,
                                            ramp_omega_time, Bstar, Rstar,
                                            Er, Etheta, Ephi);
                 amrex::Real Ex_monopole = 0._rt;
@@ -206,7 +258,7 @@ public:
             amrex::Real Ephi = 0.0_rt;
             int ApplyCorotatingEField = 0;
             if (r <= corotatingE_maxradius) ApplyCorotatingEField = 1;
-            ExternalEFieldSpherical(r, theta, phi, cur_time, omega_star,
+            ExternalEFieldSpherical(r, theta, phi, chi, cur_time, omega_star,
                                     ramp_omega_time, Bstar, Rstar,
                                     corotatingE_maxradius,
                                     E_external_monopole,
@@ -229,8 +281,10 @@ public:
                 amrex::Real Br = 0._rt;
                 amrex::Real Btheta = 0._rt;
                 amrex::Real Bphi = 0._rt;
-                ExternalBFieldSpherical (r, theta, phi, cur_time, Bstar, Rstar, dR_star,
-                                         Br, Btheta, Bphi);
+                ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                        omega_star, ramp_omega_time,
+                                        Bstar, Rstar, dR_star,
+                                        Br, Btheta, Bphi);
                 amrex::Real Bx_dipole = 0._rt;
                 amrex::Real By_dipole = 0._rt;
                 amrex::Real Bz_dipole = 0._rt;
@@ -246,8 +300,10 @@ public:
             amrex::Real Br = 0._rt;
             amrex::Real Btheta = 0._rt;
             amrex::Real Bphi = 0._rt;
-            ExternalBFieldSpherical (r, theta, phi, cur_time, Bstar, Rstar, dR_star,
-                                     Br, Btheta, Bphi);
+            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                    omega_star, ramp_omega_time,
+                                    Bstar, Rstar, dR_star,
+                                    Br, Btheta, Bphi);
             amrex::Real Bx_dipole = 0._rt;
             amrex::Real By_dipole = 0._rt;
             amrex::Real Bz_dipole = 0._rt;
@@ -262,7 +318,8 @@ public:
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
-    static void EnforceTheoreticalEBOnParticle( amrex::Real const r, amrex::Real const theta, amrex::Real const phi,
+    static void EnforceTheoreticalEBOnParticle( amrex::Real const r, amrex::Real const theta,
+                                         amrex::Real const phi, amrex::Real const chi,
                                          amrex::Real const theory_max_radius,
                                          amrex::Real const corotatingE_maxradius,
                                          const int E_external_monopole,
@@ -285,7 +342,7 @@ public:
             amrex::Real Ex_theory = 0._rt;
             amrex::Real Ey_theory = 0._rt;
             amrex::Real Ez_theory = 0._rt;
-            ExternalEFieldSpherical(r, theta, phi, cur_time, omega_star, ramp_omega_time,
+            ExternalEFieldSpherical(r, theta, phi, chi, cur_time, omega_star, ramp_omega_time,
                                     Bstar, Rstar, corotatingE_maxradius, E_external_monopole,
                                     ApplyCorotatingEField, Er, Etheta, Ephi);
             // Compute theoretical Bfield in spherical coordinates
@@ -295,7 +352,8 @@ public:
             amrex::Real Bx_theory = 0._rt;
             amrex::Real By_theory = 0._rt;
             amrex::Real Bz_theory = 0._rt;
-            ExternalBFieldSpherical(r, theta, phi, cur_time, Bstar, Rstar, dR_star, Br, Btheta, Bphi);
+            ExternalBFieldSpherical(r, theta, phi, chi, cur_time, omega_star, ramp_omega_time,
+                                    Bstar, Rstar, dR_star, Br, Btheta, Bphi);
             // Convert Efield from spherical to Cartesian
             ConvertSphericalToCartesianXComponent(Er, Etheta, Ephi, r, theta, phi, Ex_theory);
             ConvertSphericalToCartesianYComponent(Er, Etheta, Ephi, r, theta, phi, Ey_theory);

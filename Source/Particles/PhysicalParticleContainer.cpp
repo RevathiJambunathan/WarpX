@@ -2320,6 +2320,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     amrex::Real Bstar_data = Pulsar::m_B_star;
     amrex::Real Rstar_data = Pulsar::m_R_star;
     amrex::Real dRstar_data = Pulsar::m_dR_star;
+    amrex::Real chi_data = Pulsar::m_Chi;
     amrex::Real corotatingE_maxradius_data = Pulsar::m_corotatingE_maxradius;
     int E_external_monopole_data = Pulsar::m_do_E_external_monopole;
     int AddExternalMonopoleOnly = Pulsar::m_AddExternalMonopoleOnly;
@@ -2425,7 +2426,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                 amrex::ParticleReal r_p, theta_p, phi_p;
                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
                                                           r_p, theta_p, phi_p);
-                Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p,
+                Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p, chi_data,
                                     AddExternalMonopoleOnly,
                                     AddPulsarVacuumEFields,
                                     AddBDipoleOutsideRstar,
@@ -2436,7 +2437,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                     Bstar_data, Rstar_data, dRstar_data,
                                     Exp, Eyp, Ezp, Bxp, Byp, Bzp);
                 if (use_theoreticalEB == 1) {
-                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p,
+                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p, chi_data,
                                     theory_max_rstar,
                                     corotatingE_maxradius_data,
                                     E_external_monopole_data,
@@ -2747,6 +2748,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Real Bstar_data = Pulsar::m_B_star;
     amrex::Real Rstar_data = Pulsar::m_R_star;
     amrex::Real dRstar_data = Pulsar::m_dR_star;
+    amrex::Real chi_data = Pulsar::m_Chi;
     amrex::Real corotatingE_maxradius_data = Pulsar::m_corotatingE_maxradius;
     int E_external_monopole_data = Pulsar::m_do_E_external_monopole;
     int AddExternalMonopoleOnly = Pulsar::m_AddExternalMonopoleOnly;
@@ -2878,7 +2880,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                 amrex::ParticleReal r_p, theta_p, phi_p;
                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
                                                           r_p, theta_p, phi_p);
-                Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p,
+                Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p, chi_data,
                                     AddExternalMonopoleOnly,
                                     AddPulsarVacuumEFields,
                                     AddBDipoleOutsideRstar,
@@ -2889,7 +2891,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                     Bstar_data, Rstar_data, dRstar_data,
                                     Exp, Eyp, Ezp, Bxp, Byp, Bzp);
                 if (use_theoreticalEB == 1) {
-                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p,
+                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p, chi_data,
                                     theory_max_rstar,
                                     corotatingE_maxradius_data,
                                     E_external_monopole_data,
