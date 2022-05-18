@@ -1247,10 +1247,10 @@ Pulsar::TuneSigma0Threshold (const int step)
                 } else {
                     amrex::Real rel_diff = (specified_injection_rate - avg_injection_rate)/specified_injection_rate;
                     if (rel_diff < m_ubound_reldiff_sigma0) {
-                        // If relative difference is less than 10%, reduce magnetization by rel_diff
+                        // If relative difference is less than user-defined upper bound, reduce magnetization by rel_diff
                         new_sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
                     } else {
-                        // Maximum relative difference bound by 10%
+                        // Maximum relative difference is set by user-defined upper bound
                         new_sigma0_threshold = m_Sigma0_threshold - m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
                     }
                 }
@@ -1264,8 +1264,7 @@ Pulsar::TuneSigma0Threshold (const int step)
             if (m_sigma_tune_method == "relative_difference") {
                 amrex::Real rel_diff = (avg_injection_rate - specified_injection_rate)/specified_injection_rate;
                 if (rel_diff < m_ubound_reldiff_sigma0) {
-                    // Relative difference upper bound is 10%
-                    // If relative difference is less than 10%, increase magnetization by rel_diff
+                    // If relative difference is less than user-defined upper bound, increase magnetization by rel_diff
                     new_sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
                 } else {
                     // If rel_diff > upper bound, then increase sigma0 by m_ubound_reldiff_sigma0
