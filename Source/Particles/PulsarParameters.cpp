@@ -1092,7 +1092,7 @@ Pulsar::ComputePlasmaNumberDensity ()
             );
         }
 
- 
+
         const Geometry& geom = warpx.Geom(lev);
         const auto dx = geom.CellSizeArray();
 #if defined WARPX_DIM_3D
@@ -1288,7 +1288,7 @@ Pulsar::TotalParticles ()
     auto& warpx = WarpX::GetInstance();
     std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
     const int nspecies = species_names.size();
-    amrex::Long total_particles = 0; 
+    amrex::Long total_particles = 0;
 
     for (int isp = 0; isp < nspecies; ++isp) {
         auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
@@ -1332,7 +1332,7 @@ Pulsar::PrintInjectedCellValues ()
     auto& mypc = warpx.GetPartContainer();
     rho = mypc.GetChargeDensity(lev, true);
     amrex::MultiFab & rho_mf = *rho;
- 
+
     Gpu::DeviceScalar<int> cell_counter(0);
     int* cell_counter_d = cell_counter.dataPtr();
     for (MFIter mfi(injectionflag_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi)
@@ -1383,7 +1383,7 @@ Pulsar::PrintInjectedCellValues ()
                     const int unity = 1;
                     amrex::HostDevice::Atomic::Add(cell_counter_d, unity);
                 }
-            }); 
+            });
     }
     amrex::Print() << " counter : " << cell_counter.dataValue() << " total cells injected " << total_injected_cells << "\n";
     std::stringstream ss;

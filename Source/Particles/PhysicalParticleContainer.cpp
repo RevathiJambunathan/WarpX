@@ -908,7 +908,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 if (modify_sigma_threshold == 1) {
                     Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
                 }
- 
+
                 // inject particles if magnetization sigma > threshold magnetization Sigma
                 if (mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) > Sigma_threshold )
                 {
