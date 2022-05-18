@@ -155,10 +155,6 @@ FlushFormatCheckpoint::WriteToFile (
             }
 #endif
         }
-#ifdef PULSAR
-        // write magnetization multifab
-        VisMF::Write(warpx.getPulsar().get_magnetization(lev), amrex::MultiFabFileFullPrefix(lev, checkpointname, default_level_prefix, "magnetization"));
-#endif
     }
 
     CheckpointParticles(checkpointname, particle_diags);

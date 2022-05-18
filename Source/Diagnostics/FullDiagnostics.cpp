@@ -11,7 +11,6 @@
 #    include "ComputeDiagFunctors/SphericalComponentFunctor.H"
 #    include "ComputeDiagFunctors/EdotBFunctor.H"
 #    include "ComputeDiagFunctors/PoyntingVectorFunctor.H"
-#    include "ComputeDiagFunctors/NumberDensityFunctor.H"
 #endif
 #include "Diagnostics/Diagnostics.H"
 #include "Diagnostics/ParticleDiag/ParticleDiag.H"
@@ -583,10 +582,7 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
 
     // Species index to loop over species that dump rho per species
     int i = 0;
-#ifdef PULSAR
-    // Species index to loop over species that dump number density per species
-    int isp_nd = 0;
-#endif
+
     const auto nvar = static_cast<int>(m_varnames_fields.size());
     const auto nspec = static_cast<int>(m_pfield_species.size());
     const auto ntot = static_cast<int>(nvar + m_pfield_varnames.size() * nspec);
@@ -717,18 +713,6 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
                                               lev, m_crse_ratio, zcomp);
         } else if (m_varnames[comp] == "conductor") {
             m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(warpx.getPulsar().m_conductor_fp[lev].get(), lev, m_crse_ratio);
-        } else if ( m_varnames[comp].rfind("ndens_", 0) == 0 ){
-            // Initialize number density functor
-            m_all_field_functors[lev][comp] = std::make_unique<NumberDensityFunctor>(warpx.getPulsar().get_pointer_ndens(lev), lev, m_crse_ratio, m_ndens_per_species_index[isp_nd]);
-            isp_nd++;
-        } else if (m_varnames[comp] == "magnetization") {
-            m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(
-                                              warpx.getPulsar().get_pointer_magnetization(lev),
-                                              lev, m_crse_ratio);
-        } else if (m_varnames[comp] == "injectionflag") {
-            m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(
-                                              warpx.getPulsar().get_pointer_injection_flag(lev),
-                                              lev, m_crse_ratio);
 #endif
         }
         else {
