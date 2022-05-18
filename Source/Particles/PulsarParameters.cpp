@@ -1,14 +1,23 @@
 #include "PulsarParameters.H"
+#include "Particles/MultiParticleContainer.H"
+#include "Particles/WarpXParticleContainer.H"
+#include "Utils/WarpXUtil.H"
+#include "Utils/WarpXConst.H"
+#include "Utils/CoarsenIO.H"
+#include "Utils/IntervalsParser.H"
+#include "WarpX.H"
 #include <AMReX_ParmParse.H>
 #include <AMReX_Print.H>
 #include <AMReX_RealVect.H>
 #include <AMReX_REAL.H>
 #include <AMReX_GpuQualifiers.H>
-#include "Utils/WarpXUtil.H"
-#include "WarpX.H"
 #include <AMReX_MultiFab.H>
 #include <AMReX_iMultiFab.H>
+#include <AMReX_ParticleMesh.H>
+#include <AMReX_Particles.H>
 #include <AMReX_Scan.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_ParallelReduce.H>
 #include <AMReX_Math.H>
 
 
@@ -67,6 +76,21 @@ int Pulsar::m_AddBdipoleExternal = 0;
 int Pulsar::m_AddVacuumEFieldsIntAndExt = 0;
 int Pulsar::m_AddVacuumBFieldsIntAndExt = 0;
 amrex::Real Pulsar::m_injection_endtime;
+amrex::Real Pulsar::m_injection_rate;
+amrex::Real Pulsar::m_GJ_injection_rate;
+amrex::Real Pulsar::m_Sigma0_threshold;
+amrex::Real Pulsar::m_Sigma0_baseline;
+IntervalsParser Pulsar::m_injection_tuning_interval;
+amrex::Real Pulsar::m_min_Sigma0;
+amrex::Real Pulsar::m_max_Sigma0;
+amrex::Real Pulsar::m_sum_injection_rate = 0.;
+std::string Pulsar::m_sigma_tune_method;
+int Pulsar::ROI_avg_window_size = 50;
+int Pulsar::modify_sigma_threshold = 0.;
+int Pulsar::m_print_injected_celldata;
+int Pulsar::m_print_celldata_starttime;
+amrex::Real Pulsar::m_lbound_ndens_magnetization = 1.e-16;
+amrex::Real Pulsar::m_ubound_reldiff_sigma0 = 0.1;
 
 
 Pulsar::Pulsar ()
@@ -99,6 +123,21 @@ Pulsar::ReadParameters () {
     amrex::Print() << " Pulsar B_star : " << m_B_star << "\n";
     pp.get("max_ndens", m_max_ndens);
     pp.get("Ninj_fraction",m_Ninj_fraction);
+    pp.get("plasma_injection_rate", m_injection_rate);
+    // Bstar is the magnetic field strength at the equator
+    // injection rate is set for the entire simulation
+    m_GJ_injection_rate = ( 8._rt * MathConst::pi * PhysConst::ep0 * m_B_star
+                            * m_omega_star * m_omega_star * m_R_star * m_R_star * m_R_star
+                          ) / PhysConst::q_e;
+    // the factor of 2 is because B at pole = 2*B at equator
+    m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_max_ndens * 2. * PhysConst::mu0 * PhysConst::m_e
+                                         * PhysConst::c * PhysConst::c);
+    m_Sigma0_baseline = m_Sigma0_threshold;
+//    pp.get("Sigma0_threshold_init", m_Sigma0_threshold);
+    amrex::Print() << " injection rate : " << m_injection_rate << " GJ injection rate " << m_GJ_injection_rate << " Sigma0 " << m_Sigma0_threshold << "\n";
+//    m_max_Sigma0 = m_Sigma0_threshold * 10;
+    pp.get("minimum_Sigma0", m_min_Sigma0);
+    pp.get("maximum_Sigma0", m_max_Sigma0);
 
     m_particle_inject_rmin = m_R_star - m_dR_star;
     m_particle_inject_rmax = m_R_star;
@@ -198,13 +237,59 @@ Pulsar::ReadParameters () {
     pp.query("AddVacuumBFieldsIntAndExt", m_AddVacuumBFieldsIntAndExt );
     m_injection_endtime = 1000; // 1000 s upper limit
     pp.query("ParticleInjectionEndTime",m_injection_endtime);
+    std::vector<std::string> intervals_string_vec = {"0"};
+    pp.getarr("injection_tuning_interval", intervals_string_vec);
+    m_injection_tuning_interval = IntervalsParser(intervals_string_vec);
+    pp.get("sigma_tune_method",m_sigma_tune_method);
+    amrex::Print() << " sigma tune method " << m_sigma_tune_method << "\n";
+    pp.get("ROI_avg_size",ROI_avg_window_size);
+    pp.get("modify_sigma_threshold", modify_sigma_threshold);
+    pp.get("print_injected_celldata", m_print_injected_celldata);
+    pp.get("print_celldata_starttime", m_print_celldata_starttime);
+    pp.query("lowerBound_ndens_magnetization", m_lbound_ndens_magnetization);
+    if (m_sigma_tune_method == "relative_difference") {
+        pp.query("upperBound_reldiff_sigma0", m_ubound_reldiff_sigma0);
+    }
 }
+
 
 void
 Pulsar::InitDataAtRestart ()
 {
+    amrex::Print() << " pulsar init data at restart \n";
     auto & warpx = WarpX::GetInstance();
-    const int nlevs_max = warpx.maxLevel() + 1;
+    const int nlevs_max = warpx.finestLevel() + 1;
+    //allocate number density multifab
+    m_plasma_number_density.resize(nlevs_max);
+    m_magnetization.resize(nlevs_max);
+    m_injection_flag.resize(nlevs_max);
+    amrex::ParmParse pp_particles("particles");
+    std::vector<std::string> species_names;
+    pp_particles.queryarr("species_names", species_names);
+    const int ndensity_comps = species_names.size();
+    const int magnetization_comps = 1;
+
+    for (int lev = 0; lev < nlevs_max; ++lev) {
+        amrex::BoxArray ba = warpx.boxArray(lev);
+        amrex::DistributionMapping dm = warpx.DistributionMap(lev);
+        const amrex::IntVect ng_EB_alloc = warpx.getngEB();
+        // allocate cell-centered number density multifab
+        m_plasma_number_density[lev] = std::make_unique<amrex::MultiFab>(
+                                     ba, dm, ndensity_comps, ng_EB_alloc);
+        // allocate cell-centered magnetization multifab
+        m_magnetization[lev] = std::make_unique<amrex::MultiFab>(
+                               ba, dm, magnetization_comps, ng_EB_alloc);
+        // allocate multifab to store flag for cells injected with particles
+        m_injection_flag[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
+        // initialize number density
+        m_plasma_number_density[lev]->setVal(0._rt);
+        // initialize magnetization
+        m_magnetization[lev]->setVal(0._rt);
+        // initialize flag for plasma injection
+        m_injection_flag[lev]->setVal(0._rt);
+    }
+
     if (m_do_conductor == true) {
         m_conductor_fp.resize(nlevs_max);
         amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
@@ -218,14 +303,45 @@ Pulsar::InitDataAtRestart ()
             InitializeConductorMultifabUsingParser(m_conductor_fp[lev].get(), m_conductor_parser->compile<3>(), lev);
         }
     }
-}
 
+}
 
 void
 Pulsar::InitData ()
 {
     auto & warpx = WarpX::GetInstance();
-    const int nlevs_max = warpx.maxLevel() + 1;
+    const int nlevs_max = warpx.finestLevel() + 1;
+    //allocate number density multifab
+    m_plasma_number_density.resize(nlevs_max);
+    m_magnetization.resize(nlevs_max);
+    m_injection_flag.resize(nlevs_max);
+    amrex::ParmParse pp_particles("particles");
+    std::vector<std::string> species_names;
+    pp_particles.queryarr("species_names", species_names);
+    const int ndensity_comps = species_names.size();
+    const int magnetization_comps = 1;
+
+    for (int lev = 0; lev < nlevs_max; ++lev) {
+        amrex::BoxArray ba = warpx.boxArray(lev);
+        amrex::DistributionMapping dm = warpx.DistributionMap(lev);
+        const amrex::IntVect ng_EB_alloc = warpx.getngEB();
+        // allocate cell-centered number density multifab
+        m_plasma_number_density[lev] = std::make_unique<amrex::MultiFab>(
+                                     ba, dm, ndensity_comps, ng_EB_alloc);
+        // allocate cell-centered magnetization multifab
+        m_magnetization[lev] = std::make_unique<amrex::MultiFab>(
+                               ba, dm, magnetization_comps, ng_EB_alloc);
+        // allocate multifab to store flag for cells injected with particles
+        m_injection_flag[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
+        // initialize number density
+        m_plasma_number_density[lev]->setVal(0._rt);
+        // initialize magnetization
+        m_magnetization[lev]->setVal(0._rt);
+        m_injection_flag[lev]->setVal(0._rt);
+    }
+
+
     if (m_do_conductor == true) {
         m_conductor_fp.resize(nlevs_max);
         amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
@@ -926,5 +1042,359 @@ Pulsar::SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::M
                     Ez_arr(i,j,k) = 0.;
                 }
         });
+    }
+}
+
+void
+Pulsar::ComputePlasmaNumberDensity ()
+{
+    // compute plasma number density using particle to mesh
+    auto &warpx = WarpX::GetInstance();
+    const int nlevs_max = warpx.finestLevel() + 1;
+    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    const int nspecies = species_names.size();
+    for (int lev = 0; lev < nlevs_max; ++lev) {
+        m_plasma_number_density[lev]->setVal(0._rt);
+        for (int isp = 0; isp < nspecies; ++isp) {
+            // creating single-component tmp multifab
+            auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
+            // Add the weight for each particle -- total number of particles of this species
+            ParticleToMesh(pc, *m_plasma_number_density[lev], lev,
+                [=] AMREX_GPU_DEVICE (const WarpXParticleContainer::SuperParticleType& p,
+                    amrex::Array4<amrex::Real> const& out_array,
+                    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& plo,
+                    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxi)
+                {
+                    // Get position in WarpX convention to use in parser. Will be different from
+                    // p.pos() for 1D and 2D simulations.
+                    amrex::ParticleReal xw = 0._rt, yw = 0._rt, zw = 0._rt;
+                    get_particle_position(p, xw, yw, zw);
+
+                    // Get position in AMReX convention to calculate corresponding index.
+                    int ii = 0, jj = 0, kk = 0;
+                    amrex::ParticleReal x = p.pos(0);
+                    amrex::Real lx = (x - plo[0]) * dxi[0];
+                    ii = static_cast<int>(amrex::Math::floor(lx));
+#if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_3D)
+                    amrex::ParticleReal y = p.pos(1);
+                    amrex::Real ly = (y - plo[1]) * dxi[1];
+                    jj = static_cast<int>(amrex::Math::floor(ly));
+#endif
+#if defined(WARPX_DIM_3D)
+                    amrex::ParticleReal z = p.pos(2);
+                    amrex::Real lz = (z - plo[2]) * dxi[2];
+                    kk = static_cast<int>(amrex::Math::floor(lz));
+#endif
+                    amrex::Gpu::Atomic::AddNoRet(&out_array(ii, jj, kk, isp), p.rdata(PIdx::w));
+                }
+                , false // setting zero_out_input to false and
+                        // instead managing setVal(0.) before ParticleToMesh
+            );
+        }
+
+
+        const Geometry& geom = warpx.Geom(lev);
+        const auto dx = geom.CellSizeArray();
+#if defined WARPX_DIM_3D
+        amrex::Real inv_vol = 1._rt/(dx[0] * dx[1] * dx[2]);
+#elif defined(WARPX_DIM_XZ)
+        amrex::Real inv_vol = 1._rt/(dx[0] * dx[1] );
+#endif
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for ( MFIter mfi(*m_plasma_number_density[lev], TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
+            amrex::Array4<amrex::Real> const& density = m_plasma_number_density[0]->array(mfi);
+            amrex::Box const& tbx = mfi.tilebox();
+            const int ncomps = m_plasma_number_density[lev]->nComp();
+            amrex::ParallelFor(tbx, ncomps,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) {
+                    density(i,j,k,n) *= inv_vol;
+            });
+        }
+    } // loop over levels
+}
+
+
+void
+Pulsar::ComputePlasmaMagnetization ()
+{
+    auto& warpx = WarpX::GetInstance();
+    const int nlevs_max = warpx.finestLevel() + 1;
+    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    const int nspecies = species_names.size();
+    const amrex::Real min_ndens = m_lbound_ndens_magnetization;
+    constexpr amrex::Real mu0_m_c2_inv = 1._rt / (PhysConst::mu0 * PhysConst::m_e
+                                                 * PhysConst::c * PhysConst::c);
+    for (int lev = 0; lev < nlevs_max; ++lev) {
+        m_magnetization[lev]->setVal(0._rt);
+        const amrex::MultiFab& Bx_mf = warpx.getBfield(lev, 0);
+        const amrex::MultiFab& By_mf = warpx.getBfield(lev, 1);
+        const amrex::MultiFab& Bz_mf = warpx.getBfield(lev, 2);
+        for (MFIter mfi(*m_magnetization[lev], TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        {
+            const amrex::Box& bx = mfi.tilebox();
+            amrex::Array4<amrex::Real> const& mag = m_magnetization[lev]->array(mfi);
+            amrex::Array4<amrex::Real> const& ndens = m_plasma_number_density[lev]->array(mfi);
+            amrex::Array4<const amrex::Real> const& Bx = Bx_mf[mfi].array();
+            amrex::Array4<const amrex::Real> const& By = By_mf[mfi].array();
+            amrex::Array4<const amrex::Real> const& Bz = Bz_mf[mfi].array();
+
+            amrex::ParallelFor(bx,
+                [=] AMREX_GPU_DEVICE (int i, int j, int k)
+                {
+                    amrex::Real Bx_cc = (Bx(i,j,k) + Bx(i+1, j, k)) / 2.0;
+                    amrex::Real By_cc = (By(i,j,k) + By(i, j+1, k)) / 2.0;
+                    amrex::Real Bz_cc = (Bz(i,j,k) + Bz(i, j, k+1)) / 2.0;
+                    // magnitude of magnetic field
+                    amrex::Real B_mag = std::sqrt( Bx_cc * Bx_cc
+                                                 + By_cc * By_cc
+                                                 + Bz_cc * Bz_cc );
+                    // total number density
+                    amrex::Real total_ndens = 0._rt;
+                    for (int isp = 0; isp < nspecies; ++isp) {
+                        total_ndens += ndens(i, j, k, isp);
+                    }
+                    // ensure that there is no 0 in the denominator when number density is 0
+                    // due to absence of particles
+                    if (total_ndens > 0.) {
+                        mag(i, j, k) = (B_mag * B_mag) * mu0_m_c2_inv /total_ndens;
+                    } else {
+                        // using minimum number density if there are no particles in the cell
+                        mag(i, j, k) = (B_mag * B_mag) * mu0_m_c2_inv /min_ndens;
+                    }
+                }
+            );
+        } // mfiter loop
+    } // loop over levels
+}
+
+void
+Pulsar::TuneSigma0Threshold (const int step)
+{
+    auto& warpx = WarpX::GetInstance();
+    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    const int nspecies = species_names.size();
+    amrex::Real total_weight_allspecies = 0._rt;
+    amrex::Real dt = warpx.getdt(0);
+    // Total number of cells that have injected particles
+    amrex::Real total_injected_cells = SumInjectionFlag();
+    // for debugging print injected cell data
+    if (m_print_injected_celldata == 1) {
+        if (warpx.getistep(0) >= m_print_celldata_starttime) {
+            PrintInjectedCellValues();
+        }
+    }
+
+    using PTDType = typename WarpXParticleContainer::ParticleTileType::ConstParticleTileDataType;
+    for (int isp = 0; isp < nspecies; ++isp) {
+        amrex::Real ws_total = 0._rt;
+        auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
+        amrex::ReduceOps<ReduceOpSum> reduce_ops;
+        amrex::Real cur_time = warpx.gett_new(0);
+        auto ws_r = amrex::ParticleReduce<
+                        amrex::ReduceData < amrex::ParticleReal> >
+                    ( pc,
+                        [=] AMREX_GPU_DEVICE (const PTDType &ptd, const int i) noexcept
+                        {
+                            auto p = ptd.getSuperParticle(i);
+                            amrex::ParticleReal wp = p.rdata(PIdx::w);
+                            amrex::Real filter = 0._rt;
+                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[0][i];
+                            if ( injectiontime < cur_time + 0.1_rt*dt and
+                                 injectiontime > cur_time - 0.1_rt*dt ) {
+                                filter = 1._rt;
+                            }
+                            return (wp * filter);
+                        },
+                        reduce_ops
+                    );
+        ws_total = amrex::get<0>(ws_r);
+        amrex::ParallelDescriptor::ReduceRealSum(ws_total);
+        total_weight_allspecies += ws_total;
+    }
+    // injection rate is sum of particle weight over all species per timestep
+    amrex::Real current_injection_rate = total_weight_allspecies / dt;
+    if (list_size < ROI_avg_window_size) {
+        ROI_list.push_back(current_injection_rate);
+        m_sum_injection_rate += current_injection_rate;
+        list_size++;
+    } else {
+        m_sum_injection_rate -= ROI_list.front();
+        ROI_list.pop_front();
+        ROI_list.push_back(current_injection_rate);
+        m_sum_injection_rate += ROI_list.back();
+    }
+    amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
+    amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
+    if (m_injection_tuning_interval.contains(step+1) ) {
+        // Sigma0 before modification
+        amrex::Real m_Sigma0_pre = m_Sigma0_threshold;
+        // running average of injection rate over average window
+        amrex::Real avg_injection_rate = m_sum_injection_rate/(list_size * 1._rt);
+        amrex::Real new_sigma0_threshold = m_Sigma0_threshold;
+        if (avg_injection_rate < specified_injection_rate) {
+            // reduce sigma0 so more particles can be injected
+            if (m_sigma_tune_method == "10percent") {
+                // Modify threshold magnetization threshold by 10%
+                new_sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+            }
+            if (m_sigma_tune_method == "relative_difference") {
+                if (avg_injection_rate == 0.) {
+                    // If no particles are injected only change the threshold sigma by 10%
+                    new_sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+                } else {
+                    amrex::Real rel_diff = (specified_injection_rate - avg_injection_rate)/specified_injection_rate;
+                    if (rel_diff < m_ubound_reldiff_sigma0) {
+                        // If relative difference is less than user-defined upper bound, reduce magnetization by rel_diff
+                        new_sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
+                    } else {
+                        // Maximum relative difference is set by user-defined upper bound
+                        new_sigma0_threshold = m_Sigma0_threshold - m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
+                    }
+                }
+            }
+        } else if (avg_injection_rate > specified_injection_rate ) {
+            // Increase sigma0 so fewer particles are injected
+            if (m_sigma_tune_method == "10percent") {
+                // Modify threshold magnetization threshold by 10%
+                new_sigma0_threshold = m_Sigma0_threshold + 0.1 * m_Sigma0_threshold;
+            }
+            if (m_sigma_tune_method == "relative_difference") {
+                amrex::Real rel_diff = (avg_injection_rate - specified_injection_rate)/specified_injection_rate;
+                if (rel_diff < m_ubound_reldiff_sigma0) {
+                    // If relative difference is less than user-defined upper bound, increase magnetization by rel_diff
+                    new_sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
+                } else {
+                    // If rel_diff > upper bound, then increase sigma0 by m_ubound_reldiff_sigma0
+                    new_sigma0_threshold = m_Sigma0_threshold + m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
+                }
+            }
+        }
+        if (new_sigma0_threshold < m_min_Sigma0) new_sigma0_threshold = m_min_Sigma0;
+        if (new_sigma0_threshold > m_max_Sigma0) new_sigma0_threshold = m_max_Sigma0;
+        // Store modified new sigma0 in member variable, m_Sigma0_threshold
+        m_Sigma0_threshold = new_sigma0_threshold;
+        amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline<< "\n";
+    }
+    amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << total_injected_cells << "\n";
+}
+
+void
+Pulsar::TotalParticles ()
+{
+    auto& warpx = WarpX::GetInstance();
+    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    const int nspecies = species_names.size();
+    amrex::Long total_particles = 0;
+
+    for (int isp = 0; isp < nspecies; ++isp) {
+        auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
+        amrex::Long np_total = pc.TotalNumberOfParticles();
+        amrex::ParallelDescriptor::ReduceLongSum(np_total, ParallelDescriptor::IOProcessorNumber());
+        total_particles += np_total;
+    }
+}
+
+amrex::Real
+Pulsar::SumInjectionFlag ()
+{
+     return m_injection_flag[0]->sum();
+}
+
+void
+Pulsar::PrintInjectedCellValues ()
+{
+    auto& warpx = WarpX::GetInstance();
+    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    const int nspecies = species_names.size();
+    int total_injected_cells = static_cast<int>(SumInjectionFlag());
+    // x, y, z, r, theta, phi, injection_flag, magnetization, ndens_p, ndens_e, Bx, By, Bz, Bmag, rho
+    int total_diags = 15;
+    amrex::Gpu::DeviceVector<amrex::Real> InjectedCellDiag(total_injected_cells*total_diags,0.0);
+    amrex::Real * InjectedCellDiagData = InjectedCellDiag.data();
+    const int lev = 0;
+    const auto dx_lev = warpx.Geom(lev).CellSizeArray();
+    const amrex::RealBox real_box = warpx.Geom(lev).ProbDomain();
+    const amrex::MultiFab& Bx_mf = warpx.getBfield(lev,0);
+    const amrex::MultiFab& By_mf = warpx.getBfield(lev,1);
+    const amrex::MultiFab& Bz_mf = warpx.getBfield(lev,2);
+    const amrex::MultiFab& injectionflag_mf = *m_injection_flag[lev];
+    const amrex::MultiFab& magnetization_mf = *m_magnetization[lev];
+    const amrex::MultiFab& ndens_mf = *m_plasma_number_density[lev];
+    GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
+    for (int idim = 0; idim < 3; ++idim) {
+        center_star_arr[idim] = m_center_star[idim];
+    }
+    std::unique_ptr<amrex::MultiFab> rho;
+    auto& mypc = warpx.GetPartContainer();
+    rho = mypc.GetChargeDensity(lev, true);
+    amrex::MultiFab & rho_mf = *rho;
+
+    Gpu::DeviceScalar<int> cell_counter(0);
+    int* cell_counter_d = cell_counter.dataPtr();
+    for (MFIter mfi(injectionflag_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box & bx = mfi.tilebox();
+        amrex::Array4<const amrex::Real> const& Bx = Bx_mf[mfi].array();
+        amrex::Array4<const amrex::Real> const& By = By_mf[mfi].array();
+        amrex::Array4<const amrex::Real> const& Bz = Bz_mf[mfi].array();
+        amrex::Array4<const amrex::Real> const& ndens = ndens_mf[mfi].array();
+        amrex::Array4<const amrex::Real> const& injection = injectionflag_mf[mfi].array();
+        amrex::Array4<const amrex::Real> const& mag = magnetization_mf[mfi].array();
+        amrex::Array4<const amrex::Real> const& rho_arr = rho_mf[mfi].array();
+        amrex::LoopOnCpu( bx,
+            [=] (int i, int j, int k)
+            {
+                if (injection(i,j,k) == 1) {
+                    // Cartesian Coordinates
+                    amrex::Real x = i * dx_lev[0] + real_box.lo(0) + 0.5_rt * dx_lev[0];
+                    amrex::Real y = j * dx_lev[1] + real_box.lo(1) + 0.5_rt * dx_lev[1];
+                    amrex::Real z = k * dx_lev[2] + real_box.lo(2) + 0.5_rt * dx_lev[2];
+                    // convert cartesian to spherical coordinates
+                    amrex::Real r, theta, phi;
+                    ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
+                                                     r, theta, phi);
+                    amrex::Real Bx_cc = (Bx(i,j,k) + Bx(i+1, j, k)) / 2.0;
+                    amrex::Real By_cc = (By(i,j,k) + By(i, j+1, k)) / 2.0;
+                    amrex::Real Bz_cc = (Bz(i,j,k) + Bz(i, j, k+1)) / 2.0;
+                    // magnitude of magnetic field
+                    amrex::Real B_mag = std::sqrt( Bx_cc * Bx_cc
+                                                 + By_cc * By_cc
+                                                 + Bz_cc * Bz_cc );
+                    int counter = *cell_counter_d;
+                    InjectedCellDiagData[counter*total_diags+0] = x;
+                    InjectedCellDiagData[counter*total_diags+1] = y;
+                    InjectedCellDiagData[counter*total_diags+2] = z;
+                    InjectedCellDiagData[counter*total_diags+3] = r;
+                    InjectedCellDiagData[counter*total_diags+4] = theta;
+                    InjectedCellDiagData[counter*total_diags+5] = phi;
+                    InjectedCellDiagData[counter*total_diags+6] = injection(i, j, k);
+                    InjectedCellDiagData[counter*total_diags+7] = mag(i, j, k);
+                    InjectedCellDiagData[counter*total_diags+8] = ndens(i, j, k, 0);
+                    InjectedCellDiagData[counter*total_diags+9] = ndens(i, j, k, 1);
+                    InjectedCellDiagData[counter*total_diags+10] = Bx_cc;
+                    InjectedCellDiagData[counter*total_diags+11] = By_cc;
+                    InjectedCellDiagData[counter*total_diags+12] = Bz_cc;
+                    InjectedCellDiagData[counter*total_diags+13] = B_mag;
+                    InjectedCellDiagData[counter*total_diags+14] = rho_arr(i, j, k);
+                    const int unity = 1;
+                    amrex::HostDevice::Atomic::Add(cell_counter_d, unity);
+                }
+            });
+    }
+    amrex::Print() << " counter : " << cell_counter.dataValue() << " total cells injected " << total_injected_cells << "\n";
+    std::stringstream ss;
+    ss << Concatenate("InjectionCellData", warpx.getistep(0), 5);
+    amrex::AllPrintToFile(ss.str()) << " cell_index x y z r theta phi injection magnetization ndens_p ndens_e Bx By Bz Bmag rho \n" ;
+    for (int icell = 0; icell < total_injected_cells; ++icell ) {
+        if (InjectedCellDiagData[icell*total_diags + 6] == 1) {
+            amrex::AllPrintToFile(ss.str()) << icell << " ";
+            for (int idata = 0; idata < total_diags; ++idata) {
+                amrex::AllPrintToFile(ss.str()) << InjectedCellDiagData[icell * total_diags + idata] << " ";
+            }
+        }
+        amrex::AllPrintToFile(ss.str()) << "\n";
     }
 }

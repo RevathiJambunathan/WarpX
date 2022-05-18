@@ -1,6 +1,7 @@
 #ifndef PULSAR_PARAMETERS_H
 #define PULSAR_PARAMETERS_H
 
+#include "Utils/IntervalsParser.H"
 #include <AMReX_RealVect.H>
 #include <AMReX_REAL.H>
 #include <AMReX_GpuQualifiers.H>
@@ -9,6 +10,7 @@
 #include <AMReX_Array.H>
 #include <AMReX_MultiFab.H>
 #include <AMReX_Parser.H>
+#include <list>
 
 using namespace amrex;
 
@@ -35,6 +37,12 @@ public:
     void SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::MultiFab>, 3> &Efield,
                                     const int lev, const amrex::Real a_dt);
     void InitializeConductorMultifabUsingParser(const int lev);
+    void ComputePlasmaNumberDensity ();
+    void ComputePlasmaMagnetization ();
+    void TuneSigma0Threshold (const int step);
+    void TotalParticles ();
+    amrex::Real SumInjectionFlag ();
+    void PrintInjectedCellValues ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -442,6 +450,12 @@ public:
     static amrex::Array<amrex::Real, 3> m_center_star;
     static amrex::Real m_max_ndens;
     static amrex::Real m_Ninj_fraction;
+    static amrex::Real m_injection_rate;
+    static amrex::Real m_GJ_injection_rate;
+    static amrex::Real m_Sigma0_threshold;
+    static amrex::Real m_Sigma0_baseline;
+    static amrex::Real m_min_Sigma0;
+    static amrex::Real m_max_Sigma0;
     static int m_ModifyParticleWtAtInjection;
     static amrex::Real m_rhoGJ_scale;
     static int m_do_damp_EB_internal;
@@ -486,6 +500,35 @@ public:
     static int m_AddVacuumEFieldsIntAndExt;
     static int m_AddVacuumBFieldsIntAndExt;
     static amrex::Real m_injection_endtime;
+    static IntervalsParser m_injection_tuning_interval;
+    static amrex::Real m_sum_injection_rate;
+    /** Number density of the species, one for electrons and one for positrons for pair-plasma simulations*/
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_plasma_number_density;
+    /** Magnetization of plasma, sigma = B^2/mu_0m_e(ne+ni)*c^2 */
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_magnetization;
+    /** Flagging 1 where plasma is injected */
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_flag;
+    /** get pointer to number density */
+    amrex::MultiFab* get_pointer_ndens (int lev) const{return m_plasma_number_density[lev].get();}
+    /** get pointer to number magnetization */
+    amrex::MultiFab* get_pointer_magnetization (int lev) const{return m_magnetization[lev].get();}
+    amrex::MultiFab& get_magnetization  (int lev) {return *m_magnetization[lev];}
+    amrex::MultiFab* get_pointer_injection_flag (int lev) const{return m_injection_flag[lev].get();}
+    amrex::MultiFab& get_injection_flag (int lev) {return *m_injection_flag[lev];}
+    static std::string m_sigma_tune_method;
+    std::list<amrex::Real> ROI_list;
+    int list_size = 0;
+    static int ROI_avg_window_size;
+    static int modify_sigma_threshold;
+    static int m_print_injected_celldata;
+    static int m_print_celldata_starttime;
+    /** Lower bound for number density to compute magnetization (Default is 1.e-16)*/
+    static amrex::Real m_lbound_ndens_magnetization;
+    /** Upeer bound for relative difference sigma tune method, such that,
+     ** if relative_difference > upper bound, then sigma is modified by upper bound.
+     ** Upper bound specified must be less than 1, and default is 0.1 (10%)
+     */
+    static amrex::Real m_ubound_reldiff_sigma0;
 private:
 };
 
