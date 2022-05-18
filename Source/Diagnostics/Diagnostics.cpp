@@ -249,29 +249,6 @@ Diagnostics::BaseReadParameters ()
                              ".fields_to_plot does not match any species");
             }
         }
-#ifdef PULSAR
-        // Check if m_varnames contains a string of the form ndens_<species_name>
-        if (var.rfind("ndens_",0) == 0 ) {
-            // Extract species name from the string ndens_<species_name>
-            species = var.substr(var.find("ndens_") + 6);
-            // Boolean used to check if species name was misspelled
-            species_name_is_wrong = true;
-            // Loop over all species
-            for (int i = 0, n = int(m_all_species_names.size()); i<n; ++i) {
-                if (species == m_all_species_names[i]) {
-                    // Store species index: will be used in NumberDensityFunctor
-                    // to dump ndensity for this species
-                    m_ndens_per_species_index.push_back(i);
-                    species_name_is_wrong = false;
-                }
-            }
-            // If species name was misspelled, abort with error message
-            if (species_name_is_wrong) {
-                amrex::Abort("Input error: string " + var + " in " + m_diag_name +
-                             ".fields_to_plot does not match any species");
-            }
-        }
-#endif
     }
 
     bool checkpoint_compatibility = false;
