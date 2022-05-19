@@ -69,7 +69,7 @@ jobs:
           -DWarpX_PSATD=ON             \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        cmake --build build_sp -j 2        
+        cmake --build build_sp -j 2
 
         python3 -m pip install --upgrade pip setuptools wheel
         export WARPX_MPI=ON
@@ -89,7 +89,7 @@ jobs:
           -DPULSAR=ON                   \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        cmake --build build_sp -j 2        
+        cmake --build build_sp -j 2
 
   # make sure legacy build system continues to build, i.e., that we don't forget
   # to add new .cpp files
