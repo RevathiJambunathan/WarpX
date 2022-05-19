@@ -69,12 +69,27 @@ jobs:
           -DWarpX_PSATD=ON             \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        cmake --build build_sp -j 2
+        cmake --build build_sp -j 2        
 
         python3 -m pip install --upgrade pip setuptools wheel
         export WARPX_MPI=ON
         PYWARPX_LIB_DIR=$PWD/build_sp/lib python3 -m pip wheel .
         python3 -m pip install *.whl
+
+        cmake -S . -B build_pulsar      \
+          -DCMAKE_VERBOSE_MAKEFILE=ON   \
+          -DWarpX_COMPUTE=CUDA          \
+          -DWarpX_EB=OFF                \
+          -DWarpX_LIB=OFF               \
+          -DAMReX_CUDA_ARCH=6.0         \
+          -DWarpX_OPENPMD=OFF           \
+          -DWarpX_openpmd_internal=OFF  \
+          -DWarpX_PRECISION=DOUBLE      \
+          -DWarpX_PSATD=OFF             \
+          -DPULSAR=ON                   \
+          -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
+          -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
+        cmake --build build_sp -j 2        
 
   # make sure legacy build system continues to build, i.e., that we don't forget
   # to add new .cpp files
@@ -108,6 +123,7 @@ jobs:
         git clone https://github.com/AMReX-Codes/amrex.git ../amrex
         cd amrex && git checkout --detach 22.05 && cd -
         make COMP=gcc QED=FALSE USE_MPI=TRUE USE_GPU=TRUE USE_OMP=FALSE USE_PSATD=TRUE USE_CCACHE=TRUE -j 2
+        make COMP=gcc QED=FALSE USE_OPENPMD=FALSE USE_MPI=TRUE USE_GPU=TRUE USE_OMP=FALSE USE_PSATD=FALSE PULSAR=TRUE USE_CCACHE=TRUE -j 2
 
   build_nvhpc21-11-nvcc:
     name: NVHPC@21.11 NVCC/NVC++ Release [tests]
@@ -164,6 +180,20 @@ jobs:
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
         cmake --build build -j 2
+
+        cmake -S . -B build_pulsar     \
+          -DCMAKE_VERBOSE_MAKEFILE=ON  \
+          -DWarpX_COMPUTE=CUDA         \
+          -DWarpX_EB=OFF               \
+          -DWarpX_LIB=ON               \
+          -DAMReX_CUDA_ARCH=8.0        \
+          -DWarpX_OPENPMD=OFF          \
+          -DWarpX_PSATD=OFF            \
+          -DPULSAR=ON                  \
+          -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
+          -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
+        cmake --build build -j 2
+
 
         # work-around for mpi4py 3.1.1 build system issue with using
         # a GNU-built Python executable with non-GNU Python modules
