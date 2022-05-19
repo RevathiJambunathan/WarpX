@@ -1308,7 +1308,6 @@ Pulsar::PrintInjectedCellValues ()
 {
     auto& warpx = WarpX::GetInstance();
     std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
-    const int nspecies = species_names.size();
     int total_injected_cells = static_cast<int>(SumInjectionFlag());
     // x, y, z, r, theta, phi, injection_flag, magnetization, ndens_p, ndens_e, Bx, By, Bz, Bmag, rho
     int total_diags = 15;
