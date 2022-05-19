@@ -9,6 +9,7 @@ target_sources(WarpX
     LaserParticleContainer.cpp
     ParticleBoundaryBuffer.cpp
     SpeciesPhysicalProperties.cpp
+    PulsarParameters.cpp
 )
 
 #add_subdirectory(Algorithms)

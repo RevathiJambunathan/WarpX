@@ -12,7 +12,7 @@
 #include <AMReX_Parser.H>
 #include <list>
 
-using namespace amrex;
+using namespace amrex::literals;
 
 
 class Pulsar {
