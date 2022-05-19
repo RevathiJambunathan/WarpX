@@ -408,7 +408,7 @@ Pulsar::InitializeConductorMultifabUsingParser(
     const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx_lev = warpx.Geom(lev).CellSizeArray();
     const amrex::RealBox& real_box = warpx.Geom(lev).ProbDomain();
     amrex::IntVect iv = mf->ixType().toIntVect();
-    for ( amrex::MFIter mfi(*mf, TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+    for ( amrex::MFIter mfi(*mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
         //InitializeGhost Cells also
         const amrex::Box& tb = mfi.tilebox(iv, mf->nGrowVect());
         amrex::Array4<amrex::Real> const& conductor_fab = mf->array(mfi);
@@ -448,10 +448,10 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
     amrex::IntVect x_nodal_flag = mfx->ixType().toIntVect();
     amrex::IntVect y_nodal_flag = mfy->ixType().toIntVect();
     amrex::IntVect z_nodal_flag = mfz->ixType().toIntVect();
-    GpuArray<int, 3> x_IndexType;
-    GpuArray<int, 3> y_IndexType;
-    GpuArray<int, 3> z_IndexType;
-    GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
+    amrex::GpuArray<int, 3> x_IndexType;
+    amrex::GpuArray<int, 3> y_IndexType;
+    amrex::GpuArray<int, 3> z_IndexType;
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
     for (int idim = 0; idim < 3; ++idim) {
         x_IndexType[idim] = x_nodal_flag[idim];
         y_IndexType[idim] = y_nodal_flag[idim];
@@ -471,7 +471,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(*mfx, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(*mfx, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tbx = mfi.tilebox(x_nodal_flag, mfx->nGrowVect() );
         const amrex::Box& tby = mfi.tilebox(y_nodal_flag, mfy->nGrowVect() );
@@ -658,10 +658,10 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
     amrex::IntVect x_nodal_flag = Efield[0]->ixType().toIntVect();
     amrex::IntVect y_nodal_flag = Efield[1]->ixType().toIntVect();
     amrex::IntVect z_nodal_flag = Efield[2]->ixType().toIntVect();
-    GpuArray<int, 3> x_IndexType;
-    GpuArray<int, 3> y_IndexType;
-    GpuArray<int, 3> z_IndexType;
-    GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
+    amrex::GpuArray<int, 3> x_IndexType;
+    amrex::GpuArray<int, 3> y_IndexType;
+    amrex::GpuArray<int, 3> z_IndexType;
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
     for (int idim = 0; idim < 3; ++idim) {
         x_IndexType[idim] = x_nodal_flag[idim];
         y_IndexType[idim] = y_nodal_flag[idim];
@@ -679,7 +679,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(*Efield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(*Efield[0], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tex = mfi.tilebox(x_nodal_flag);
         const amrex::Box& tey = mfi.tilebox(y_nodal_flag);
@@ -811,10 +811,10 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
     amrex::IntVect x_nodal_flag = Bfield[0]->ixType().toIntVect();
     amrex::IntVect y_nodal_flag = Bfield[1]->ixType().toIntVect();
     amrex::IntVect z_nodal_flag = Bfield[2]->ixType().toIntVect();
-    GpuArray<int, 3> x_IndexType;
-    GpuArray<int, 3> y_IndexType;
-    GpuArray<int, 3> z_IndexType;
-    GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
+    amrex::GpuArray<int, 3> x_IndexType;
+    amrex::GpuArray<int, 3> y_IndexType;
+    amrex::GpuArray<int, 3> z_IndexType;
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
     for (int idim = 0; idim < 3; ++idim) {
         x_IndexType[idim] = x_nodal_flag[idim];
         y_IndexType[idim] = y_nodal_flag[idim];
@@ -832,7 +832,7 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(*Bfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(*Bfield[0], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tbx = mfi.tilebox(x_nodal_flag);
         const amrex::Box& tby = mfi.tilebox(y_nodal_flag);
@@ -1013,7 +1013,7 @@ Pulsar::SetTangentialEforInternalConductor( std::array <std::unique_ptr<amrex::M
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(*Efield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(*Efield[0], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tex = mfi.tilebox(x_nodal_flag);
         const amrex::Box& tey = mfi.tilebox(y_nodal_flag);
@@ -1093,7 +1093,7 @@ Pulsar::ComputePlasmaNumberDensity ()
         }
 
 
-        const Geometry& geom = warpx.Geom(lev);
+        const amrex::Geometry& geom = warpx.Geom(lev);
         const auto dx = geom.CellSizeArray();
 #if defined WARPX_DIM_3D
         amrex::Real inv_vol = 1._rt/(dx[0] * dx[1] * dx[2]);
@@ -1104,7 +1104,7 @@ Pulsar::ComputePlasmaNumberDensity ()
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 #endif
-        for ( MFIter mfi(*m_plasma_number_density[lev], TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
+        for ( amrex::MFIter mfi(*m_plasma_number_density[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
             amrex::Array4<amrex::Real> const& density = m_plasma_number_density[0]->array(mfi);
             amrex::Box const& tbx = mfi.tilebox();
             const int ncomps = m_plasma_number_density[lev]->nComp();
@@ -1132,7 +1132,7 @@ Pulsar::ComputePlasmaMagnetization ()
         const amrex::MultiFab& Bx_mf = warpx.getBfield(lev, 0);
         const amrex::MultiFab& By_mf = warpx.getBfield(lev, 1);
         const amrex::MultiFab& Bz_mf = warpx.getBfield(lev, 2);
-        for (MFIter mfi(*m_magnetization[lev], TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        for (amrex::MFIter mfi(*m_magnetization[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
             const amrex::Box& bx = mfi.tilebox();
             amrex::Array4<amrex::Real> const& mag = m_magnetization[lev]->array(mfi);
@@ -1191,7 +1191,7 @@ Pulsar::TuneSigma0Threshold (const int step)
     for (int isp = 0; isp < nspecies; ++isp) {
         amrex::Real ws_total = 0._rt;
         auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
-        amrex::ReduceOps<ReduceOpSum> reduce_ops;
+        amrex::ReduceOps<amrex::ReduceOpSum> reduce_ops;
         amrex::Real cur_time = warpx.gett_new(0);
         auto ws_r = amrex::ParticleReduce<
                         amrex::ReduceData < amrex::ParticleReal> >
@@ -1292,7 +1292,7 @@ Pulsar::TotalParticles ()
     for (int isp = 0; isp < nspecies; ++isp) {
         auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
         amrex::Long np_total = pc.TotalNumberOfParticles();
-        amrex::ParallelDescriptor::ReduceLongSum(np_total, ParallelDescriptor::IOProcessorNumber());
+        amrex::ParallelDescriptor::ReduceLongSum(np_total);
         total_particles += np_total;
     }
 }
@@ -1322,7 +1322,7 @@ Pulsar::PrintInjectedCellValues ()
     const amrex::MultiFab& injectionflag_mf = *m_injection_flag[lev];
     const amrex::MultiFab& magnetization_mf = *m_magnetization[lev];
     const amrex::MultiFab& ndens_mf = *m_plasma_number_density[lev];
-    GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
     for (int idim = 0; idim < 3; ++idim) {
         center_star_arr[idim] = m_center_star[idim];
     }
@@ -1331,9 +1331,9 @@ Pulsar::PrintInjectedCellValues ()
     rho = mypc.GetChargeDensity(lev, true);
     amrex::MultiFab & rho_mf = *rho;
 
-    Gpu::DeviceScalar<int> cell_counter(0);
+    amrex::Gpu::DeviceScalar<int> cell_counter(0);
     int* cell_counter_d = cell_counter.dataPtr();
-    for (MFIter mfi(injectionflag_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(injectionflag_mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box & bx = mfi.tilebox();
         amrex::Array4<const amrex::Real> const& Bx = Bx_mf[mfi].array();
@@ -1385,7 +1385,7 @@ Pulsar::PrintInjectedCellValues ()
     }
     amrex::Print() << " counter : " << cell_counter.dataValue() << " total cells injected " << total_injected_cells << "\n";
     std::stringstream ss;
-    ss << Concatenate("InjectionCellData", warpx.getistep(0), 5);
+    ss << amrex::Concatenate("InjectionCellData", warpx.getistep(0), 5);
     amrex::AllPrintToFile(ss.str()) << " cell_index x y z r theta phi injection magnetization ndens_p ndens_e Bx By Bz Bmag rho \n" ;
     for (int icell = 0; icell < total_injected_cells; ++icell ) {
         if (InjectedCellDiagData[icell*total_diags + 6] == 1) {
