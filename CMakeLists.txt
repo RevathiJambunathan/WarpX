@@ -71,6 +71,7 @@ option(WarpX_PSATD         "spectral solver support"                    OFF)
 option(WarpX_SENSEI        "SENSEI in situ diagnostics"                 OFF)
 option(WarpX_QED           "QED support (requires PICSAR)"                    ON)
 option(WarpX_QED_TABLE_GEN "QED table generation (requires PICSAR and Boost)" OFF)
+option(PULSAR              "pulsar simulations support"                 OFF)
 
 set(WarpX_DIMS_VALUES 1 2 3 RZ)
 set(WarpX_DIMS 3 CACHE STRING "Simulation dimensionality (1/2/3/RZ)")
@@ -249,6 +250,10 @@ if(WarpX_QED)
     target_link_libraries(ablastr PUBLIC PXRMP_QED::PXRMP_QED)
 endif()
 
+if(PULSAR)
+    target_compile_definitions(WarpX PUBLIC PULSAR)
+endif()
+
 # AMReX helper function: propagate CUDA specific target & source properties
 if(WarpX_COMPUTE STREQUAL CUDA)
     foreach(warpx_tgt IN LISTS _ALL_TARGETS)
@@ -300,6 +305,10 @@ if(WarpX_QED)
     if(WarpX_QED_TABLE_GEN)
         target_compile_definitions(ablastr PUBLIC WarpX_QED_TABLE_GEN)
     endif()
+endif()
+
+if(PULSAR)
+    target_compile_definitions(WarpX PUBLIC PULSAR)
 endif()
 
 if(WarpX_PSATD)
