@@ -1051,7 +1051,7 @@ Pulsar::ComputePlasmaNumberDensity ()
     // compute plasma number density using particle to mesh
     auto &warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.finestLevel() + 1;
-    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
     const int nspecies = species_names.size();
     for (int lev = 0; lev < nlevs_max; ++lev) {
         m_plasma_number_density[lev]->setVal(0._rt);
@@ -1122,7 +1122,7 @@ Pulsar::ComputePlasmaMagnetization ()
 {
     auto& warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.finestLevel() + 1;
-    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
     const int nspecies = species_names.size();
     const amrex::Real min_ndens = m_lbound_ndens_magnetization;
     constexpr amrex::Real mu0_m_c2_inv = 1._rt / (PhysConst::mu0 * PhysConst::m_e
@@ -1174,7 +1174,7 @@ void
 Pulsar::TuneSigma0Threshold (const int step)
 {
     auto& warpx = WarpX::GetInstance();
-    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
     const int nspecies = species_names.size();
     amrex::Real total_weight_allspecies = 0._rt;
     amrex::Real dt = warpx.getdt(0);
@@ -1285,7 +1285,7 @@ void
 Pulsar::TotalParticles ()
 {
     auto& warpx = WarpX::GetInstance();
-    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
     const int nspecies = species_names.size();
     amrex::Long total_particles = 0;
 
@@ -1307,7 +1307,7 @@ void
 Pulsar::PrintInjectedCellValues ()
 {
     auto& warpx = WarpX::GetInstance();
-    std::vector species_names = warpx.GetPartContainer().GetSpeciesNames();
+    std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
     int total_injected_cells = static_cast<int>(SumInjectionFlag());
     // x, y, z, r, theta, phi, injection_flag, magnetization, ndens_p, ndens_e, Bx, By, Bz, Bmag, rho
     int total_diags = 15;
