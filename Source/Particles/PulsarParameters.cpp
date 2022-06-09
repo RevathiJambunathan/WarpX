@@ -91,6 +91,7 @@ int Pulsar::m_print_injected_celldata;
 int Pulsar::m_print_celldata_starttime;
 amrex::Real Pulsar::m_lbound_ndens_magnetization = 1.e-16;
 amrex::Real Pulsar::m_ubound_reldiff_sigma0 = 0.1;
+int Pulsar::m_injection_type = 0;
 
 
 Pulsar::Pulsar ()
@@ -250,6 +251,7 @@ Pulsar::ReadParameters () {
     if (m_sigma_tune_method == "relative_difference") {
         pp.query("upperBound_reldiff_sigma0", m_ubound_reldiff_sigma0);
     }
+    pp.query("plasma_injection_type", m_injection_type);
 }
 
 
