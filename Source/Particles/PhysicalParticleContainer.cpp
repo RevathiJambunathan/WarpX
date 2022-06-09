@@ -756,6 +756,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
     amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
     const int modify_sigma_threshold = Pulsar::modify_sigma_threshold;
+    const int injection_type = Pulsar::m_injection_type;
+    const amrex::Real RLC = PhysConst::c/Pulsar::m_omega_star;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -905,8 +907,19 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             {
                 // compute threshold magnetization Sigma = Sigma0 * (Rstar/r)^3
                 amrex::Real Sigma_threshold = Sigma0_threshold;
-                if (modify_sigma_threshold == 1) {
-                    Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                if (injection_type == 0) {
+                    if (modify_sigma_threshold == 1) {
+                        Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                    }
+                } else {
+                    if ( rad <= RLC) {
+                        Sigma_threshold = Sigma0_threshold * (Rstar/rad)
+                                          * (Rstar/rad) * (Rstar/rad);
+                    } else if (rad > RLC) {
+                        Sigma_threshold = Sigma0_threshold * (Rstar/RLC)
+                                          * (Rstar/RLC) * (Rstar/RLC) * (RLC/rad);
+                    }
+                    
                 }
 
                 // inject particles if magnetization sigma > threshold magnetization Sigma

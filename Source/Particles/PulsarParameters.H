@@ -529,6 +529,10 @@ public:
      ** Upper bound specified must be less than 1, and default is 0.1 (10%)
      */
     static amrex::Real m_ubound_reldiff_sigma0;
+    /** surface injection (0) or volume injection (1)
+     ** everywhere outside magnetosphere
+     */
+    static int m_injection_type;
 private:
 };
 
