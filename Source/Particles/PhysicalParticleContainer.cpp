@@ -998,14 +998,35 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         amrex::Gpu::DeviceVector<ParticleReal*> pa_user_real(n_user_real_attribs);
         amrex::Gpu::DeviceVector< amrex::ParserExecutor<7> > user_int_attrib_parserexec(n_user_int_attribs);
         amrex::Gpu::DeviceVector< amrex::ParserExecutor<7> > user_real_attrib_parserexec(n_user_real_attribs);
+        amrex::Gpu::HostVector<int*> h_pa_user_int(n_user_int_attribs);
+        amrex::Gpu::HostVector<ParticleReal*> h_pa_user_real(n_user_real_attribs);
+        amrex::Gpu::HostVector< amrex::ParserExecutor<7> > h_user_int_attrib_parserexec(n_user_int_attribs);
+        amrex::Gpu::HostVector< amrex::ParserExecutor<7> > h_user_real_attrib_parserexec(n_user_real_attribs);
         for (int ia = 0; ia < n_user_int_attribs; ++ia) {
-            pa_user_int[ia] = soa.GetIntData(particle_icomps[m_user_int_attribs[ia]]).data() + old_size;
-            user_int_attrib_parserexec[ia] = m_user_int_attrib_parser[ia]->compile<7>();
+            h_pa_user_int[ia] = soa.GetIntData(particle_icomps[m_user_int_attribs[ia]]).data() + old_size;
+            h_user_int_attrib_parserexec[ia] = m_user_int_attrib_parser[ia]->compile<7>();
         }
         for (int ia = 0; ia < n_user_real_attribs; ++ia) {
-            pa_user_real[ia] = soa.GetRealData(particle_comps[m_user_real_attribs[ia]]).data() + old_size;
-            user_real_attrib_parserexec[ia] = m_user_real_attrib_parser[ia]->compile<7>();
+            h_pa_user_real[ia] = soa.GetRealData(particle_comps[m_user_real_attribs[ia]]).data() + old_size;
+            h_user_real_attrib_parserexec[ia] = m_user_real_attrib_parser[ia]->compile<7>();
         }
+        amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                              h_pa_user_real.begin(),
+                              h_pa_user_real.end(),
+                              pa_user_real.begin());
+        amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                              h_user_real_attrib_parserexec.begin(),
+                              h_user_real_attrib_parserexec.end(),
+                              user_real_attrib_parserexec.begin());
+        amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                              h_pa_user_int.begin(),
+                              h_pa_user_int.end(),
+                              pa_user_int.begin());
+        amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                              h_user_int_attrib_parserexec.begin(),
+                              h_user_int_attrib_parserexec.end(),
+                              user_int_attrib_parserexec.begin());
+        amrex::Gpu::synchronize();
         int** pa_user_int_data = pa_user_int.dataPtr();
         ParticleReal** pa_user_real_data = pa_user_real.dataPtr();
         amrex::ParserExecutor<7> const* user_int_parserexec_data = user_int_attrib_parserexec.dataPtr();
