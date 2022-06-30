@@ -43,6 +43,7 @@ public:
     void TotalParticles ();
     amrex::Real SumInjectionFlag ();
     void PrintInjectedCellValues ();
+    int TotalParticlesToBeInjected (amrex::Real scale_factor);
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -529,6 +530,7 @@ public:
      ** Upper bound specified must be less than 1, and default is 0.1 (10%)
      */
     static amrex::Real m_ubound_reldiff_sigma0;
+    static int EnforceParticleInjection;
 private:
 };
 
