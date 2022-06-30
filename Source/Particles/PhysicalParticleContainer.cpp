@@ -1160,11 +1160,22 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             // inject particles if magnetization sigma > threshold magnetization Sigma
             if (injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) == 1 )
             {
+                // compute threshold magnetization Sigma = Sigma0 * (Rstar/r)^3
+                amrex::Real Sigma_threshold = Sigma0_threshold;
+                if (modify_sigma_threshold == 1) {
+                    Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                }
+
+                // inject particles if magnetization sigma > threshold magnetization Sigma
                 auto index = overlap_box.index(iv);
                 if (pulsar_modifyParticleWtAtInjection == 1) {
                     // instead of modiying number of particles, the weight is changed
                     if (EnforceParticleInjection == 1) {
                         pcounts[index] = modified_num_ppc;
+			if (modified_num_ppc == 0) {
+                            if ( amrex::Math::abs((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > 0.5) pcounts[index] = num_ppc;
+			}
+
                     } else {
                         pcounts[index] = num_ppc;
                     }
@@ -1174,6 +1185,9 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     // (could lead to round-off errors)
                     if (EnforceParticleInjection == 1) {
                         pcounts[index] = modified_num_ppc;
+			if (modified_num_ppc == 0) {
+                            if ( amrex::Math::abs((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > 0.5) pcounts[index] = num_ppc;
+			}
                     } else {
                         pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
                                        * static_cast<int>(ppc_per_dim.y*std::cbrt(pulsar_injection_fraction))
