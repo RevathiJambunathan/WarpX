@@ -756,6 +756,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
     amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
     const int modify_sigma_threshold = Pulsar::modify_sigma_threshold;
+    const int EnforceParticleInjection = Pulsar::EnforceParticleInjection;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -804,6 +805,134 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     info.SetDynamic(true);
 #pragma omp parallel if (not WarpX::serialize_initial_conditions)
 #endif
+
+#ifdef PULSAR
+    // Determine injection flag
+    for (MFIter mfi = MakeMFIter(lev, info); mfi.isValid(); ++mfi)
+    {
+        if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
+        {
+            amrex::Gpu::synchronize();
+        }
+        Real wt = amrex::second();
+
+        const Box& tile_box = mfi.tilebox();
+        const RealBox tile_realbox = WarpX::getRealBox(tile_box, lev);
+
+        const GpuArray<int, AMREX_SPACEDIM> lo_tile_index
+            {AMREX_D_DECL(tile_box.smallEnd(0), tile_box.smallEnd(1), tile_box.smallEnd(2))};
+        amrex::Real Rstar = Pulsar::m_R_star;
+        const FArrayBox& mag_fab = magnetization_mf[mfi];
+        amrex::Array4<const amrex::Real> const& mag = mag_fab.array();
+        amrex::Array4<amrex::Real> const& injection = injection_flag_mf->array(mfi);
+
+        // Find the cells of part_box that overlap with tile_realbox
+        // If there is no overlap, just go to the next tile in the loop
+        RealBox overlap_realbox;
+        Box overlap_box;
+        IntVect shifted;
+        bool no_overlap = false;
+
+        for (int dir=0; dir<AMREX_SPACEDIM; dir++) {
+            if ( tile_realbox.lo(dir) <= part_realbox.hi(dir) ) {
+                Real ncells_adjust = std::floor( (tile_realbox.lo(dir) - part_realbox.lo(dir))/dx[dir] );
+                overlap_realbox.setLo( dir, part_realbox.lo(dir) + std::max(ncells_adjust, 0._rt) * dx[dir]);
+            } else {
+                no_overlap = true; break;
+            }
+            if ( tile_realbox.hi(dir) >= part_realbox.lo(dir) ) {
+                Real ncells_adjust = std::floor( (part_realbox.hi(dir) - tile_realbox.hi(dir))/dx[dir] );
+                overlap_realbox.setHi( dir, part_realbox.hi(dir) - std::max(ncells_adjust, 0._rt) * dx[dir]);
+            } else {
+                no_overlap = true; break;
+            }
+            // Count the number of cells in this direction in overlap_realbox
+            overlap_box.setSmall( dir, 0 );
+            overlap_box.setBig( dir,
+                int( std::round((overlap_realbox.hi(dir)-overlap_realbox.lo(dir))
+                                /dx[dir] )) - 1);
+            shifted[dir] =
+                static_cast<int>(std::round((overlap_realbox.lo(dir)-problo[dir])/dx[dir]));
+            // shifted is exact in non-moving-window direction.  That's all we care.
+        }
+        if (no_overlap == 1) {
+            continue; // Go to the next tile
+        }
+
+        const int grid_id = mfi.index();
+        const int tile_id = mfi.LocalTileIndex();
+        const GpuArray<Real,AMREX_SPACEDIM> overlap_corner
+            {AMREX_D_DECL(overlap_realbox.lo(0),
+                          overlap_realbox.lo(1),
+                          overlap_realbox.lo(2))};
+        // count the number of particles that each cell in overlap_box could add
+        Gpu::DeviceVector<int> counts(overlap_box.numPts(), 0);
+        Gpu::DeviceVector<int> offset(overlap_box.numPts());
+        auto pcounts = counts.data();
+        int lrrfac = rrfac;
+        int lrefine_injection = refine_injection;
+        Box lfine_box = fine_injection_box;
+        amrex::ParallelFor(overlap_box, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            IntVect iv(AMREX_D_DECL(i, j, k));
+            auto lo = getCellCoords(overlap_corner, dx, {0._rt, 0._rt, 0._rt}, iv);
+            auto hi = getCellCoords(overlap_corner, dx, {1._rt, 1._rt, 1._rt}, iv);
+
+            lo.z = applyBallisticCorrection(lo, inj_mom, gamma_boost, beta_boost, t);
+            hi.z = applyBallisticCorrection(hi, inj_mom, gamma_boost, beta_boost, t);
+
+            // Only inject particles in cells wherein the cell-center is inside
+            // the pulsar bounds. Some +/- buffer is added since the cell-center
+            // for some cells may be cut with a small portion inside/outside the pulsar radius
+
+            // First obtain pulsar center
+            const amrex::Real xc = center_star_arr[0];
+            const amrex::Real yc = center_star_arr[1];
+            const amrex::Real zc = center_star_arr[2];
+            // cell-center coordinates
+            const amrex::Real x = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
+            const amrex::Real y = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
+            const amrex::Real z = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
+            // cell-center radius
+            const amrex::Real rad = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
+            // Buffer-factor to ensure all cells that intersect the ring inject particles
+            const amrex::Real buffer_factor = 0.75;
+            // is cell-center within user-defined particle injection radius
+            if (inj_pos->insidePulsarBoundsCC( rad, pulsar_particle_inject_rmin,
+                                                    pulsar_particle_inject_rmax,
+                                                    pulsar_dR_star*buffer_factor) )
+            {
+                // compute threshold magnetization Sigma = Sigma0 * (Rstar/r)^3
+                amrex::Real Sigma_threshold = Sigma0_threshold;
+                if (modify_sigma_threshold == 1) {
+                    Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                }
+
+                // inject particles if magnetization sigma > threshold magnetization Sigma
+                if (mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) > Sigma_threshold )
+                {
+                    injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
+                } // if sigma_local > threshold
+                else {
+                    injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 0;
+                }
+            }
+            amrex::ignore_unused(lrefine_injection, lfine_box, lrrfac);
+        });
+    }
+#endif  // ifdef pulsar
+
+    // Sum the values to get the total number of cells
+    amrex::Real TotalInjectionCells = WarpX::GetInstance().getPulsar().SumInjectionFlag();
+    amrex::Print() << " TotalInjectionCells : " << TotalInjectionCells << "\n";
+    // Find total number of particles to be injected
+    amrex::Real scale_factor = dx[0]*dx[1]*dx[2]/num_ppc;
+    int TotalParticlesToBeInjected = WarpX::GetInstance().getPulsar().TotalParticlesToBeInjected(scale_factor);
+    amrex::Print() << " total particles to be inj : " << TotalParticlesToBeInjected << "\n";
+    // distribute injection between selected cells as num_ppc
+    int modified_num_ppc = static_cast<int>((TotalParticlesToBeInjected*1.)/(TotalInjectionCells));
+    amrex::Print() << " particles_per_cell : " << modified_num_ppc <<"\n";
+ 
     for (MFIter mfi = MakeMFIter(lev, info); mfi.isValid(); ++mfi)
     {
         if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
@@ -898,10 +1027,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             const amrex::Real rad = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
             // Buffer-factor to ensure all cells that intersect the ring inject particles
             const amrex::Real buffer_factor = 0.75;
-            // is cell-center within user-defined particle injection radius
-            if (inj_pos->insidePulsarBoundsCC( rad, pulsar_particle_inject_rmin,
-                                                    pulsar_particle_inject_rmax,
-                                                    pulsar_dR_star*buffer_factor) )
+            // inject particles if magnetization sigma > threshold magnetization Sigma
+            if (injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) == 1 )
             {
                 // compute threshold magnetization Sigma = Sigma0 * (Rstar/r)^3
                 amrex::Real Sigma_threshold = Sigma0_threshold;
@@ -910,24 +1037,32 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 }
 
                 // inject particles if magnetization sigma > threshold magnetization Sigma
-                if (mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) > Sigma_threshold )
-                {
-                    auto index = overlap_box.index(iv);
-                    if (pulsar_modifyParticleWtAtInjection == 1) {
-                        // instead of modiying number of particles, the weight is changed
+                auto index = overlap_box.index(iv);
+                if (pulsar_modifyParticleWtAtInjection == 1) {
+                    // instead of modiying number of particles, the weight is changed
+                    if (EnforceParticleInjection == 1) {
+                        pcounts[index] = modified_num_ppc;
+			if (modified_num_ppc == 0) {
+                            if ( amrex::Math::abs((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > 0.5) pcounts[index] = num_ppc;
+			}
+
+                    } else {
                         pcounts[index] = num_ppc;
-                    } else if (pulsar_modifyParticleWtAtInjection == 0) {
-                const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
-                        // Modiying number of particles injected
-                        // (could lead to round-off errors)
+                    }
+                } else if (pulsar_modifyParticleWtAtInjection == 0) {
+                    const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
+                    // Modiying number of particles injected
+                    // (could lead to round-off errors)
+                    if (EnforceParticleInjection == 1) {
+                        pcounts[index] = modified_num_ppc;
+			if (modified_num_ppc == 0) {
+                            if ( amrex::Math::abs((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > 0.5) pcounts[index] = num_ppc;
+			}
+                    } else {
                         pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
                                        * static_cast<int>(ppc_per_dim.y*std::cbrt(pulsar_injection_fraction))
                                        * static_cast<int>(ppc_per_dim.z*std::cbrt(pulsar_injection_fraction));
                     }
-                    injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
-                } // if sigma_local > threshold
-                else {
-                    injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 0;
                 }
             }
             amrex::ignore_unused(lrefine_injection, lfine_box, lrrfac);
@@ -998,14 +1133,35 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         amrex::Gpu::DeviceVector<ParticleReal*> pa_user_real(n_user_real_attribs);
         amrex::Gpu::DeviceVector< amrex::ParserExecutor<7> > user_int_attrib_parserexec(n_user_int_attribs);
         amrex::Gpu::DeviceVector< amrex::ParserExecutor<7> > user_real_attrib_parserexec(n_user_real_attribs);
+        amrex::Gpu::HostVector<int*> h_pa_user_int(n_user_int_attribs);
+        amrex::Gpu::HostVector<ParticleReal*> h_pa_user_real(n_user_real_attribs);
+        amrex::Gpu::HostVector< amrex::ParserExecutor<7> > h_user_int_attrib_parserexec(n_user_int_attribs);
+        amrex::Gpu::HostVector< amrex::ParserExecutor<7> > h_user_real_attrib_parserexec(n_user_real_attribs);
         for (int ia = 0; ia < n_user_int_attribs; ++ia) {
-            pa_user_int[ia] = soa.GetIntData(particle_icomps[m_user_int_attribs[ia]]).data() + old_size;
-            user_int_attrib_parserexec[ia] = m_user_int_attrib_parser[ia]->compile<7>();
+            h_pa_user_int[ia] = soa.GetIntData(particle_icomps[m_user_int_attribs[ia]]).data() + old_size;
+            h_user_int_attrib_parserexec[ia] = m_user_int_attrib_parser[ia]->compile<7>();
         }
         for (int ia = 0; ia < n_user_real_attribs; ++ia) {
-            pa_user_real[ia] = soa.GetRealData(particle_comps[m_user_real_attribs[ia]]).data() + old_size;
-            user_real_attrib_parserexec[ia] = m_user_real_attrib_parser[ia]->compile<7>();
+            h_pa_user_real[ia] = soa.GetRealData(particle_comps[m_user_real_attribs[ia]]).data() + old_size;
+            h_user_real_attrib_parserexec[ia] = m_user_real_attrib_parser[ia]->compile<7>();
         }
+        amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                              h_pa_user_real.begin(),
+                              h_pa_user_real.end(),
+                              pa_user_real.begin());
+        amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                              h_user_real_attrib_parserexec.begin(),
+                              h_user_real_attrib_parserexec.end(),
+                              user_real_attrib_parserexec.begin());
+        amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                              h_pa_user_int.begin(),
+                              h_pa_user_int.end(),
+                              pa_user_int.begin());
+        amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                              h_user_int_attrib_parserexec.begin(),
+                              h_user_int_attrib_parserexec.end(),
+                              user_int_attrib_parserexec.begin());
+        amrex::Gpu::synchronize();
         int** pa_user_int_data = pa_user_int.dataPtr();
         ParticleReal** pa_user_real_data = pa_user_real.dataPtr();
         amrex::ParserExecutor<7> const* user_int_parserexec_data = user_int_attrib_parserexec.dataPtr();

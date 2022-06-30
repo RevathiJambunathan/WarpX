@@ -92,6 +92,7 @@ int Pulsar::m_print_celldata_starttime;
 amrex::Real Pulsar::m_lbound_ndens_magnetization = 1.e-16;
 amrex::Real Pulsar::m_ubound_reldiff_sigma0 = 0.1;
 amrex::Real Pulsar::m_Chi;
+int Pulsar::EnforceParticleInjection = 0;
 
 
 Pulsar::Pulsar ()
@@ -257,6 +258,8 @@ Pulsar::ReadParameters () {
     // convert degrees to radians
     m_Chi = m_Chi * MathConst::pi / 180._rt;
     amrex::Print() << "Oblique angle between B-axis and Omega-axis " << m_Chi << " radians \n";
+    pp.query("EnforceParticleInjection",EnforceParticleInjection);
+    amrex::Print() << " enforce particle inj : " << EnforceParticleInjection << "\n";
 }
 
 
@@ -1322,6 +1325,16 @@ Pulsar::TuneSigma0Threshold (const int step)
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline<< "\n";
     }
     amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << total_injected_cells << "\n";
+}
+
+int
+Pulsar::TotalParticlesToBeInjected (amrex::Real scale_factor)
+{
+    auto& warpx = WarpX::GetInstance();
+    amrex::Real dt = warpx.getdt(0);
+    amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
+    amrex::Real part_weight = m_max_ndens * scale_factor;
+    return (specified_injection_rate * dt / part_weight);
 }
 
 void

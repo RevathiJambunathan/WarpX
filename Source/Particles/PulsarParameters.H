@@ -43,6 +43,7 @@ public:
     void TotalParticles ();
     amrex::Real SumInjectionFlag ();
     void PrintInjectedCellValues ();
+    int TotalParticlesToBeInjected (amrex::Real scale_factor);
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -591,6 +592,7 @@ public:
      ** (Read in degrees and converted to radians)
      */
     static amrex::Real m_Chi;
+    static int EnforceParticleInjection;
 private:
 };
 
