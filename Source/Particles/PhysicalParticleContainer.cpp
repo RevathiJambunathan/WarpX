@@ -885,6 +885,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
     const int modify_sigma_threshold = Pulsar::modify_sigma_threshold;
     const int EnforceParticleInjection = Pulsar::EnforceParticleInjection;
+    const amrex::Real injection_sigma_reldiff = Pulsar::m_injection_sigma_reldiff;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -1173,9 +1174,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     if (EnforceParticleInjection == 1) {
                         pcounts[index] = modified_num_ppc;
 			if (modified_num_ppc == 0) {
-                            if ( amrex::Math::abs((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > 0.5) pcounts[index] = num_ppc;
+                            if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff) pcounts[index] = 1;
 			}
-
                     } else {
                         pcounts[index] = num_ppc;
                     }
@@ -1186,7 +1186,13 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     if (EnforceParticleInjection == 1) {
                         pcounts[index] = modified_num_ppc;
 			if (modified_num_ppc == 0) {
-                            if ( amrex::Math::abs((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > 0.5) pcounts[index] = num_ppc;
+                            if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff)
+                            {
+                                amrex::Real r1 = amrex::Random(engine);
+                                if (r1 <= TotalParticlesToBeInjected/TotalInjectionCells) {
+                                    pcounts[index] = 1;
+                                }
+                            }
 			}
                     } else {
                         pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
