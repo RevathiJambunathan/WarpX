@@ -112,6 +112,11 @@ Pulsar::ReadParameters () {
     pp.getarr("center_star",center_star_v);
     std::copy(center_star_v.begin(),center_star_v.end(),m_center_star.begin());
 
+    // Obliquity of the pulsar
+    pp.get("Chi", m_Chi);
+    // convert degrees to radians
+    m_Chi = m_Chi * MathConst::pi / 180._rt;
+    amrex::Print() << "Oblique angle between B-axis and Omega-axis " << m_Chi << " radians \n";
     pp.get("R_star",m_R_star);
     pp.get("B_star",m_B_star);
     pp.get("dR",m_dR_star);
@@ -131,6 +136,7 @@ Pulsar::ReadParameters () {
     // injection rate is set for the entire simulation
     m_GJ_injection_rate = ( 8._rt * MathConst::pi * PhysConst::ep0 * m_B_star
                             * m_omega_star * m_omega_star * m_R_star * m_R_star * m_R_star
+                            * std::cos(m_Chi)
                           ) / PhysConst::q_e;
     // the factor of 2 is because B at pole = 2*B at equator
     m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_max_ndens * 2. * PhysConst::mu0 * PhysConst::m_e
@@ -253,11 +259,6 @@ Pulsar::ReadParameters () {
     if (m_sigma_tune_method == "relative_difference") {
         pp.query("upperBound_reldiff_sigma0", m_ubound_reldiff_sigma0);
     }
-    // Obliquity of the pulsar
-    pp.get("Chi", m_Chi);
-    // convert degrees to radians
-    m_Chi = m_Chi * MathConst::pi / 180._rt;
-    amrex::Print() << "Oblique angle between B-axis and Omega-axis " << m_Chi << " radians \n";
     pp.query("EnforceParticleInjection",EnforceParticleInjection);
     amrex::Print() << " enforce particle inj : " << EnforceParticleInjection << "\n";
 }
