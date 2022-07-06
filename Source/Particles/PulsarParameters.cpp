@@ -93,7 +93,7 @@ amrex::Real Pulsar::m_lbound_ndens_magnetization = 1.e-16;
 amrex::Real Pulsar::m_ubound_reldiff_sigma0 = 0.1;
 amrex::Real Pulsar::m_Chi;
 int Pulsar::EnforceParticleInjection = 0;
-amrex::Real m_injection_sigma_reldiff = 0;
+amrex::Real Pulsar::m_injection_sigma_reldiff = 0;
 
 
 Pulsar::Pulsar ()
