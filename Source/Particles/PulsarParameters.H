@@ -593,6 +593,7 @@ public:
      */
     static amrex::Real m_Chi;
     static int EnforceParticleInjection;
+    static amrex::Real m_injection_sigma_reldiff;
 private:
 };
 

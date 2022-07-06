@@ -757,6 +757,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
     const int modify_sigma_threshold = Pulsar::modify_sigma_threshold;
     const int EnforceParticleInjection = Pulsar::EnforceParticleInjection;
+    const amrex::Real injection_sigma_reldiff = Pulsar::m_injection_sigma_reldiff;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -1001,7 +1002,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         int lrrfac = rrfac;
         int lrefine_injection = refine_injection;
         Box lfine_box = fine_injection_box;
-        amrex::ParallelFor(overlap_box, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        amrex::ParallelForRNG(overlap_box,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
         {
             IntVect iv(AMREX_D_DECL(i, j, k));
             auto lo = getCellCoords(overlap_corner, dx, {0._rt, 0._rt, 0._rt}, iv);
@@ -1043,9 +1045,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     if (EnforceParticleInjection == 1) {
                         pcounts[index] = modified_num_ppc;
 			if (modified_num_ppc == 0) {
-                            if ( amrex::Math::abs((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > 0.5) pcounts[index] = num_ppc;
+                            if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff) pcounts[index] = 1;
 			}
-
                     } else {
                         pcounts[index] = num_ppc;
                     }
@@ -1056,7 +1057,13 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     if (EnforceParticleInjection == 1) {
                         pcounts[index] = modified_num_ppc;
 			if (modified_num_ppc == 0) {
-                            if ( amrex::Math::abs((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > 0.5) pcounts[index] = num_ppc;
+                            if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff)
+                            {
+                                amrex::Real r1 = amrex::Random(engine);
+                                if (r1 <= TotalParticlesToBeInjected/TotalInjectionCells) {
+                                    pcounts[index] = 1;
+                                }
+                            }
 			}
                     } else {
                         pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
