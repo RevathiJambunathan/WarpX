@@ -338,6 +338,7 @@ Pulsar::InitData ()
     m_plasma_number_density.resize(nlevs_max);
     m_magnetization.resize(nlevs_max);
     m_injection_flag.resize(nlevs_max);
+    m_sigma_reldiff.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
