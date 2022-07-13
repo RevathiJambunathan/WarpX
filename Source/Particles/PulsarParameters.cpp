@@ -94,6 +94,7 @@ amrex::Real Pulsar::m_ubound_reldiff_sigma0 = 0.1;
 amrex::Real Pulsar::m_Chi;
 int Pulsar::EnforceParticleInjection = 0;
 amrex::Real Pulsar::m_injection_sigma_reldiff = 0;
+int Pulsar::WeightedParticleInjection = 0;
 
 
 Pulsar::Pulsar ()
@@ -264,6 +265,8 @@ Pulsar::ReadParameters () {
     amrex::Print() << " enforce particle inj : " << EnforceParticleInjection << "\n";
     pp.query("injection_sigma_reldiff", m_injection_sigma_reldiff);
     amrex::Print() << " injection sigma rel diff : " << m_injection_sigma_reldiff << "\n";
+    pp.query("WeightedParticleInjection",WeightedParticleInjection);
+    amrex::Print() << " weighted particle injection : " << WeightedParticleInjection << "\n";
 }
 
 
@@ -277,6 +280,7 @@ Pulsar::InitDataAtRestart ()
     m_plasma_number_density.resize(nlevs_max);
     m_magnetization.resize(nlevs_max);
     m_injection_flag.resize(nlevs_max);
+    m_sigma_reldiff.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -296,12 +300,16 @@ Pulsar::InitDataAtRestart ()
         // allocate multifab to store flag for cells injected with particles
         m_injection_flag[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
+        m_sigma_reldiff[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
         m_magnetization[lev]->setVal(0._rt);
         // initialize flag for plasma injection
         m_injection_flag[lev]->setVal(0._rt);
+        // rel diff
+        m_sigma_reldiff[lev]->setVal(0._rt);
     }
 
     if (m_do_conductor == true) {
@@ -1361,6 +1369,12 @@ amrex::Real
 Pulsar::SumInjectionFlag ()
 {
      return m_injection_flag[0]->sum();
+}
+
+amrex::Real
+Pulsar::SumSigmaRelDiff ()
+{
+    return m_sigma_reldiff[0]->sum();
 }
 
 void
