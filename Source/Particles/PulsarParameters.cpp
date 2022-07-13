@@ -357,11 +357,15 @@ Pulsar::InitData ()
         // allocate multifab to store flag for cells injected with particles
         m_injection_flag[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
+        m_sigma_reldiff[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
         m_magnetization[lev]->setVal(0._rt);
         m_injection_flag[lev]->setVal(0._rt);
+        // rel diff
+        m_sigma_reldiff[lev]->setVal(0._rt);
     }
 
 

@@ -214,6 +214,8 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
         RemakeMultiFab(m_pulsar->m_magnetization[lev], dm, true);
         // need not redistribute injection flag multifab as it is set every timestep
         RemakeMultiFab(m_pulsar->m_injection_flag[lev], dm, true);
+        // need not redistribute injection flag multifab as it is set every timestep
+        RemakeMultiFab(m_pulsar->m_sigma_reldiff[lev], dm, true);
 #endif
 
 #ifdef AMREX_USE_EB
