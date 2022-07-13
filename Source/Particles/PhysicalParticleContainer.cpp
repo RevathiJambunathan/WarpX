@@ -1212,10 +1212,13 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                             int kk = lo_tile_index[2] + k;
                             amrex::Real weight = sigma_reldiff(ii, jj, kk) / SumSigmaRelDiff;
                             amrex::Real partcount = weight * TotalParticlesToBeInjected;
+                            pcounts[index] = partcount;
                             if (partcount < 1) {
-                                amrex::Real r1 = amrex::Random(engine);
-                                if (r1 <= weight) {
-                                    pcounts[index] = 1;
+                                if ( sigma_reldiff(ii, jj, kk) > injection_sigma_reldiff) {
+                                    amrex::Real r1 = amrex::Random(engine);
+                                    if (r1 <= weight) {
+                                        pcounts[index] = 1;
+                                    }
                                 }
                             }
                         }
