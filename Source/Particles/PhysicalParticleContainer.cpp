@@ -883,9 +883,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::Real Sigma0_threshold = Pulsar::m_Sigma0_threshold;
     const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
     amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
+    amrex::MultiFab* sigma_reldiff_mf = WarpX::GetInstance().getPulsar().get_pointer_sigma_reldiff(lev);
     const int modify_sigma_threshold = Pulsar::modify_sigma_threshold;
     const int EnforceParticleInjection = Pulsar::EnforceParticleInjection;
     const amrex::Real injection_sigma_reldiff = Pulsar::m_injection_sigma_reldiff;
+    const int WeightedParticleInjection = Pulsar::WeightedParticleInjection;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -954,6 +956,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         const FArrayBox& mag_fab = magnetization_mf[mfi];
         amrex::Array4<const amrex::Real> const& mag = mag_fab.array();
         amrex::Array4<amrex::Real> const& injection = injection_flag_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& sigma_reldiff = sigma_reldiff_mf->array(mfi);
 
         // Find the cells of part_box that overlap with tile_realbox
         // If there is no overlap, just go to the next tile in the loop
@@ -1041,9 +1044,14 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 if (mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) > Sigma_threshold )
                 {
                     injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
+                    sigma_reldiff(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) =
+                        ( mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k)
+                        - Sigma_threshold
+                        ) / Sigma_threshold;
                 } // if sigma_local > threshold
                 else {
                     injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 0;
+                    sigma_reldiff(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 0._rt;
                 }
             }
             amrex::ignore_unused(lrefine_injection, lfine_box, lrrfac);
@@ -1058,6 +1066,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::Real scale_factor = dx[0]*dx[1]*dx[2]/num_ppc;
     int TotalParticlesToBeInjected = WarpX::GetInstance().getPulsar().TotalParticlesToBeInjected(scale_factor);
     amrex::Print() << " total particles to be inj : " << TotalParticlesToBeInjected << "\n";
+    amrex::Real SumSigmaRelDiff = WarpX::GetInstance().getPulsar().SumSigmaRelDiff();
+
     // distribute injection between selected cells as num_ppc
     int modified_num_ppc = static_cast<int>((TotalParticlesToBeInjected*1.)/(TotalInjectionCells));
     amrex::Print() << " particles_per_cell : " << modified_num_ppc <<"\n";
@@ -1080,6 +1090,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         const FArrayBox& mag_fab = magnetization_mf[mfi];
         amrex::Array4<const amrex::Real> const& mag = mag_fab.array();
         amrex::Array4<amrex::Real> const& injection = injection_flag_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& sigma_reldiff = sigma_reldiff_mf->array(mfi);
 #endif
 
         // Find the cells of part_box that overlap with tile_realbox
@@ -1184,16 +1195,30 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     // Modiying number of particles injected
                     // (could lead to round-off errors)
                     if (EnforceParticleInjection == 1) {
-                        pcounts[index] = modified_num_ppc;
-			if (modified_num_ppc == 0) {
-                            if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff)
-                            {
+                        if (WeightedParticleInjection == 0) {
+                            pcounts[index] = modified_num_ppc;
+			    if (modified_num_ppc == 0) {
+                                if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff)
+                                {
+                                    amrex::Real r1 = amrex::Random(engine);
+                                    if (r1 <= TotalParticlesToBeInjected/TotalInjectionCells) {
+                                        pcounts[index] = 1;
+                                    }
+                                }
+			    }
+                        } else if (WeightedParticleInjection == 1) {
+                            int ii = lo_tile_index[0] + i;
+                            int jj = lo_tile_index[1] + j;
+                            int kk = lo_tile_index[2] + k;
+                            amrex::Real weight = sigma_reldiff(ii, jj, kk) / SumSigmaRelDiff;
+                            amrex::Real partcount = weight * TotalParticlesToBeInjected;
+                            if (partcount < 1) {
                                 amrex::Real r1 = amrex::Random(engine);
-                                if (r1 <= TotalParticlesToBeInjected/TotalInjectionCells) {
+                                if (r1 <= weight) {
                                     pcounts[index] = 1;
                                 }
                             }
-			}
+                        }
                     } else {
                         pcounts[index] = static_cast<int>(ppc_per_dim.x*std::cbrt(pulsar_injection_fraction))
                                        * static_cast<int>(ppc_per_dim.y*std::cbrt(pulsar_injection_fraction))
