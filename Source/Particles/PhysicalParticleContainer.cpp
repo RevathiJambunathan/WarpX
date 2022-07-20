@@ -1044,6 +1044,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             // Buffer-factor to ensure all cells that intersect the ring inject particles
             const amrex::Real buffer_factor = 0.75;
             // inject particles if magnetization sigma > threshold magnetization Sigma
+            injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 0;
             if (injection(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) == 1 )
             {
                 // compute threshold magnetization Sigma = Sigma0 * (Rstar/r)^3
@@ -1059,10 +1060,14 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     if (EnforceParticleInjection == 1) {
                         pcounts[index] = modified_num_ppc;
 			if (modified_num_ppc == 0) {
-                            if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff) pcounts[index] = 1;
+                            if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff) {
+                                pcounts[index] = 1;
+                                injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
+                            }
 			}
                     } else {
                         pcounts[index] = num_ppc;
+                        injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
                     }
                 } else if (pulsar_modifyParticleWtAtInjection == 0) {
                     const amrex::XDim3 ppc_per_dim = inj_pos->getppcInEachDim();
@@ -1077,6 +1082,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                     amrex::Real r1 = amrex::Random(engine);
                                     if (r1 <= TotalParticlesToBeInjected/TotalInjectionCells) {
                                         pcounts[index] = 1;
+                                        injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
                                     }
                                 }
 			    }
@@ -1092,6 +1098,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                     amrex::Real r1 = amrex::Random(engine);
                                     if (r1 <= weight) {
                                         pcounts[index] = 1;
+                                        injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
                                     }
                                 }
                             }
