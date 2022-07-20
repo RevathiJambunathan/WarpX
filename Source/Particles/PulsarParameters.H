@@ -568,6 +568,8 @@ public:
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_magnetization;
     /** Flagging 1 where plasma is injected */
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_flag;
+    /** Flagging 1 where plasma is injected */
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injected_cell;
     /** Relative difference between sigma and sigma threshold (sigma-sigma_threshold)/sigma_threshold */
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_reldiff;
     /** get pointer to number density */
@@ -577,6 +579,8 @@ public:
     amrex::MultiFab& get_magnetization  (int lev) {return *m_magnetization[lev];}
     amrex::MultiFab* get_pointer_injection_flag (int lev) const{return m_injection_flag[lev].get();}
     amrex::MultiFab& get_injection_flag (int lev) {return *m_injection_flag[lev];}
+    amrex::MultiFab* get_pointer_injected_cell (int lev) const {return m_injected_cell[lev].get();}
+    amrex::MultiFab& get_injected_cell (int lev) {return *m_injected_cell[lev];}
     amrex::MultiFab* get_pointer_sigma_reldiff (int lev) const { return m_sigma_reldiff[lev].get(); }
     amrex::MultiFab& get_sigma_reldiff (int lev) { return *m_sigma_reldiff[lev].get(); }
     static std::string m_sigma_tune_method;
