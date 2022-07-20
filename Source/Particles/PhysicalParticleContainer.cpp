@@ -883,6 +883,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::Real Sigma0_threshold = Pulsar::m_Sigma0_threshold;
     const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
     amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
+    amrex::MultiFab* injected_cell_mf = WarpX::GetInstance().getPulsar().get_pointer_injected_cell(lev);
     amrex::MultiFab* sigma_reldiff_mf = WarpX::GetInstance().getPulsar().get_pointer_sigma_reldiff(lev);
     const int modify_sigma_threshold = Pulsar::modify_sigma_threshold;
     const int EnforceParticleInjection = Pulsar::EnforceParticleInjection;
@@ -956,6 +957,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         const FArrayBox& mag_fab = magnetization_mf[mfi];
         amrex::Array4<const amrex::Real> const& mag = mag_fab.array();
         amrex::Array4<amrex::Real> const& injection = injection_flag_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& injected_cell = injected_cell_mf->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_reldiff = sigma_reldiff_mf->array(mfi);
 
         // Find the cells of part_box that overlap with tile_realbox
@@ -1090,6 +1092,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         const FArrayBox& mag_fab = magnetization_mf[mfi];
         amrex::Array4<const amrex::Real> const& mag = mag_fab.array();
         amrex::Array4<amrex::Real> const& injection = injection_flag_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& injected_cell = injected_cell_mf->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_reldiff = sigma_reldiff_mf->array(mfi);
 #endif
 
