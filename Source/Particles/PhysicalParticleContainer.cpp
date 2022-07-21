@@ -1080,7 +1080,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                 if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff)
                                 {
                                     amrex::Real r1 = amrex::Random(engine);
-                                    if (r1 >= TotalParticlesToBeInjected/TotalInjectionCells) {
+                                    if (r1 <= TotalParticlesToBeInjected/TotalInjectionCells) {
                                         pcounts[index] = 1;
                                         injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
                                     }
@@ -1096,7 +1096,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                             if (partcount < 1) {
                                 if ( sigma_reldiff(ii, jj, kk) > injection_sigma_reldiff) {
                                     amrex::Real r1 = amrex::Random(engine);
-                                    if (r1 >= weight * TotalParticlesToBeInjected) {
+                                    if (r1 <= weight * TotalParticlesToBeInjected) {
                                         pcounts[index] = 1;
                                         injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
                                     }
