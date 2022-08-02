@@ -889,6 +889,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const int EnforceParticleInjection = Pulsar::EnforceParticleInjection;
     const amrex::Real injection_sigma_reldiff = Pulsar::m_injection_sigma_reldiff;
     const int WeightedParticleInjection = Pulsar::WeightedParticleInjection;
+    const amrex::Real bufferdR_CCBounds = Pulsar::m_bufferdR_forCCBounds;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -1030,11 +1031,10 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             // cell-center radius
             const amrex::Real rad = std::sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc) + (z-zc)*(z-zc));
             // Buffer-factor to ensure all cells that intersect the ring inject particles
-            const amrex::Real buffer_factor = 0.75;
             // is cell-center within user-defined particle injection radius
             if (inj_pos->insidePulsarBoundsCC( rad, pulsar_particle_inject_rmin,
                                                     pulsar_particle_inject_rmax,
-                                                    pulsar_dR_star*buffer_factor) )
+                                                    bufferdR_CCBounds) )
             {
                 // compute threshold magnetization Sigma = Sigma0 * (Rstar/r)^3
                 amrex::Real Sigma_threshold = Sigma0_threshold;

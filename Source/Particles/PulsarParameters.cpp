@@ -95,6 +95,7 @@ amrex::Real Pulsar::m_Chi;
 int Pulsar::EnforceParticleInjection = 0;
 amrex::Real Pulsar::m_injection_sigma_reldiff = 0;
 int Pulsar::WeightedParticleInjection = 0;
+amrex::Real Pulsar::m_bufferdR_forCCBounds = 0.;
 
 
 Pulsar::Pulsar ()
@@ -267,6 +268,8 @@ Pulsar::ReadParameters () {
     amrex::Print() << " injection sigma rel diff : " << m_injection_sigma_reldiff << "\n";
     pp.query("WeightedParticleInjection",WeightedParticleInjection);
     amrex::Print() << " weighted particle injection : " << WeightedParticleInjection << "\n";
+    pp.query("BufferdRForCCBounds",m_bufferdR_forCCBounds);
+    amrex::Print() << " buffer dR for CC Bounds \n";
 }
 
 
