@@ -1486,3 +1486,50 @@ Pulsar::PrintInjectedCellValues ()
         amrex::AllPrintToFile(ss.str()) << "\n";
     }
 }
+
+void
+Pulsar::TotalParticlesInjected ()
+{
+    auto& warpx = WarpX::GetInstance();
+    std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
+    const int nspecies = species_names.size();
+    amrex::Real total_weight_allspecies = 0._rt;
+    amrex::Real dt = warpx.getdt(0);
+    // Total number of cells that have injected particles
+    amrex::Real total_injected_cells = SumInjectionFlag();
+    // for debugging print injected cell data
+    if (m_print_injected_celldata == 1) {
+        if (warpx.getistep(0) >= m_print_celldata_starttime) {
+            PrintInjectedCellValues();
+        }
+    }
+
+    using PTDType = typename WarpXParticleContainer::ParticleTileType::ConstParticleTileDataType;
+
+    for (int isp = 0; isp < nspecies; ++isp) {
+        amrex::Real ws_total = 0._rt;
+        auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
+        amrex::ReduceOps<amrex::ReduceOpSum> reduce_ops;
+        amrex::Real cur_time = warpx.gett_new(0);
+        auto ws_r = amrex::ParticleReduce<
+                        amrex::ReduceData < amrex::ParticleReal> >
+                    ( pc,
+                        [=] AMREX_GPU_DEVICE (const PTDType &ptd, const int i) noexcept
+                        {
+                            auto p = ptd.getSuperParticle(i);
+                            amrex::ParticleReal wp = p.rdata(PIdx::w);
+                            amrex::Real filter = 0._rt;
+                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[0][i];
+                            if ( injectiontime < cur_time + 0.1_rt*dt and
+                                 injectiontime > cur_time - 0.1_rt*dt ) {
+                                filter = 1._rt;
+                            }
+                            return (filter);
+                        },
+                        reduce_ops
+                    );
+        ws_total = amrex::get<0>(ws_r);
+        amrex::ParallelDescriptor::ReduceRealSum(ws_total);
+        amrex::Print() << " sp : " << isp << " total particles injected call: " << ws_total << "\n";
+    }
+}

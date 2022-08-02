@@ -45,6 +45,7 @@ public:
     amrex::Real SumSigmaRelDiff ();
     void PrintInjectedCellValues ();
     int TotalParticlesToBeInjected (amrex::Real scale_factor);
+    void TotalParticlesInjected ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
