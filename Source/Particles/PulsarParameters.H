@@ -605,6 +605,7 @@ public:
     // upper bound in sigma rell diff to inject particles
     static amrex::Real m_injection_sigma_reldiff;
     static int WeightedParticleInjection;
+    static amrex::Real m_bufferdR_forCCBounds;
 private:
 };
 
