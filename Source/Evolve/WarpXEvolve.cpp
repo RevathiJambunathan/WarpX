@@ -148,6 +148,7 @@ WarpX::Evolve (int numsteps)
             // Particle-pair injected from user-defined start to end time
             if (cur_time >= Pulsar::m_injection_time &&
                 cur_time <= Pulsar::m_injection_endtime) {
+                    m_pulsar->FlagCellsForInjectionWithPcounts();
                     // particle injection call
                     mypc->PulsarParticleInjection();
                     m_pulsar->TotalParticlesInjected();

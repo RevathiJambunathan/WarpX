@@ -46,6 +46,8 @@ public:
     void PrintInjectedCellValues ();
     int TotalParticlesToBeInjected (amrex::Real scale_factor);
     void TotalParticlesInjected ();
+    amrex::Real SumInjectedCells ();
+    void FlagCellsForInjectionWithPcounts ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -573,6 +575,8 @@ public:
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injected_cell;
     /** Relative difference between sigma and sigma threshold (sigma-sigma_threshold)/sigma_threshold */
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_reldiff;
+    /** Number of particles to be injected per cell per species */
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_pcount;
     /** get pointer to number density */
     amrex::MultiFab* get_pointer_ndens (int lev) const{return m_plasma_number_density[lev].get();}
     /** get pointer to number magnetization */
@@ -584,6 +588,8 @@ public:
     amrex::MultiFab& get_injected_cell (int lev) {return *m_injected_cell[lev];}
     amrex::MultiFab* get_pointer_sigma_reldiff (int lev) const { return m_sigma_reldiff[lev].get(); }
     amrex::MultiFab& get_sigma_reldiff (int lev) { return *m_sigma_reldiff[lev].get(); }
+    amrex::MultiFab* get_pointer_pcount (int lev) const {return m_pcount[lev].get();}
+    amrex::MultiFab& get_pcount (int lev) {return *m_pcount[lev];}    
     static std::string m_sigma_tune_method;
     std::list<amrex::Real> ROI_list;
     int list_size = 0;
@@ -607,6 +613,7 @@ public:
     static amrex::Real m_injection_sigma_reldiff;
     static int WeightedParticleInjection;
     static amrex::Real m_bufferdR_forCCBounds;
+    static int TotalParticlesIsSumOfSpecies;
 private:
 };
 
