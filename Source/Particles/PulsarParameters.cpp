@@ -1300,10 +1300,9 @@ Pulsar::TuneSigma0Threshold (const int step)
         total_weight_allspecies += ws_total;
     }
     // injection rate is sum of particle weight over all species per timestep
-    if (TotalParticlesIsSumOfSpecies == 1) {
-        amrex::Real current_injection_rate = total_weight_allspecies / dt;
-    } else {
-        amrex::Real current_injection_rate = total_weight_allspecies / 2._rt / dt;
+    amrex::Real current_injection_rate = total_weight_allspecies / dt;
+    if (TotalParticlesIsSumOfSpecies == 0) {
+        current_injection_rate = total_weight_allspecies / 2._rt / dt;
     }
     if (list_size < ROI_avg_window_size) {
         ROI_list.push_back(current_injection_rate);
