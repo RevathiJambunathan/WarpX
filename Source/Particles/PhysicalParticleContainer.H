@@ -346,6 +346,7 @@ public:
 #ifdef PULSAR
     virtual void PulsarParticleRemoval () override;
     virtual void PulsarParticleInjection () override;
+    PlasmaInjector* getPlasmaInjector () {return plasma_injector.get();}
 #endif
 
 protected:

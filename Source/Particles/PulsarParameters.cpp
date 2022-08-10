@@ -1,6 +1,7 @@
 #include "PulsarParameters.H"
 #include "Particles/MultiParticleContainer.H"
 #include "Particles/WarpXParticleContainer.H"
+#include "Particles/PhysicalParticleContainer.H"
 #include "Utils/WarpXUtil.H"
 #include "Utils/WarpXConst.H"
 #include "Utils/CoarsenIO.H"
@@ -96,6 +97,7 @@ int Pulsar::EnforceParticleInjection = 0;
 amrex::Real Pulsar::m_injection_sigma_reldiff = 0;
 int Pulsar::WeightedParticleInjection = 0;
 amrex::Real Pulsar::m_bufferdR_forCCBounds = 0.;
+int Pulsar::TotalParticlesIsSumOfSpecies = 1;
 
 
 Pulsar::Pulsar ()
@@ -142,7 +144,7 @@ Pulsar::ReadParameters () {
                             * std::cos(m_Chi)
                           ) / PhysConst::q_e;
     // the factor of 2 is because B at pole = 2*B at equator
-    m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_max_ndens * 2. * PhysConst::mu0 * PhysConst::m_e
+    m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_injection_rate * m_max_ndens * 2. * PhysConst::mu0 * PhysConst::m_e
                                          * PhysConst::c * PhysConst::c);
     m_Sigma0_baseline = m_Sigma0_threshold;
 //    pp.get("Sigma0_threshold_init", m_Sigma0_threshold);
@@ -270,6 +272,8 @@ Pulsar::ReadParameters () {
     amrex::Print() << " weighted particle injection : " << WeightedParticleInjection << "\n";
     pp.query("BufferdRForCCBounds",m_bufferdR_forCCBounds);
     amrex::Print() << " buffer dR for CC Bounds \n";
+    pp.query("TotalParticlesIsSumOfSpecies", TotalParticlesIsSumOfSpecies);
+    amrex::Print() << " total particles is sum of species " << TotalParticlesIsSumOfSpecies << "\n";
 }
 
 
@@ -285,6 +289,7 @@ Pulsar::InitDataAtRestart ()
     m_injection_flag.resize(nlevs_max);
     m_injected_cell.resize(nlevs_max);
     m_sigma_reldiff.resize(nlevs_max);
+    m_pcount.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -308,6 +313,8 @@ Pulsar::InitDataAtRestart ()
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_reldiff[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
+        m_pcount[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -316,6 +323,7 @@ Pulsar::InitDataAtRestart ()
         m_injection_flag[lev]->setVal(0._rt);
         // rel diff
         m_sigma_reldiff[lev]->setVal(0._rt);
+        m_pcount[lev]->setVal(0._rt);
     }
 
     if (m_do_conductor == true) {
@@ -346,6 +354,7 @@ Pulsar::InitData ()
     m_injection_flag.resize(nlevs_max);
     m_sigma_reldiff.resize(nlevs_max);
     m_injected_cell.resize(nlevs_max);
+    m_pcount.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -369,6 +378,8 @@ Pulsar::InitData ()
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_reldiff[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
+        m_pcount[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -377,6 +388,7 @@ Pulsar::InitData ()
         m_injected_cell[lev]->setVal(0._rt);
         // rel diff
         m_sigma_reldiff[lev]->setVal(0._rt);
+        m_pcount[lev]->setVal(0._rt);
     }
 
 
@@ -1361,7 +1373,12 @@ Pulsar::TotalParticlesToBeInjected (amrex::Real scale_factor)
     amrex::Real dt = warpx.getdt(0);
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     amrex::Real part_weight = m_max_ndens * scale_factor;
-    return (specified_injection_rate * dt / part_weight);
+   
+    if (TotalParticlesIsSumOfSpecies == 1) {
+        return (specified_injection_rate * dt / part_weight) / 2._rt;
+    } else {
+        return (specified_injection_rate * dt / part_weight);
+    }
 }
 
 void
@@ -1384,6 +1401,12 @@ amrex::Real
 Pulsar::SumInjectionFlag ()
 {
      return m_injection_flag[0]->sum();
+}
+
+amrex::Real
+Pulsar::SumInjectedCells ()
+{
+    return m_injected_cell[0]->sum();
 }
 
 amrex::Real
@@ -1532,4 +1555,123 @@ Pulsar::TotalParticlesInjected ()
         amrex::ParallelDescriptor::ReduceRealSum(ws_total);
         amrex::Print() << " sp : " << isp << " total particles injected call: " << ws_total << "\n";
     }
+}
+
+void
+Pulsar::FlagCellsForInjectionWithPcounts ()
+{
+    //Flag cells within desired injection region that have sigma > sigma0
+    WarpX& warpx = WarpX::GetInstance();
+    const int lev = 0;
+    const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx_lev = warpx.Geom(lev).CellSizeArray();
+    const amrex::RealBox& real_box = warpx.Geom(lev).ProbDomain();
+    amrex::IntVect iv = m_injection_flag[lev]->ixType().toIntVect();
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> xc;
+    for (int idim = 0; idim < 3; ++idim) {
+        xc[idim] = m_center_star[idim];
+    }
+    amrex::Real pulsar_particle_inject_rmin = m_particle_inject_rmin;
+    amrex::Real pulsar_particle_inject_rmax = m_particle_inject_rmax;
+    amrex::Real Rstar = m_R_star;
+    amrex::Real Sigma0_threshold = m_Sigma0_threshold;
+    int modify_Sigma0_threshold = modify_sigma_threshold;
+
+    //particles to be injected
+    auto& pc = warpx.GetPartContainer().GetParticleContainer(0);
+    auto& phys_pc = dynamic_cast<PhysicalParticleContainer&>(pc);
+    amrex::Real num_ppc = phys_pc.getPlasmaInjector()->num_particles_per_cell;
+    amrex::Print() << " num ppc : " << num_ppc << "\n";
+    amrex::Real scale_factor = dx_lev[0] * dx_lev[1] * dx_lev[2] / num_ppc;
+    int ParticlesToBeInjected = TotalParticlesToBeInjected(scale_factor);
+    amrex::Print() << " particles to be injected " << ParticlesToBeInjected <<"\n";
+
+    m_injection_flag[lev]->setVal(0);
+    m_injected_cell[lev]->setVal(0);
+
+    for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        //InitializeGhost Cells also
+        const amrex::Box& tb = mfi.tilebox(iv);
+        amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& sigma = m_magnetization[lev]->array(mfi);
+        amrex::ParallelFor(tb,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                // cell-centered position based on index type
+                amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+#if (AMREX_SPACEDIM==2)
+                amrex::Real y = 0._rt;
+                amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+#else
+                amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+#endif
+                amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
+                                           + (y-xc[1]) * (y-xc[1])
+                                           + (z-xc[2]) * (z-xc[2]));
+
+                if ( (rad >= pulsar_particle_inject_rmin) and (rad <= pulsar_particle_inject_rmax) ){
+                    amrex::Real Sigma_threshold = Sigma0_threshold;
+                    if (modify_Sigma0_threshold == 1) {
+                        Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                    }
+                    // flag cells with sigma > sigma0_threshold
+                    if (sigma(i,j,k) > Sigma_threshold ) {
+                        injection_flag(i,j,k) = 1;
+                    }
+                }
+            }
+        );
+    }
+
+    // Total injection cells
+    amrex::Real TotalInjectionCells = SumInjectionFlag();
+    amrex::Print() << " total inj cells : " << TotalInjectionCells << "\n";
+
+    int num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);
+    amrex::Print() << " particle to be inj " << ParticlesToBeInjected << "\n";
+    amrex::Real num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
+    amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
+    // fill pcounts and injected cell flag
+    for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box& tb = mfi.tilebox(iv);
+        amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& pcount = m_pcount[lev]->array(mfi);
+        amrex::ParallelForRNG(tb,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
+            {
+                injected_cell(i,j,k) = 0;
+                pcount(i,j,k) = 0;
+                if (injection_flag(i,j,k) == 1) {
+                    pcount(i,j,k) = num_ppc_modified;
+                    if (num_ppc_modified == 0) {
+                        // particle injection done probabilistically
+                        amrex::Real r1 = amrex::Random(engine);
+                        if (r1 <= num_ppc_modified_real) {
+                            injected_cell(i,j,k) = 1;
+                            pcount(i,j,k) = 1;
+                        }
+                    } else if (num_ppc_modified > 0) {
+                        amrex::Real particle_fraction = num_ppc_modified_real - num_ppc_modified;
+                        amrex::Real r1 = amrex::Random(engine);
+                        if (r1 <= particle_fraction) {
+                            // additional particle included if probability is satisfied
+                            pcount(i,j,k) = num_ppc_modified + 1;
+                        }
+                        injected_cell(i,j,k) = 1;
+                    }
+                }
+            }
+        );
+    }
+    amrex::Real TotalInjectedCells = SumInjectedCells();
+    amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n"; 
+
+
 }
