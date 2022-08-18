@@ -1639,6 +1639,9 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Print() << " particle to be inj " << ParticlesToBeInjected << "\n";
     amrex::Real num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
     amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
+    amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
+    int num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);
+    
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
