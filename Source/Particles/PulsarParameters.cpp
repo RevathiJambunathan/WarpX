@@ -98,6 +98,8 @@ amrex::Real Pulsar::m_injection_sigma_reldiff = 0;
 int Pulsar::WeightedParticleInjection = 0;
 amrex::Real Pulsar::m_bufferdR_forCCBounds = 0.;
 int Pulsar::TotalParticlesIsSumOfSpecies = 1;
+int Pulsar::sigma_ref_avg_window_size = 0;
+amrex::Real Pulsar::m_sigma_threshold_sum = 0.;
 
 
 Pulsar::Pulsar ()
@@ -274,6 +276,8 @@ Pulsar::ReadParameters () {
     amrex::Print() << " buffer dR for CC Bounds \n";
     pp.query("TotalParticlesIsSumOfSpecies", TotalParticlesIsSumOfSpecies);
     amrex::Print() << " total particles is sum of species " << TotalParticlesIsSumOfSpecies << "\n";
+    pp.query("sigma_ref_avg_window_size", sigma_ref_avg_window_size);
+    amrex::Print() << " sigma ref avg window size : " << sigma_ref_avg_window_size << "\n";
 }
 
 
@@ -1314,7 +1318,20 @@ Pulsar::TuneSigma0Threshold (const int step)
         ROI_list.push_back(current_injection_rate);
         m_sum_injection_rate += ROI_list.back();
     }
+
+    if (sigma_list_size < sigma_ref_avg_window_size) {
+        sigma_list.push_back(m_Sigma0_threshold);
+        m_sigma_threshold_sum += sigma_list.back();
+        sigma_list_size++;
+    } else {
+        sigma_list.pop_front();
+        sigma_list.push_back(m_Sigma0_threshold);
+        m_sigma_threshold_sum += sigma_list.back();
+        sigma_list_size++;
+    }
     amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
+    amrex::Real avg_sigma_threshold = m_sigma_threshold_sum/(sigma_list_size * 1._rt);
+    amrex::Print() << " sigma list size : " << sigma_list_size << " sigma sum " << m_sigma_threshold_sum << " current sigma " << m_Sigma0_threshold << " avg : " << avg_sigma_threshold << "\n";
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     if (m_injection_tuning_interval.contains(step+1) ) {
         // Sigma0 before modification
@@ -1326,20 +1343,20 @@ Pulsar::TuneSigma0Threshold (const int step)
             // reduce sigma0 so more particles can be injected
             if (m_sigma_tune_method == "10percent") {
                 // Modify threshold magnetization threshold by 10%
-                new_sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+                new_sigma0_threshold = m_Sigma0_threshold - 0.1 * avg_sigma_threshold;
             }
             if (m_sigma_tune_method == "relative_difference") {
                 if (avg_injection_rate == 0.) {
                     // If no particles are injected only change the threshold sigma by 10%
-                    new_sigma0_threshold = m_Sigma0_threshold - 0.1 * m_Sigma0_threshold;
+                    new_sigma0_threshold = m_Sigma0_threshold - 0.1 * avg_sigma_threshold;
                 } else {
                     amrex::Real rel_diff = (specified_injection_rate - avg_injection_rate)/specified_injection_rate;
                     if (rel_diff < m_ubound_reldiff_sigma0) {
                         // If relative difference is less than user-defined upper bound, reduce magnetization by rel_diff
-                        new_sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
+                        new_sigma0_threshold = m_Sigma0_threshold - rel_diff * avg_sigma_threshold;
                     } else {
                         // Maximum relative difference is set by user-defined upper bound
-                        new_sigma0_threshold = m_Sigma0_threshold - m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
+                        new_sigma0_threshold = m_Sigma0_threshold - m_ubound_reldiff_sigma0 * avg_sigma_threshold;
                     }
                 }
             }
@@ -1347,16 +1364,16 @@ Pulsar::TuneSigma0Threshold (const int step)
             // Increase sigma0 so fewer particles are injected
             if (m_sigma_tune_method == "10percent") {
                 // Modify threshold magnetization threshold by 10%
-                new_sigma0_threshold = m_Sigma0_threshold + 0.1 * m_Sigma0_threshold;
+                new_sigma0_threshold = m_Sigma0_threshold + 0.1 * avg_sigma_threshold;
             }
             if (m_sigma_tune_method == "relative_difference") {
                 amrex::Real rel_diff = (avg_injection_rate - specified_injection_rate)/specified_injection_rate;
                 if (rel_diff < m_ubound_reldiff_sigma0) {
                     // If relative difference is less than user-defined upper bound, increase magnetization by rel_diff
-                    new_sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
+                    new_sigma0_threshold = m_Sigma0_threshold + rel_diff * avg_sigma_threshold;
                 } else {
                     // If rel_diff > upper bound, then increase sigma0 by m_ubound_reldiff_sigma0
-                    new_sigma0_threshold = m_Sigma0_threshold + m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
+                    new_sigma0_threshold = m_Sigma0_threshold + m_ubound_reldiff_sigma0 * avg_sigma_threshold;
                 }
             }
         }
@@ -1640,7 +1657,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Real num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
     amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
     amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
-    int num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);
     
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
