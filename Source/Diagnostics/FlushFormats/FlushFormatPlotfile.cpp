@@ -314,6 +314,11 @@ FlushFormatPlotfile::WriteWarpXHeader(
         for (amrex::Real injection_rate : warpx.getPulsar().ROI_list) {
             HeaderFile << injection_rate << "\n";
         }
+        HeaderFile << warpx.getPulsar().m_sigma_threshold_sum << "\n";
+        HeaderFile << warpx.getPulsar().sigma_list_size << "\n";
+        for (amrex::Real sigma_threshold : warpx.getPulsar().sigma_list) {
+            HeaderFile << sigma_threshold << "\n";
+        }
 #endif
     }
 }
