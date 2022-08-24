@@ -1419,6 +1419,7 @@ Pulsar::TuneSigma0Threshold (const int step)
                 }
             }
         } else {
+            amrex::Print() << " sigma tuning using TCTP \n";
         // sigma is tuned by comparing TC = TP
             if (avg_InjCells < ParticlesToBeInjected) {
             // decrease sigma by relative difference
