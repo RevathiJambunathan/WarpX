@@ -248,6 +248,16 @@ WarpX::InitFromCheckpoint ()
             m_pulsar->sigma_list.push_back(sigma_threshold);
             GotoNextLine(is);
         }        
+        is >> m_pulsar->m_InjCell_sum;
+        GotoNextLine(is);
+        is >> m_pulsar->InjCell_list_size;
+        GotoNextLine(is);
+        for (int i = 0; i < m_pulsar->InjCell_list_size; ++i) {
+            amrex::Real total_injection_cells;
+            is >> total_injection_cells;
+            m_pulsar->InjCell_list.push_back(total_injection_cells);
+            GotoNextLine(is);
+        }
 #endif
     }
 

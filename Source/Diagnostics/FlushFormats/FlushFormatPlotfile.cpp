@@ -304,6 +304,11 @@ FlushFormatPlotfile::WriteWarpXHeader(
         for (amrex::Real sigma_threshold : warpx.getPulsar().sigma_list) {
             HeaderFile << sigma_threshold << "\n";
         }
+        HeaderFile << warpx.getPulsar().m_InjCell_sum << "\n";
+        HeaderFile << warpx.getPulsar().InjCell_list_size << "\n";
+        for ( amrex::Real total_injected_cells : warpx.getPulsar().InjCell_list) {
+            HeaderFile << total_injected_cells << "\n";
+        }
 #endif
     }
 }

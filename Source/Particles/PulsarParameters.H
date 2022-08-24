@@ -620,6 +620,11 @@ public:
     static int WeightedParticleInjection;
     static amrex::Real m_bufferdR_forCCBounds;
     static int TotalParticlesIsSumOfSpecies;
+    static int sigma_tune_method_TCTP;
+    std::list<amrex::Real> InjCell_list;
+    int InjCell_list_size = 0;
+    static int m_InjCell_avg_window_size;
+    static amrex::Real m_InjCell_sum;
 private:
 };
 
