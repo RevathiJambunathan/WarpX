@@ -100,6 +100,8 @@ amrex::Real Pulsar::m_bufferdR_forCCBounds = 0.;
 int Pulsar::TotalParticlesIsSumOfSpecies = 1;
 int Pulsar::sigma_ref_avg_window_size = 0;
 amrex::Real Pulsar::m_sigma_threshold_sum = 0.;
+int Pulsar::use_single_sigma_ref = 0;
+amrex::Real Pulsar::sigma_ref;
 
 
 Pulsar::Pulsar ()
@@ -278,6 +280,10 @@ Pulsar::ReadParameters () {
     amrex::Print() << " total particles is sum of species " << TotalParticlesIsSumOfSpecies << "\n";
     pp.query("sigma_ref_avg_window_size", sigma_ref_avg_window_size);
     amrex::Print() << " sigma ref avg window size : " << sigma_ref_avg_window_size << "\n";
+    pp.query("use_single_sigma_ref",use_single_sigma_ref);
+    if (use_single_sigma_ref == 1) {
+        pp.query("sigma_ref",sigma_ref);
+    }
 }
 
 
@@ -1331,6 +1337,9 @@ Pulsar::TuneSigma0Threshold (const int step)
     }
     amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
     amrex::Real avg_sigma_threshold = m_sigma_threshold_sum/(sigma_list_size * 1._rt);
+    if (use_single_sigma_ref == 1) {
+        avg_sigma_threshold = sigma_ref;
+    }
     amrex::Print() << " sigma list size : " << sigma_list_size << " sigma sum " << m_sigma_threshold_sum << " current sigma " << m_Sigma0_threshold << " avg : " << avg_sigma_threshold << "\n";
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     if (m_injection_tuning_interval.contains(step+1) ) {
