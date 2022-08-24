@@ -601,6 +601,8 @@ public:
     int sigma_list_size = 0;
     static int sigma_ref_avg_window_size;
     static amrex::Real m_sigma_threshold_sum;
+    static int use_single_sigma_ref;
+    static amrex::Real sigma_ref;
     /** Lower bound for number density to compute magnetization (Default is 1.e-16)*/
     static amrex::Real m_lbound_ndens_magnetization;
     /** Upeer bound for relative difference sigma tune method, such that,
