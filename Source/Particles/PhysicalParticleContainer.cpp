@@ -1439,6 +1439,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             Real theta_offset = 0._rt;
             if (rz_random_theta) theta_offset = amrex::Random(engine) * 2._rt * MathConst::pi;
 #endif
+            // Compute cell-center to be used in obtaining density of all particles
+            // injected in that cell and also check if cell-center is within pulsar bounds (spherical ring)
+            const amrex::Real x_cc = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
+            const amrex::Real y_cc = overlap_corner[1] + i*dx[1] + 0.5*dx[1];
+            const amrex::Real z_cc = overlap_corner[2] + i*dx[2] + 0.5*dx[2];
 
             Real scale_fac = 0.0_rt;
             if( pcounts[index] != 0) {
@@ -1564,7 +1569,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     const amrex::Real xc = center_star_arr[0];
                     const amrex::Real yc = center_star_arr[1];
                     const amrex::Real zc = center_star_arr[2];
-                    const amrex::Real rad = std::sqrt( (xb-xc)*(xb-xc) + (yb-yc)*(yb-yc) + (z0-zc)*(z0-zc));
+                    // pulsar bounds checked using cell-center
+                    const amrex::Real rad = std::sqrt( (x_cc-xc)*(x_cc-xc) + (y_cc-yc)*(y_cc-yc) + (z_cc-zc)*(z_cc-zc));
                     if ( !inj_pos->insidePulsarBounds(rad,pulsar_particle_inject_rmin,
                                                           pulsar_particle_inject_rmax))
                     {
@@ -1581,7 +1587,12 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 #endif
 
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
+#ifdef PULSAR
+                    // density computed using cell-center
+                    dens = inj_rho->getDensity(x_cc, y_cc, z_cc);
+#else
                     dens = inj_rho->getDensity(pos.x, pos.y, z0);
+#endif
 
                     // Remove particle if density below threshold
                     if ( dens < density_min ){
