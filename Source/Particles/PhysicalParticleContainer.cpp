@@ -1296,8 +1296,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
             // Compute cell-center to be used in obtaining density of all particles
             // injected in that cell and also check if cell-center is within pulsar bounds (spherical ring)
             const amrex::Real x_cc = overlap_corner[0] + i*dx[0] + 0.5*dx[0];
-            const amrex::Real y_cc = overlap_corner[1] + i*dx[1] + 0.5*dx[1];
-            const amrex::Real z_cc = overlap_corner[2] + i*dx[2] + 0.5*dx[2];
+            const amrex::Real y_cc = overlap_corner[1] + j*dx[1] + 0.5*dx[1];
+            const amrex::Real z_cc = overlap_corner[2] + k*dx[2] + 0.5*dx[2];
 
             Real scale_fac = 0.0_rt;
             if( pcounts[index] != 0) {
