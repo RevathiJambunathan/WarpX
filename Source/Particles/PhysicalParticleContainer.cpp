@@ -763,6 +763,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const amrex::Real injection_sigma_reldiff = Pulsar::m_injection_sigma_reldiff;
     const int WeightedParticleInjection = Pulsar::WeightedParticleInjection;
     const amrex::Real bufferdR_CCBounds = Pulsar::m_bufferdR_forCCBounds;
+    const amrex::Real particle_scale_fac = Pulsar::m_particle_scale_fac;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -1507,7 +1508,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                 u.y *= PhysConst::c;
                 u.z *= PhysConst::c;
 
+#ifdef PULSAR
+                amrex::Real weight = dens * particle_scale_fac;
+#else
                 Real weight = dens * scale_fac;
+#endif
 #ifdef WARPX_DIM_RZ
                 if (radially_weighted) {
                     weight *= 2._rt*MathConst::pi*xb;
