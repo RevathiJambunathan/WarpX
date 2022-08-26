@@ -77,7 +77,7 @@ struct InjectorPositionRegular
 #ifdef PULSAR
                        , const int modify_particle_wt_at_injection = 0,
                          amrex::Real Ninj_fraction = 1.,
-			 int particle_count = 0
+                         int particle_count = 0
 #endif
                        ) const noexcept
     {
@@ -210,7 +210,8 @@ struct InjectorPosition
         {
 #ifdef PULSAR
             return object.regular.getPositionUnitBox(i_part, ref_fac, engine,
-                                                     modify_particle_wt_at_injection, Ninj_fraction);
+                                                     modify_particle_wt_at_injection, Ninj_fraction,
+                                                     particle_count);
 #else
             return object.regular.getPositionUnitBox(i_part, ref_fac, engine);
 #endif
