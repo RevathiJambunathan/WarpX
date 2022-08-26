@@ -78,29 +78,38 @@ struct InjectorPositionRegular
                         amrex::RandomEngine const&
 #ifdef PULSAR
                        , const int modify_particle_wt_at_injection = 0,
-                         amrex::Real Ninj_fraction = 1.
+                         amrex::Real Ninj_fraction = 1.,
+                         int particle_count = 0
 #endif
                        ) const noexcept
     {
         using namespace amrex;
 #ifdef PULSAR
 #if (defined WARPX_DIM_3D) || (defined WARPX_DIM_RZ)
-        int nx = 1;
-        int ny = 1;
-        int nz = 1;
-        if (modify_particle_wt_at_injection == 1) {
-            // particle wt is modified if Ninjection fraction !=1
-            // So we dont have to change the number of particles injected per cell
-            nx = ref_fac*ppc.x;
-            ny = ref_fac*ppc.y;
-            nz = ref_fac*ppc.z;
-        } else if (modify_particle_wt_at_injection == 0) {
-            // for Ninjection fraction !=1, we modify the particles injected per cell
-            const amrex::Real ninj_per_dim = std::cbrt(Ninj_fraction);
-            nx = static_cast<int>(ceil(ref_fac*ppc.x*ninj_per_dim));
-            ny = static_cast<int>(ceil(ref_fac*ppc.y*ninj_per_dim));
-            nz = static_cast<int>(ceil(ref_fac*ppc.z*ninj_per_dim));
-        }
+        //int nx = 1;
+        //int ny = 1;
+        //int nz = 1;
+        //if (modify_particle_wt_at_injection == 1) {
+        //    // particle wt is modified if Ninjection fraction !=1
+        //    // So we dont have to change the number of particles injected per cell
+        //    nx = ref_fac*ppc.x;
+        //    ny = ref_fac*ppc.y;
+        //    nz = ref_fac*ppc.z;
+        //} else if (modify_particle_wt_at_injection == 0) {
+        //    // for Ninjection fraction !=1, we modify the particles injected per cell
+        //    const amrex::Real ninj_per_dim = std::cbrt(Ninj_fraction);
+        //    nx = static_cast<int>(ceil(ref_fac*ppc.x*ninj_per_dim));
+        //    ny = static_cast<int>(ceil(ref_fac*ppc.y*ninj_per_dim));
+        //    nz = static_cast<int>(ceil(ref_fac*ppc.z*ninj_per_dim));
+        //}
+        const amrex::Real pcount_per_dim = std::cbrt(particle_count);
+        // integer conversion with ceil
+        const int pcount_x = static_cast<int>(ceil(pcount_per_dim));
+        const int pcount_y = static_cast<int>(ceil(pcount_per_dim));
+        const int pcount_z = static_cast<int>(ceil(pcount_per_dim));
+        int nx = ref_fac * pcount_x;
+        int ny = ref_fac * pcount_y;
+        int nz = ref_fac * pcount_z;
 #endif //ifdef 3D or RZ
         int const ix_part = i_part / (ny*nz);  // written this way backward compatibility
         int const iz_part = (i_part-ix_part*(ny*nz)) / ny;
@@ -206,7 +215,8 @@ struct InjectorPosition
                         amrex::RandomEngine const& engine
 #ifdef PULSAR
                        , const int modify_particle_wt_at_injection = 0,
-                         amrex::Real Ninj_fraction = 1.
+                         amrex::Real Ninj_fraction = 1. ,
+                         const int particle_count = 0
 #endif
                        ) const noexcept
     {
@@ -216,7 +226,8 @@ struct InjectorPosition
         {
 #ifdef PULSAR
             return object.regular.getPositionUnitBox(i_part, ref_fac, engine,
-                                                     modify_particle_wt_at_injection, Ninj_fraction);
+                                                     modify_particle_wt_at_injection, Ninj_fraction,
+                                                     particle_count);
 #else
             return object.regular.getPositionUnitBox(i_part, ref_fac, engine);
 #endif

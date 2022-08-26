@@ -1323,7 +1323,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     inj_pos->getPositionUnitBox(i_part, lrrfac, engine
 #ifdef PULSAR
                                                 , pulsar_modifyParticleWtAtInjection,
-                                                  pulsar_injection_fraction
+                                                  pulsar_injection_fraction,
+                                                  pcounts[index]
 #endif
                                                );
                 auto pos = getCellCoords(overlap_corner, dx, r, iv);
