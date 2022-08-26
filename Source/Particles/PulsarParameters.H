@@ -625,6 +625,8 @@ public:
     int InjCell_list_size = 0;
     static int m_InjCell_avg_window_size;
     static amrex::Real m_InjCell_sum;
+    static amrex::Real m_particle_wt;
+    static amrex::Real m_particle_scale_fac;
 private:
 };
 

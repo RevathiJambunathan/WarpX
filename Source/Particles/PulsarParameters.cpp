@@ -105,6 +105,8 @@ amrex::Real Pulsar::sigma_ref;
 int Pulsar::sigma_tune_method_TCTP = 1;
 int Pulsar::m_InjCell_avg_window_size = 1;
 amrex::Real Pulsar::m_InjCell_sum = 0.;
+amrex::Real Pulsar::m_particle_wt;
+amrex::Real Pulsar::m_particle_scale_fac;
 
 
 Pulsar::Pulsar ()
@@ -1335,10 +1337,10 @@ Pulsar::TuneSigma0Threshold (const int step)
         m_sigma_threshold_sum += sigma_list.back();
         sigma_list_size++;
     } else {
+        m_sigma_threshold_sum -= sigma_list.front();
         sigma_list.pop_front();
         sigma_list.push_back(m_Sigma0_threshold);
         m_sigma_threshold_sum += sigma_list.back();
-        sigma_list_size++;
     }
 
     amrex::Real total_injection_cells = SumInjectionFlag();
@@ -1347,10 +1349,10 @@ Pulsar::TuneSigma0Threshold (const int step)
         m_InjCell_sum += total_injection_cells;
         InjCell_list_size++;
     } else {
+        m_InjCell_sum -= InjCell_list.front();
         InjCell_list.pop_front();
         InjCell_list.push_back(total_injection_cells);
         m_InjCell_sum += total_injection_cells;
-        InjCell_list_size++;
     }
     amrex::Real avg_InjCells = m_InjCell_sum/(InjCell_list_size * 1._rt);
     amrex::Print() << " curent TC= " << total_injection_cells << " list size : " << InjCell_list_size << " sum : " << m_InjCell_sum << " avg_inj cells : " << avg_InjCells << "\n";
@@ -1423,7 +1425,7 @@ Pulsar::TuneSigma0Threshold (const int step)
         // sigma is tuned by comparing TC = TP
             if (avg_InjCells < ParticlesToBeInjected) {
             // decrease sigma by relative difference
-                if (m_sigma_tune_method == "relativedifference") {
+                if (m_sigma_tune_method == "relative_difference") {
                     amrex::Real rel_diff =  (ParticlesToBeInjected - avg_InjCells)
                                           / (ParticlesToBeInjected * 1._rt);
                     if (rel_diff < m_ubound_reldiff_sigma0) {
@@ -1436,7 +1438,7 @@ Pulsar::TuneSigma0Threshold (const int step)
                 } // ref diff method
             } else if (avg_InjCells > ParticlesToBeInjected) {
             // increase sigma by relative difference
-                if (m_sigma_tune_method == "relativedifference") {
+                if (m_sigma_tune_method == "relative_difference") {
                     amrex::Real rel_diff = (avg_InjCells - ParticlesToBeInjected)
                                          / (ParticlesToBeInjected * 1._rt);
                     if (rel_diff < m_ubound_reldiff_sigma0) {
@@ -1466,6 +1468,7 @@ Pulsar::TotalParticlesToBeInjected (amrex::Real scale_factor)
     amrex::Real dt = warpx.getdt(0);
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     amrex::Real part_weight = m_max_ndens * scale_factor;
+    m_particle_wt = part_weight;
    
     if (TotalParticlesIsSumOfSpecies == 1) {
         return (specified_injection_rate * dt / part_weight) / 2._rt;
@@ -1675,6 +1678,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Real num_ppc = phys_pc.getPlasmaInjector()->num_particles_per_cell;
     amrex::Print() << " num ppc : " << num_ppc << "\n";
     amrex::Real scale_factor = dx_lev[0] * dx_lev[1] * dx_lev[2] / num_ppc;
+    m_particle_scale_fac = scale_factor;
     int ParticlesToBeInjected = TotalParticlesToBeInjected(scale_factor);
     amrex::Print() << " particles to be injected " << ParticlesToBeInjected <<"\n";
 
