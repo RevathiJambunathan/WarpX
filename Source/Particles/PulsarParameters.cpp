@@ -107,6 +107,7 @@ int Pulsar::m_InjCell_avg_window_size = 1;
 amrex::Real Pulsar::m_InjCell_sum = 0.;
 amrex::Real Pulsar::m_particle_wt;
 amrex::Real Pulsar::m_particle_scale_fac;
+int Pulsar::m_use_Sigma0_avg = 1;
 
 
 Pulsar::Pulsar ()
@@ -291,6 +292,8 @@ Pulsar::ReadParameters () {
     }
     pp.query("sigma_tune_method_TCTP", sigma_tune_method_TCTP);
     pp.query("InjCell_avg_window_size",m_InjCell_avg_window_size);
+    // to average Sigma0_threshold new and old
+    pp.query("use_Sigma0_avg", m_use_Sigma0_avg);
 }
 
 
@@ -1455,7 +1458,12 @@ Pulsar::TuneSigma0Threshold (const int step)
         if (new_sigma0_threshold > m_max_Sigma0) new_sigma0_threshold = m_max_Sigma0;
         // Store modified new sigma0 in member variable, m_Sigma0_threshold
         amrex::Print() << " old sigma " << m_Sigma0_threshold << " new : " << new_sigma0_threshold << "\n";
-        m_Sigma0_threshold = new_sigma0_threshold;
+        if (m_use_Sigma0_avg == 1) {
+            amrex::Real sigma_avg = (new_sigma0_threshold + m_Sigma0_threshold)/2._rt;
+            m_Sigma0_threshold = sigma_avg;
+        } else {
+            m_Sigma0_threshold = new_sigma0_threshold;
+        }
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
     }
     amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << total_injected_cells << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
