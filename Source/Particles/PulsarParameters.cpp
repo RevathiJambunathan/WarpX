@@ -337,7 +337,7 @@ Pulsar::InitDataAtRestart ()
         m_pcount[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_injection_ring[lev] = std::make_unique<amrex::MultiFab>(
-                                ba, dm, 1,, ng_EB_alloc);
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -406,7 +406,7 @@ Pulsar::InitData ()
         m_pcount[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_injection_ring[lev] = std::make_unique<amrex::MultiFab>(
-                                ba, dm, 1,, ng_EB_alloc);
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
