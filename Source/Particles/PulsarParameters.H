@@ -577,6 +577,7 @@ public:
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_reldiff;
     /** Number of particles to be injected per cell per species */
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_pcount;
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_ring;
     /** get pointer to number density */
     amrex::MultiFab* get_pointer_ndens (int lev) const{return m_plasma_number_density[lev].get();}
     /** get pointer to number magnetization */
@@ -589,7 +590,9 @@ public:
     amrex::MultiFab* get_pointer_sigma_reldiff (int lev) const { return m_sigma_reldiff[lev].get(); }
     amrex::MultiFab& get_sigma_reldiff (int lev) { return *m_sigma_reldiff[lev].get(); }
     amrex::MultiFab* get_pointer_pcount (int lev) const {return m_pcount[lev].get();}
-    amrex::MultiFab& get_pcount (int lev) {return *m_pcount[lev];}    
+    amrex::MultiFab& get_pcount (int lev) {return *m_pcount[lev];}
+    amrex::MultiFab* get_pointer_injection_ring (int lev) {return *m_injection_ring[lev];}
+    amrex::MultiFab& get_injection_ring (int lev) {return *m_injection_ring[lev].get();}
     static std::string m_sigma_tune_method;
     std::list<amrex::Real> ROI_list;
     int list_size = 0;
