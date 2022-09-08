@@ -591,8 +591,8 @@ public:
     amrex::MultiFab& get_sigma_reldiff (int lev) { return *m_sigma_reldiff[lev].get(); }
     amrex::MultiFab* get_pointer_pcount (int lev) const {return m_pcount[lev].get();}
     amrex::MultiFab& get_pcount (int lev) {return *m_pcount[lev];}
-    amrex::MultiFab* get_pointer_injection_ring (int lev) {return *m_injection_ring[lev];}
-    amrex::MultiFab& get_injection_ring (int lev) {return *m_injection_ring[lev].get();}
+    amrex::MultiFab* get_pointer_injection_ring (int lev) const {return m_injection_ring[lev].get();}
+    amrex::MultiFab& get_injection_ring (int lev) {return *m_injection_ring[lev];}
     static std::string m_sigma_tune_method;
     std::list<amrex::Real> ROI_list;
     int list_size = 0;
