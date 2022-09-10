@@ -311,6 +311,7 @@ Pulsar::InitDataAtRestart ()
     m_sigma_reldiff.resize(nlevs_max);
     m_pcount.resize(nlevs_max);
     m_injection_ring.resize(nlevs_max);
+    m_sigma_inj_ring.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -338,6 +339,8 @@ Pulsar::InitDataAtRestart ()
                                 ba, dm, 1, ng_EB_alloc);
         m_injection_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
+        m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -348,6 +351,7 @@ Pulsar::InitDataAtRestart ()
         m_sigma_reldiff[lev]->setVal(0._rt);
         m_pcount[lev]->setVal(0._rt);
         m_injection_ring[lev]->setVal(0._rt);
+        m_sigma_inj_ring[lev]->setVal(0._rt);
     }
 
     if (m_do_conductor == true) {
@@ -380,6 +384,7 @@ Pulsar::InitData ()
     m_injected_cell.resize(nlevs_max);
     m_pcount.resize(nlevs_max);
     m_injection_ring.resize(nlevs_max);
+    m_sigma_inj_ring.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -407,6 +412,8 @@ Pulsar::InitData ()
                                 ba, dm, 1, ng_EB_alloc);
         m_injection_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
+        m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -417,6 +424,7 @@ Pulsar::InitData ()
         m_sigma_reldiff[lev]->setVal(0._rt);
         m_pcount[lev]->setVal(0._rt);
         m_injection_ring[lev]->setVal(0._rt);
+        m_sigma_inj_ring[lev]->setVal(0._rt);
     }
 
 
@@ -1242,6 +1250,7 @@ Pulsar::ComputePlasmaMagnetization ()
                                                  * PhysConst::c * PhysConst::c);
     for (int lev = 0; lev < nlevs_max; ++lev) {
         m_magnetization[lev]->setVal(0._rt);
+        m_sigma_inj_ring[lev]->setVal(0._rt);
         const amrex::MultiFab& Bx_mf = warpx.getBfield(lev, 0);
         const amrex::MultiFab& By_mf = warpx.getBfield(lev, 1);
         const amrex::MultiFab& Bz_mf = warpx.getBfield(lev, 2);
@@ -1253,6 +1262,8 @@ Pulsar::ComputePlasmaMagnetization ()
             amrex::Array4<const amrex::Real> const& Bx = Bx_mf[mfi].array();
             amrex::Array4<const amrex::Real> const& By = By_mf[mfi].array();
             amrex::Array4<const amrex::Real> const& Bz = Bz_mf[mfi].array();
+            amrex::Array4<const amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
+            amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
 
             amrex::ParallelFor(bx,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -1277,6 +1288,7 @@ Pulsar::ComputePlasmaMagnetization ()
                         // using minimum number density if there are no particles in the cell
                         mag(i, j, k) = (B_mag * B_mag) * mu0_m_c2_inv /min_ndens;
                     }
+                    sigma_inj_ring(i, j, k) = mag(i, j, k) * inj_ring(i, j, k);
                 }
             );
         } // mfiter loop
@@ -1531,7 +1543,7 @@ Pulsar::SumSigmaRelDiff ()
 amrex::Real
 Pulsar::MaxMagnetization ()
 {
-    return m_magnetization[0]->max(0);
+    return m_sigma_inj_ring[0]->max(0);
 }
 
 void

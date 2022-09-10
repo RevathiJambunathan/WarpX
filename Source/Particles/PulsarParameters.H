@@ -579,6 +579,7 @@ public:
     /** Number of particles to be injected per cell per species */
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_pcount;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_ring;
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_inj_ring;
     /** get pointer to number density */
     amrex::MultiFab* get_pointer_ndens (int lev) const{return m_plasma_number_density[lev].get();}
     /** get pointer to number magnetization */
