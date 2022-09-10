@@ -48,6 +48,7 @@ public:
     void TotalParticlesInjected ();
     amrex::Real SumInjectedCells ();
     void FlagCellsForInjectionWithPcounts ();
+    amrex::Real MaxMagnetization ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
