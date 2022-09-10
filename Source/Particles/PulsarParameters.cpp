@@ -1250,7 +1250,6 @@ Pulsar::ComputePlasmaMagnetization ()
                                                  * PhysConst::c * PhysConst::c);
     for (int lev = 0; lev < nlevs_max; ++lev) {
         m_magnetization[lev]->setVal(0._rt);
-        m_sigma_inj_ring[lev]->setVal(0._rt);
         const amrex::MultiFab& Bx_mf = warpx.getBfield(lev, 0);
         const amrex::MultiFab& By_mf = warpx.getBfield(lev, 1);
         const amrex::MultiFab& Bz_mf = warpx.getBfield(lev, 2);
@@ -1263,7 +1262,6 @@ Pulsar::ComputePlasmaMagnetization ()
             amrex::Array4<const amrex::Real> const& By = By_mf[mfi].array();
             amrex::Array4<const amrex::Real> const& Bz = Bz_mf[mfi].array();
             amrex::Array4<const amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
-            amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
 
             amrex::ParallelFor(bx,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -1288,7 +1286,6 @@ Pulsar::ComputePlasmaMagnetization ()
                         // using minimum number density if there are no particles in the cell
                         mag(i, j, k) = (B_mag * B_mag) * mu0_m_c2_inv /min_ndens;
                     }
-                    sigma_inj_ring(i, j, k) = mag(i, j, k) * inj_ring(i, j, k);
                 }
             );
         } // mfiter loop
@@ -1719,7 +1716,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 
     m_injection_flag[lev]->setVal(0);
     m_injected_cell[lev]->setVal(0);
-
+    m_sigma_inj_ring[lev]->setVal(0);
+    m_injection_ring[lev]->setVal(0);
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         //InitializeGhost Cells also
@@ -1728,6 +1726,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& sigma = m_magnetization[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
         amrex::ParallelFor(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 // cell-centered position based on index type
@@ -1749,6 +1748,9 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 
                 if ( (rad >= pulsar_particle_inject_rmin) and (rad <= pulsar_particle_inject_rmax) ){
                     inj_ring(i,j,k) = 1;
+                    if (inj_ring(i,j,k) == 1) {
+                        sigma_inj_ring(i, j, k) = sigma(i, j, k);
+                    }
                     amrex::Real Sigma_threshold = Sigma0_threshold;
                     if (modify_Sigma0_threshold == 1) {
                         Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
