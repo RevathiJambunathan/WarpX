@@ -1,4 +1,4 @@
-#include "PulsarParameters.H"
+#include "Particles/PulsarParameters.H"
 #include "Particles/MultiParticleContainer.H"
 #include "Particles/WarpXParticleContainer.H"
 #include "Particles/PhysicalParticleContainer.H"
@@ -1748,9 +1748,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 
                 if ( (rad >= pulsar_particle_inject_rmin) and (rad <= pulsar_particle_inject_rmax) ){
                     inj_ring(i,j,k) = 1;
-                    if (inj_ring(i,j,k) == 1) {
-                        sigma_inj_ring(i, j, k) = sigma(i, j, k);
-                    }
+                    sigma_inj_ring(i, j, k) = sigma(i, j, k);
                     amrex::Real Sigma_threshold = Sigma0_threshold;
                     if (modify_Sigma0_threshold == 1) {
                         Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
