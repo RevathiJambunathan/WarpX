@@ -637,6 +637,7 @@ public:
     static amrex::Real m_particle_wt;
     static amrex::Real m_particle_scale_fac;
     static int m_use_Sigma0_avg;
+    static amrex::Real m_particle_weight_scaling;
 private:
 };
 
