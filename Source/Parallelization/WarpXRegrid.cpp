@@ -218,6 +218,8 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
         RemakeMultiFab(m_pulsar->m_sigma_reldiff[lev], dm, true);
         RemakeMultiFab(m_pulsar->m_injected_cell[lev], dm, true);
         RemakeMultiFab(m_pulsar->m_pcount[lev], dm, true);
+        RemakeMultiFab(m_pulsar->m_injection_ring[lev], dm, true);
+        RemakeMultiFab(m_pulsar->m_sigma_inj_ring[lev], dm, true);
 #endif
 
 #ifdef AMREX_USE_EB
