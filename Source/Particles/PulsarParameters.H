@@ -49,6 +49,7 @@ public:
     amrex::Real SumInjectedCells ();
     void FlagCellsForInjectionWithPcounts ();
     amrex::Real MaxMagnetization ();
+    amrex::Real MaxThresholdSigma();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -580,6 +581,9 @@ public:
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_pcount;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_ring;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_inj_ring;
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_threshold;
+    amrex::MultiFab* get_pointer_sigma_threshold (int lev) const {return m_sigma_threshold[lev].get();}
+    amrex::MultiFab& get_sigma_threshold (int lev) const {return *m_sigma_threshold[lev];}
     /** get pointer to number density */
     amrex::MultiFab* get_pointer_ndens (int lev) const{return m_plasma_number_density[lev].get();}
     /** get pointer to number magnetization */
