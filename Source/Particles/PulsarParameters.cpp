@@ -1394,6 +1394,7 @@ Pulsar::TuneSigma0Threshold (const int step)
     }
     amrex::Print() << " sigma list size : " << sigma_list_size << " sigma sum " << m_sigma_threshold_sum << " current sigma " << m_Sigma0_threshold << " avg : " << avg_sigma_threshold << "\n";
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
+    amrex::Real max_sigma = MaxMagnetization();
     if (m_injection_tuning_interval.contains(step+1) ) {
         // Sigma0 before modification
         amrex::Real m_Sigma0_pre = m_Sigma0_threshold;
@@ -1475,6 +1476,10 @@ Pulsar::TuneSigma0Threshold (const int step)
         if (new_sigma0_threshold > m_max_Sigma0) new_sigma0_threshold = m_max_Sigma0;
         // Store modified new sigma0 in member variable, m_Sigma0_threshold
         amrex::Print() << " old sigma " << m_Sigma0_threshold << " new : " << new_sigma0_threshold << "\n";
+        if (total_injection_cells <= 0.1 * ParticlesToBeInjected) {
+            new_sigma0_threshold = 0.99*max_sigma*(14000/12000)*(14000/12000)*(14000/12000);
+            amrex::Print() << " injec cell is " << total_injection_cells << " <= 0.1*TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+        }
         if (m_use_Sigma0_avg == 1) {
             amrex::Real sigma_avg = (new_sigma0_threshold + m_Sigma0_threshold)/2._rt;
             m_Sigma0_threshold = sigma_avg;
@@ -1483,7 +1488,6 @@ Pulsar::TuneSigma0Threshold (const int step)
         }
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
     }
-    amrex::Real max_sigma = MaxMagnetization();
     amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << total_injected_cells << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<<" " << max_sigma << "\n";
 }
 
