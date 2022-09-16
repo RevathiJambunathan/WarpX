@@ -1244,7 +1244,6 @@ Pulsar::ComputePlasmaNumberDensity ()
                     density(i,j,k,n) *= inv_vol;
             });
         }
-        amrex::Gpu::synchronize();
     } // loop over levels
 }
 
@@ -1346,7 +1345,6 @@ Pulsar::TuneSigma0Threshold (const int step)
         amrex::ParallelDescriptor::ReduceRealSum(ws_total);
         total_weight_allspecies += ws_total;
     }
-    amrex::Gpu::synchronize();
     // injection rate is sum of particle weight over all species per timestep
     amrex::Real current_injection_rate = total_weight_allspecies / dt;
     if (TotalParticlesIsSumOfSpecies == 0) {
