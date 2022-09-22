@@ -1222,7 +1222,6 @@ Pulsar::ComputePlasmaNumberDensity ()
                         // instead managing setVal(0.) before ParticleToMesh
             );
         }
-        amrex::Gpu::synchronize();
 
         const amrex::Geometry& geom = warpx.Geom(lev);
         const auto dx = geom.CellSizeArray();
