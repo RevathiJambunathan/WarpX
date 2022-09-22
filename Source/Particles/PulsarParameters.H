@@ -50,6 +50,7 @@ public:
     void FlagCellsForInjectionWithPcounts ();
     amrex::Real MaxMagnetization ();
     amrex::Real MaxThresholdSigma();
+    amrex::Real LeastSquareFitforTC ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -638,6 +639,7 @@ public:
     static amrex::Real m_particle_scale_fac;
     static int m_use_Sigma0_avg;
     static amrex::Real m_particle_weight_scaling;
+    static int m_use_LstSqFit_TC;
 private:
 };
 
