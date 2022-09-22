@@ -1763,7 +1763,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
         amrex::ParallelFor(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-            sigma_threshold_loc(i,j,k) = 0.;
+                sigma_threshold_loc(i,j,k) = 0.;
                 // cell-centered position based on index type
                 amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
                 amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
