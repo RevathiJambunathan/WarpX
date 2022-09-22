@@ -108,6 +108,7 @@ amrex::Real Pulsar::m_InjCell_sum = 0.;
 amrex::Real Pulsar::m_particle_wt;
 amrex::Real Pulsar::m_particle_scale_fac;
 int Pulsar::m_use_Sigma0_avg = 1;
+int Pulsar::m_use_LstSqFit_TC;
 
 
 Pulsar::Pulsar ()
@@ -294,6 +295,7 @@ Pulsar::ReadParameters () {
     pp.query("InjCell_avg_window_size",m_InjCell_avg_window_size);
     // to average Sigma0_threshold new and old
     pp.query("use_Sigma0_avg", m_use_Sigma0_avg);
+    pp.get("use_LstSqFit_TC",m_use_LstSqFit_TC);
 }
 
 
@@ -1374,7 +1376,12 @@ Pulsar::TuneSigma0Threshold (const int step)
         InjCell_list.push_back(total_injection_cells);
         m_InjCell_sum += total_injection_cells;
     }
-    amrex::Real avg_InjCells = m_InjCell_sum/(InjCell_list_size * 1._rt);
+    amrex::Real avg_InjCells = 0;
+    if (m_use_LstSqFit_TC == 1) {
+        avg_InjCells = LeastSquareFitforTC();
+    } else {
+        avg_InjCells = m_InjCell_sum/(InjCell_list_size * 1._rt);
+    }
     amrex::Print() << " curent TC= " << total_injection_cells << " list size : " << InjCell_list_size << " sum : " << m_InjCell_sum << " avg_inj cells : " << avg_InjCells << "\n";
     //particles to be injected
     auto& pc = warpx.GetPartContainer().GetParticleContainer(0);
@@ -1490,6 +1497,41 @@ Pulsar::TuneSigma0Threshold (const int step)
     }
     amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << total_injected_cells << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<<" " << max_sigma << "\n";
 }
+
+amrex::Real
+Pulsar::LeastSquareFitforTC ()
+{
+    auto& warpx = WarpX::GetInstance();
+    amrex::Real dt = warpx.getdt(0);
+    amrex::Real cur_time = warpx.gett_new(0);
+    int sample_size = InjCell_list.size();
+    if (InjCell_list_size > m_InjCell_avg_window_size) {
+        amrex::Real p11 = 0.0;
+        amrex::Real p12 = 0.0;
+        amrex::Real p21 = 0.0;
+        amrex::Real p22 = sample_size;
+        amrex::Real q11 = 0.0;
+        amrex::Real q21 = 0.0;
+        for (int i = 0; i < sample_size; ++i) {
+            amrex::Real ti = cur_time - i * dt;
+            p11 += ti * ti;
+            p12 += ti;
+            p21 = p12;
+            //std::list<amrex::Real>::iterator it = InjCell_list.begin();
+            //std::advance(it, sample_size - 1 - i);
+            amrex::Real TC_at_ti = *(std::next(InjCell_list.begin(), sample_size - 1 - i) );
+            q11 += ti * TC_at_ti;
+            q21 += TC_at_ti;
+        }
+        amrex::Real b = ( q11 - (p11/p21) * q21 ) / ( p12 - (p11/p21) * p22 );
+        amrex::Real a = ( q21 - p22*b ) / p21;
+        return (a * cur_time + b);
+    } else {
+        return *std::next(InjCell_list.begin(), InjCell_list_size-1);
+    }
+    return 0.;
+}
+
 
 int
 Pulsar::TotalParticlesToBeInjected (amrex::Real scale_factor)
