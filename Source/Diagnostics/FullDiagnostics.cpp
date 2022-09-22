@@ -739,6 +739,11 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
             m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(
                                               warpx.getPulsar().get_pointer_injection_ring(lev),
                                               lev, m_crse_ratio);
+        } else if (m_varnames[comp] == "Sigma0threshold") {
+            m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(
+                                              warpx.getPulsar().get_pointer_sigma_threshold(lev),
+                                              lev, m_crse_ratio);
+
 #endif
         }
         else {

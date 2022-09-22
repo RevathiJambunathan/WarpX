@@ -1065,12 +1065,12 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 //                    // instead of modiying number of particles, the weight is changed
 //                    if (EnforceParticleInjection == 1) {
 //                        pcounts[index] = modified_num_ppc;
-//			if (modified_num_ppc == 0) {
+//            if (modified_num_ppc == 0) {
 //                            if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff) {
 //                                pcounts[index] = 1;
 //                                injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
 //                            }
-//			} else {
+//            } else {
 //                            amrex::Real particle_fraction = ( TotalParticlesToBeInjected * 1._rt
 //                                                            / TotalInjectionCells
 //                                                            ) - modified_num_ppc;
@@ -1092,7 +1092,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 //                    if (EnforceParticleInjection == 1) {
 //                        if (WeightedParticleInjection == 0) {
 //                            pcounts[index] = modified_num_ppc;
-//			    if (modified_num_ppc == 0) {
+//                if (modified_num_ppc == 0) {
 //                                if ( ((mag(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) - Sigma_threshold ) / Sigma_threshold)  > injection_sigma_reldiff)
 //                                {
 //                                    amrex::Real r1 = amrex::Random(engine);
@@ -1101,7 +1101,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 //                                        injected_cell(lo_tile_index[0] + i, lo_tile_index[1] + j, lo_tile_index[2] + k) = 1;
 //                                    }
 //                                }
-//			    } else {
+//                } else {
 //                                amrex::Real particle_fraction = ( TotalParticlesToBeInjected * 1._rt
 //                                                                / TotalInjectionCells
 //                                                                ) - modified_num_ppc;

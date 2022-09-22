@@ -108,6 +108,7 @@ amrex::Real Pulsar::m_InjCell_sum = 0.;
 amrex::Real Pulsar::m_particle_wt;
 amrex::Real Pulsar::m_particle_scale_fac;
 int Pulsar::m_use_Sigma0_avg = 1;
+amrex::Real Pulsar::m_particle_weight_scaling = 1;
 int Pulsar::m_use_LstSqFit_TC;
 
 
@@ -295,6 +296,7 @@ Pulsar::ReadParameters () {
     pp.query("InjCell_avg_window_size",m_InjCell_avg_window_size);
     // to average Sigma0_threshold new and old
     pp.query("use_Sigma0_avg", m_use_Sigma0_avg);
+    pp.query("particle_weight_scaling",m_particle_weight_scaling);
     pp.get("use_LstSqFit_TC",m_use_LstSqFit_TC);
 }
 
@@ -314,6 +316,7 @@ Pulsar::InitDataAtRestart ()
     m_pcount.resize(nlevs_max);
     m_injection_ring.resize(nlevs_max);
     m_sigma_inj_ring.resize(nlevs_max);
+    m_sigma_threshold.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -343,6 +346,8 @@ Pulsar::InitDataAtRestart ()
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
+        m_sigma_threshold[lev] = std::make_unique<amrex::MultiFab>(
+                    ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -354,6 +359,7 @@ Pulsar::InitDataAtRestart ()
         m_pcount[lev]->setVal(0._rt);
         m_injection_ring[lev]->setVal(0._rt);
         m_sigma_inj_ring[lev]->setVal(0._rt);
+    m_sigma_threshold[lev]->setVal(0._rt);
     }
 
     if (m_do_conductor == true) {
@@ -387,6 +393,7 @@ Pulsar::InitData ()
     m_pcount.resize(nlevs_max);
     m_injection_ring.resize(nlevs_max);
     m_sigma_inj_ring.resize(nlevs_max);
+    m_sigma_threshold.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
     std::vector<std::string> species_names;
     pp_particles.queryarr("species_names", species_names);
@@ -416,6 +423,8 @@ Pulsar::InitData ()
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
+        m_sigma_threshold[lev] = std::make_unique<amrex::MultiFab>(
+                    ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -427,6 +436,7 @@ Pulsar::InitData ()
         m_pcount[lev]->setVal(0._rt);
         m_injection_ring[lev]->setVal(0._rt);
         m_sigma_inj_ring[lev]->setVal(0._rt);
+    m_sigma_threshold[lev]->setVal(0._rt);
     }
 
 
@@ -1215,7 +1225,6 @@ Pulsar::ComputePlasmaNumberDensity ()
             );
         }
 
-
         const amrex::Geometry& geom = warpx.Geom(lev);
         const auto dx = geom.CellSizeArray();
 #if defined WARPX_DIM_3D
@@ -1263,7 +1272,6 @@ Pulsar::ComputePlasmaMagnetization ()
             amrex::Array4<const amrex::Real> const& Bx = Bx_mf[mfi].array();
             amrex::Array4<const amrex::Real> const& By = By_mf[mfi].array();
             amrex::Array4<const amrex::Real> const& Bz = Bz_mf[mfi].array();
-            amrex::Array4<const amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
 
             amrex::ParallelFor(bx,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -1390,7 +1398,7 @@ Pulsar::TuneSigma0Threshold (const int step)
     amrex::Print() << " num ppc : " << num_ppc << "\n";
     const int lev = 0;
     const auto dx_lev = warpx.Geom(lev).CellSizeArray();
-    amrex::Real scale_factor = dx_lev[0] * dx_lev[1] * dx_lev[2] / num_ppc;
+    amrex::Real scale_factor = dx_lev[0] * dx_lev[1] * dx_lev[2] / num_ppc * m_particle_weight_scaling;
     int ParticlesToBeInjected = TotalParticlesToBeInjected(scale_factor);
     amrex::Print() << " TP " << ParticlesToBeInjected << " current TC : " << total_injection_cells<< "\n";
 
@@ -1483,10 +1491,10 @@ Pulsar::TuneSigma0Threshold (const int step)
         if (new_sigma0_threshold > m_max_Sigma0) new_sigma0_threshold = m_max_Sigma0;
         // Store modified new sigma0 in member variable, m_Sigma0_threshold
         amrex::Print() << " old sigma " << m_Sigma0_threshold << " new : " << new_sigma0_threshold << "\n";
-        if (total_injection_cells <= 0.1 * ParticlesToBeInjected) {
-            new_sigma0_threshold = 0.99*max_sigma*(14000/12000)*(14000/12000)*(14000/12000);
-            amrex::Print() << " injec cell is " << total_injection_cells << " <= 0.1*TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
-        }
+//        if (total_injection_cells <= 0.1 * ParticlesToBeInjected) {i
+//            new_sigma0_threshold = 0.99*max_sigma*(14000/12000)*(14000/12000)*(14000/12000);
+//            amrex::Print() << " injec cell is " << total_injection_cells << " <= 0.1*TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+//        }
         if (m_use_Sigma0_avg == 1) {
             amrex::Real sigma_avg = (new_sigma0_threshold + m_Sigma0_threshold)/2._rt;
             m_Sigma0_threshold = sigma_avg;
@@ -1495,7 +1503,21 @@ Pulsar::TuneSigma0Threshold (const int step)
         }
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
     }
-    amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << total_injected_cells << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<<" " << max_sigma << "\n";
+    amrex::Real max_sigma_threshold = MaxThresholdSigma();
+    amrex::Real theta = 0.0;
+    amrex::Real c_theta = std::cos(theta);
+    amrex::Real s_theta = std::sin(theta);
+    amrex::Real c_chi = std::cos(m_Chi);
+    amrex::Real s_chi = std::sin(m_Chi);
+    amrex::Real omega = Omega(m_omega_star, warpx.gett_new(0), m_omega_ramp_time);
+    amrex::Real phi = 0.;
+    amrex::Real psi = phi - omega*warpx.gett_new(0);
+    amrex::Real c_psi = std::cos(psi);
+    amrex::Real s_psi = std::sin(psi);
+    amrex::Real Brp = 2. * m_B_star * (c_chi * c_theta + s_chi * s_theta * c_psi);
+    amrex::Real Btp = m_B_star * (c_chi * s_theta - s_chi * c_theta * c_psi);
+    amrex::Real Bphip = m_B_star * s_chi * s_psi;
+    amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << total_injected_cells << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< " "<< psi << " " << Brp << " " << Btp << " " << Bphip << " " << max_sigma << " "<< max_sigma_threshold <<"\n";
 }
 
 amrex::Real
@@ -1587,6 +1609,12 @@ amrex::Real
 Pulsar::MaxMagnetization ()
 {
     return m_sigma_inj_ring[0]->max(0);
+}
+
+amrex::Real
+Pulsar::MaxThresholdSigma()
+{
+    return m_sigma_threshold[0]->max(0);
 }
 
 void
@@ -1755,7 +1783,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     auto& phys_pc = dynamic_cast<PhysicalParticleContainer&>(pc);
     amrex::Real num_ppc = phys_pc.getPlasmaInjector()->num_particles_per_cell;
     amrex::Print() << " num ppc : " << num_ppc << "\n";
-    amrex::Real scale_factor = dx_lev[0] * dx_lev[1] * dx_lev[2] / num_ppc;
+    amrex::Real scale_factor = dx_lev[0] * dx_lev[1] * dx_lev[2] / num_ppc * m_particle_weight_scaling;
     m_particle_scale_fac = scale_factor;
     int ParticlesToBeInjected = TotalParticlesToBeInjected(scale_factor);
     amrex::Print() << " particles to be injected " << ParticlesToBeInjected <<"\n";
@@ -1764,6 +1792,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     m_injected_cell[lev]->setVal(0);
     m_sigma_inj_ring[lev]->setVal(0);
     m_injection_ring[lev]->setVal(0);
+    m_pcount[lev]->setVal(0);
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         //InitializeGhost Cells also
@@ -1773,8 +1802,10 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Array4<amrex::Real> const& sigma = m_magnetization[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
         amrex::ParallelFor(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                sigma_threshold_loc(i,j,k) = 0.;
                 // cell-centered position based on index type
                 amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
                 amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
@@ -1799,6 +1830,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     if (modify_Sigma0_threshold == 1) {
                         Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
                     }
+                sigma_threshold_loc(i,j,k) = Sigma_threshold;
                     // flag cells with sigma > sigma0_threshold
                     if (sigma(i,j,k) > Sigma_threshold ) {
                         injection_flag(i,j,k) = 1;
