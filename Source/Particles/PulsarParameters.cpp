@@ -1224,7 +1224,6 @@ Pulsar::ComputePlasmaNumberDensity ()
                         // instead managing setVal(0.) before ParticleToMesh
             );
         }
-        amrex::Gpu::synchronize();
 
         const amrex::Geometry& geom = warpx.Geom(lev);
         const auto dx = geom.CellSizeArray();
@@ -1803,10 +1802,10 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Array4<amrex::Real> const& sigma = m_magnetization[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
-    amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
         amrex::ParallelFor(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-            sigma_threshold_loc(i,j,k) = 0.;
+                sigma_threshold_loc(i,j,k) = 0.;
                 // cell-centered position based on index type
                 amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
                 amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
@@ -1831,7 +1830,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     if (modify_Sigma0_threshold == 1) {
                         Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
                     }
-            sigma_threshold_loc(i,j,k) = Sigma_threshold;
+                sigma_threshold_loc(i,j,k) = Sigma_threshold;
                     // flag cells with sigma > sigma0_threshold
                     if (sigma(i,j,k) > Sigma_threshold ) {
                         injection_flag(i,j,k) = 1;
