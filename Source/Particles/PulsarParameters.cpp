@@ -1788,7 +1788,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     if (modify_Sigma0_threshold == 1) {
                         Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
                     }
-            sigma_threshold_loc(i,j,k) = Sigma_threshold;
+                sigma_threshold_loc(i,j,k) = Sigma_threshold;
                     // flag cells with sigma > sigma0_threshold
                     if (sigma(i,j,k) > Sigma_threshold ) {
                         injection_flag(i,j,k) = 1;
