@@ -640,6 +640,10 @@ public:
     static int m_use_Sigma0_avg;
     static amrex::Real m_particle_weight_scaling;
     static int m_use_LstSqFit_TC;
+    static int m_use_maxsigma_for_Sigma0;
+    static amrex::Real m_min_TCTP_ratio;
+    static amrex::Real m_maxsigma_fraction;
+    static amrex::Real m_injRing_radius;
 private:
 };
 
