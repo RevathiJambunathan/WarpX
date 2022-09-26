@@ -1515,7 +1515,7 @@ Pulsar::TuneSigma0Threshold (const int step)
         if (m_use_maxsigma_for_Sigma0 == 1) {
             amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
             amrex::Real new_sigma0_threshold = m_maxsigma_fraction * max_sigma * r_rstar_fac * r_rstar_fac * r_rstar_fac;
-            amrex::Print() << " injec cell is " << total_injection_cells << " <= " << m_minTCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+            amrex::Print() << " injec cell is " << total_injection_cells << " <= " << m_min_TCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
             m_Sigma0_threshold = new_sigma0_threshold;
         }
     }
