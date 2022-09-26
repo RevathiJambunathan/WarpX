@@ -110,6 +110,10 @@ amrex::Real Pulsar::m_particle_scale_fac;
 int Pulsar::m_use_Sigma0_avg = 1;
 amrex::Real Pulsar::m_particle_weight_scaling = 1;
 int Pulsar::m_use_LstSqFit_TC;
+int Pulsar::m_use_maxsigma_for_Sigma0 = 0;
+amrex::Real Pulsar::m_min_TCTP_ratio;
+amrex::Real Pulsar::m_maxsigma_fraction = 1;
+amrex::Real Pulsar::m_injRing_radius;
 
 
 Pulsar::Pulsar ()
@@ -298,6 +302,10 @@ Pulsar::ReadParameters () {
     pp.query("use_Sigma0_avg", m_use_Sigma0_avg);
     pp.query("particle_weight_scaling",m_particle_weight_scaling);
     pp.get("use_LstSqFit_TC",m_use_LstSqFit_TC);
+    pp.get("use_maxsigma_for_Sigm0_ifTC0",m_use_maxsigma_for_Sigma0);
+    pp.get("min_TCTP_ratio",m_min_TCTP_ratio);
+    pp.get("maxsigma_fraction", m_maxsigma_fraction);
+    pp.get("injRing_radius", m_injRing_radius);
 }
 
 
@@ -1503,6 +1511,18 @@ Pulsar::TuneSigma0Threshold (const int step)
         }
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
     }
+int Pulsar::m_use_maxsigma_for_Sigma0 = 0;
+amrex::Real Pulsar::m_min_TCTP_ratio;
+amrex::Real Pulsar::m_maxsigma_fraction = 1;
+amrex::Real Pulsar::m_injRing_radius;
+    if (total_injection_cells <= m_min_TCTP_ratio * ParticlesToBeInjected) {
+        if (m_use_maxsigma_for_Sigma0 == 1) {
+            amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
+            amrex::Real new_sigma0_threshold = m_maxsigma_fraction * max_sigma * r_rstar_fac * r_rstar_fac * r_rstar_fac;
+            amrex::Print() << " injec cell is " << total_injection_cells << " <= " << m_minTCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+            m_Sigma0_threshold = new_sigma0_threshold;
+        }
+    }
     amrex::Real max_sigma_threshold = MaxThresholdSigma();
     amrex::Real theta = 0.0;
     amrex::Real c_theta = std::cos(theta);
@@ -1527,7 +1547,9 @@ Pulsar::LeastSquareFitforTC ()
     amrex::Real dt = warpx.getdt(0);
     amrex::Real cur_time = warpx.gett_new(0);
     int sample_size = InjCell_list.size();
-    if (InjCell_list_size > m_InjCell_avg_window_size) {
+    if (InjCell_list_size < m_InjCell_avg_window_size) {
+        return *std::next(InjCell_list.begin(), InjCell_list_size-1);
+    } else {
         amrex::Real p11 = 0.0;
         amrex::Real p12 = 0.0;
         amrex::Real p21 = 0.0;
@@ -1539,8 +1561,6 @@ Pulsar::LeastSquareFitforTC ()
             p11 += ti * ti;
             p12 += ti;
             p21 = p12;
-            //std::list<amrex::Real>::iterator it = InjCell_list.begin();
-            //std::advance(it, sample_size - 1 - i);
             amrex::Real TC_at_ti = *(std::next(InjCell_list.begin(), sample_size - 1 - i) );
             q11 += ti * TC_at_ti;
             q21 += TC_at_ti;
@@ -1548,8 +1568,6 @@ Pulsar::LeastSquareFitforTC ()
         amrex::Real b = ( q11 - (p11/p21) * q21 ) / ( p12 - (p11/p21) * p22 );
         amrex::Real a = ( q21 - p22*b ) / p21;
         return (a * cur_time + b);
-    } else {
-        return *std::next(InjCell_list.begin(), InjCell_list_size-1);
     }
     return 0.;
 }
@@ -1830,7 +1848,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     if (modify_Sigma0_threshold == 1) {
                         Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
                     }
-                sigma_threshold_loc(i,j,k) = Sigma_threshold;
+                    sigma_threshold_loc(i,j,k) = Sigma_threshold;
                     // flag cells with sigma > sigma0_threshold
                     if (sigma(i,j,k) > Sigma_threshold ) {
                         injection_flag(i,j,k) = 1;
