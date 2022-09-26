@@ -1511,10 +1511,6 @@ Pulsar::TuneSigma0Threshold (const int step)
         }
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
     }
-int Pulsar::m_use_maxsigma_for_Sigma0 = 0;
-amrex::Real Pulsar::m_min_TCTP_ratio;
-amrex::Real Pulsar::m_maxsigma_fraction = 1;
-amrex::Real Pulsar::m_injRing_radius;
     if (total_injection_cells <= m_min_TCTP_ratio * ParticlesToBeInjected) {
         if (m_use_maxsigma_for_Sigma0 == 1) {
             amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
