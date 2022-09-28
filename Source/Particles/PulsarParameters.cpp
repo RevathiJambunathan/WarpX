@@ -1295,7 +1295,6 @@ Pulsar::ComputePlasmaMagnetization ()
             amrex::Array4<const amrex::Real> const& Bz = Bz_mf[mfi].array();
             amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
             int offset_index = num_cells;
-            amrex::Print() << " offset index: " << offset_index << "\n";
             num_cells += bx.numPts();
             amrex::ParallelFor(bx,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k)
@@ -1977,7 +1976,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     m_injection_flag[lev]->setVal(0);
     m_injected_cell[lev]->setVal(0);
     m_sigma_inj_ring[lev]->setVal(0);
-    m_injection_ring[lev]->setVal(0);
     m_pcount[lev]->setVal(0);
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -2016,7 +2014,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     }
                     sigma_threshold_loc(i,j,k) = Sigma_threshold;
                     // flag cells with sigma > sigma0_threshold
-                    if (sigma(i,j,k) > Sigma_threshold ) {
+                    if ( (sigma(i,j,k) > Sigma_threshold) and (Sigma_threshold>0)) {
                         injection_flag(i,j,k) = 1;
                     }
                 }
