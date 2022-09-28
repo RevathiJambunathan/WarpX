@@ -51,6 +51,7 @@ public:
     amrex::Real MaxMagnetization ();
     amrex::Real MaxThresholdSigma();
     amrex::Real LeastSquareFitforTC ();
+    void FlagInjectionRing ();
 
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -665,6 +666,13 @@ public:
     static amrex::Real m_min_TCTP_ratio;
     static amrex::Real m_maxsigma_fraction;
     static amrex::Real m_injRing_radius;
+    static int m_totalcells_injection_ring;
+    amrex::Gpu::DeviceVector<int> m_inj_ring_offset_vec;
+    amrex::Gpu::DeviceVector<amrex::Real> m_sigmaloc_vec;
+    amrex::Gpu::DeviceVector<amrex::Real> m_sigmaloc_allproc;
+    amrex::Vector<int> m_vecsize_allprocs;
+    amrex::Vector<int> m_offset_allprocs;
+
 private:
 };
 
