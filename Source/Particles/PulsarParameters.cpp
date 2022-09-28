@@ -1910,7 +1910,6 @@ Pulsar::FlagInjectionRing ()
                 amrex::IntVect ijk(AMREX_D_DECL(i,j,k));
                 auto index = tb.index(ijk);
                 injring_vec[index + offset_index] = inj_ring(i,j,k);
-                amrex::Print() << " i " << i << " j " << j << " k " << k << " ijk " << ijk << " indx " << index << " offset index : " << offset_index << " final injdex " << offset_index + index << "\n";
             }
         );
     }
