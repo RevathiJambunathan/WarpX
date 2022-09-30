@@ -2009,9 +2009,9 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                                                + (z-xc[2]) * (z-xc[2]));
                     sigma_inj_ring(i, j, k) = sigma(i, j, k);
                     amrex::Real Sigma_threshold = Sigma0_threshold;
-                    if (modify_Sigma0_threshold == 1) {
-                        Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
-                    }
+//                    if (modify_Sigma0_threshold == 1) {
+//                        Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+//                    }
                     sigma_threshold_loc(i,j,k) = Sigma_threshold;
                     // flag cells with sigma > sigma0_threshold
                     if ( (sigma(i,j,k) > Sigma_threshold) and (Sigma_threshold>0)) {
