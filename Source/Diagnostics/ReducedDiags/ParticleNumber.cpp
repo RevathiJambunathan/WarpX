@@ -92,6 +92,14 @@ void ParticleNumber::ComputeDiags (int step)
     // get MultiParticleContainer class object
     const auto & mypc = WarpX::GetInstance().GetPartContainer();
 
+#ifdef PULSAR
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
+    for (int i = 0; i < AMREX_SPACEDIM; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    amrex::Real r_surface = Pulsar::m_corotatingE_maxradius;
+#endif
+
     // get number of species (int)
     const auto nSpecies = mypc.nSpecies();
 
@@ -123,7 +131,21 @@ void ParticleNumber::ComputeDiags (int step)
         auto Wtot = ReduceSum( myspc,
         [=] AMREX_GPU_HOST_DEVICE (const PType& p) -> amrex::Real
         {
+#ifdef PULSAR
+            amrex::ParticleReal x = p.pos(0);
+            amrex::ParticleReal y = p.pos(1);
+            amrex::ParticleReal z = p.pos(2);
+            amrex::ParticleReal rp = std::sqrt((x-center_star_arr[0])*(x-center_star_arr[0])
+                                             + (y-center_star_arr[1])*(y-center_star_arr[1])
+                                             + (z-center_star_arr[2])*(z-center_star_arr[2]) );
+            if (rp > r_surface) {
+                return {p.rdata(PIdx::w)};
+            } else {
+                return {0.};
+            }
+#else
             return p.rdata(PIdx::w);
+#endif
         });
 
         // MPI reduction

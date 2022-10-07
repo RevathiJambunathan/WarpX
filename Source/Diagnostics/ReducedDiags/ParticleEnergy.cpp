@@ -103,6 +103,13 @@ void ParticleEnergy::ComputeDiags (int step)
     int offset_total_species, offset_mean_species, offset_mean_all;
 
     amrex::Real Wtot = 0.0_rt;
+#ifdef PULSAR
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
+    for (int i = 0; i < AMREX_SPACEDIM; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    amrex::Real r_surface = Pulsar::m_corotatingE_maxradius;
+#endif
 
     // Loop over species
     for (int i_s = 0; i_s < nSpecies; ++i_s)
@@ -149,8 +156,21 @@ void ParticleEnergy::ComputeDiags (int step)
                     const amrex::Real ux = p.rdata(PIdx::ux);
                     const amrex::Real uy = p.rdata(PIdx::uy);
                     const amrex::Real uz = p.rdata(PIdx::uz);
-
+#ifdef PULSAR
+                    amrex::ParticleReal x = p.pos(0);
+                    amrex::ParticleReal y = p.pos(1);
+                    amrex::ParticleReal z = p.pos(2);
+                    amrex::ParticleReal rp = std::sqrt((x-center_star_arr[0])*(x-center_star_arr[0])
+                                                     + (y-center_star_arr[1])*(y-center_star_arr[1])
+                                                     + (z-center_star_arr[2])*(z-center_star_arr[2]) );
+                    if (rp > r_surface) {
+                        return {w*Algorithms::KineticEnergy(ux,uy,uz,m), w};
+                    } else {
+                        return {0., 0.};
+                    }
+#else
                     return {w*Algorithms::KineticEnergy(ux,uy,uz,m), w};
+#endif
                 },
                 reduce_ops);
 
