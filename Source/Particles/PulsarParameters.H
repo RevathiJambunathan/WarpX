@@ -84,7 +84,14 @@ public:
         amrex::Real s_chi = std::sin(chi);
         // Instantaneous phase, psi = phi - Omega*t (phi is the azimuthal angle)
         // Refer to Pg. 6 of Jeromi Petri's 2016 paper
-        amrex::Real psi = phi - omega*time;
+        amrex::Real omega_t_integral;
+        if (time < ramp_omega_time_data) {
+            // omega returned from function above is Omega_star * t / tramp
+            omega_t_integral = omega * time / 2.;
+        } else {
+            omega_t_integral = omega*(time - ramp_omega_time_data) + omega*ramp_omega_time_data/2.0;
+        }
+        amrex::Real psi = phi - omega_t_integral;
         amrex::Real c_psi = std::cos(psi);
         // Ratio : Rstar/r
         amrex::Real r_ratio;
@@ -127,7 +134,14 @@ public:
         amrex::Real s_chi = std::sin(chi);
         // Instantaneous phase, psi = phi - Omega*t (phi is the azimuthal angle)
         // Refer to Pg. 6 of Jeromi Petri's 2016 paper
-        amrex::Real psi = phi - omega*time;
+        amrex::Real omega_t_integral;
+        if (time < ramp_omega_time_data) {
+            // omega returned from function above is Omega_star * t / tramp
+            omega_t_integral = omega * time / 2.;
+        } else {
+            omega_t_integral = omega*(time - ramp_omega_time_data) + omega*ramp_omega_time_data/2.0;
+        }
+        amrex::Real psi = phi - omega_t_integral;
         amrex::Real c_psi = std::cos(psi);
         amrex::Real s_psi = std::sin(psi);
 
@@ -206,7 +220,14 @@ public:
         // Instantaneous phase, psi = phi - Omega*t (phi is the azimuthal angle)
         // Refer to Pg. 6 of Jeromi Petri's 2016 paper
         amrex::Real omega = Omega(omega_star_data, time, ramp_omega_time_data);
-        amrex::Real psi = phi - omega*time;
+        amrex::Real omega_t_integral;
+        if (time < ramp_omega_time_data) {
+            // omega returned from function above is Omega_star * t / tramp
+            omega_t_integral = omega * time / 2.;
+        } else {
+            omega_t_integral = omega*(time - ramp_omega_time_data) + omega*ramp_omega_time_data/2.0;
+        }
+        amrex::Real psi = phi - omega_t_integral;
         amrex::Real c_psi = std::cos(psi);
         amrex::Real s_psi = std::sin(psi);
 

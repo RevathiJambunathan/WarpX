@@ -1527,7 +1527,14 @@ Pulsar::TuneSigma0Threshold (const int step)
     amrex::Real s_chi = std::sin(m_Chi);
     amrex::Real omega = Omega(m_omega_star, warpx.gett_new(0), m_omega_ramp_time);
     amrex::Real phi = 0.;
-    amrex::Real psi = phi - omega*warpx.gett_new(0);
+    amrex::Real omega_t_integral;
+    if (warpx.gett_new(0) < m_omega_ramp_time) {
+        // omega returned from function above is Omega_star * t / tramp
+        omega_t_integral = omega * warpx.gett_new(0) / 2.;
+    } else {
+        omega_t_integral = omega*(warpx.gett_new(0) - m_omega_ramp_time) + omega*m_omega_ramp_time/2.0;
+    }
+    amrex::Real psi = phi - omega_t_integral;
     amrex::Real c_psi = std::cos(psi);
     amrex::Real s_psi = std::sin(psi);
     amrex::Real Brp = 2. * m_B_star * (c_chi * c_theta + s_chi * s_theta * c_psi);
