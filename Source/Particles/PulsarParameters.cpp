@@ -444,7 +444,7 @@ Pulsar::InitData ()
         m_pcount[lev]->setVal(0._rt);
         m_injection_ring[lev]->setVal(0._rt);
         m_sigma_inj_ring[lev]->setVal(0._rt);
-    m_sigma_threshold[lev]->setVal(0._rt);
+        m_sigma_threshold[lev]->setVal(0._rt);
     }
 
 
@@ -1866,9 +1866,70 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Print() << " total inj cells : " << TotalInjectionCells << "\n";
 
     int num_ppc_modified = 0;
-    if (TotalInjectionCells > 0) {
-        num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);
+    if (TotalInjectionCells < 1) {
+        if (m_use_maxsigma_for_Sigma0 == 1) {
+            amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
+            amrex::Real max_sigma = MaxMagnetization();
+            amrex::Real new_sigma0_threshold = m_maxsigma_fraction * max_sigma * r_rstar_fac * r_rstar_fac * r_rstar_fac;
+            amrex::Print() << " injec cell is 0 at pcount! " << TotalInjectionCells << " <= " << m_min_TCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+            m_Sigma0_threshold = new_sigma0_threshold;
+            amrex::Real Sigma0_threshold = m_Sigma0_threshold;
+            m_injection_flag[lev]->setVal(0);
+            m_injected_cell[lev]->setVal(0);
+            m_sigma_inj_ring[lev]->setVal(0);
+            m_injection_ring[lev]->setVal(0);
+            m_pcount[lev]->setVal(0);
+            for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+            {
+                //InitializeGhost Cells also
+                const amrex::Box& tb = mfi.tilebox(iv);
+                amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
+                amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
+                amrex::Array4<amrex::Real> const& sigma = m_magnetization[lev]->array(mfi);
+                amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
+                amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
+                amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
+                amrex::ParallelFor(tb,
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                        sigma_threshold_loc(i,j,k) = 0.;
+                        // cell-centered position based on index type
+                        amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                        amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+#if (AMREX_SPACEDIM==2)
+                        amrex::Real y = 0._rt;
+                        amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                        amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+#else
+                        amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                        amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                        amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                        amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+#endif
+                        amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
+                                                   + (y-xc[1]) * (y-xc[1])
+                                                   + (z-xc[2]) * (z-xc[2]));
+
+                        if ( (rad >= pulsar_particle_inject_rmin) and (rad <= pulsar_particle_inject_rmax) ){
+                            inj_ring(i,j,k) = 1;
+                            sigma_inj_ring(i, j, k) = sigma(i, j, k);
+                            amrex::Real Sigma_threshold = Sigma0_threshold;
+                            if (modify_Sigma0_threshold == 1) {
+                                Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                            }
+                            sigma_threshold_loc(i,j,k) = Sigma_threshold;
+                            // flag cells with sigma > sigma0_threshold
+                            if (sigma(i,j,k) > Sigma_threshold ) {
+                                injection_flag(i,j,k) = 1;
+                            }
+                        }
+                    }
+                );
+            }
+        TotalInjectionCells = SumInjectionFlag();
+        amrex::Print() << " redefined sigma to get total inj cells : " << TotalInjectionCells << "\n";
+        }
     }
+    num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);
     amrex::Print() << " particle to be inj " << ParticlesToBeInjected << "\n";
     amrex::Real num_ppc_modified_real = 0.;
     if (TotalInjectionCells > 0) {
