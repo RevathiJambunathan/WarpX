@@ -59,6 +59,7 @@
 #include <AMReX_Random.H>
 #include <AMReX_TinyProfiler.H>
 #include <AMReX_Utility.H>
+#include <cuda.h>
 
 
 #ifdef AMREX_USE_OMP
@@ -436,6 +437,7 @@ WarpXParticleContainer::DepositCurrent (WarpXParIter& pti,
     }
 
     WARPX_PROFILE_VAR_START(blp_deposit);
+    nvtxRangePush("deposit");
     amrex::LayoutData<amrex::Real> * const costs = WarpX::getCosts(lev);
     amrex::Real * const cost = costs ? &((*costs)[pti.index()]) : nullptr;
 
@@ -516,6 +518,7 @@ WarpXParticleContainer::DepositCurrent (WarpXParIter& pti,
                 WarpX::load_balance_costs_update_algo);
         }
     }
+    nvtxRangePop();
     WARPX_PROFILE_VAR_STOP(blp_deposit);
 
 #ifndef AMREX_USE_GPU
