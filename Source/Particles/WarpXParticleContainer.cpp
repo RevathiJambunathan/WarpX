@@ -438,7 +438,7 @@ WarpXParticleContainer::DepositCurrent (WarpXParIter& pti,
     WARPX_PROFILE_VAR_START(blp_deposit);
     amrex::LayoutData<amrex::Real> * const costs = WarpX::getCosts(lev);
     amrex::Real * const cost = costs ? &((*costs)[pti.index()]) : nullptr;
-
+    nvtxRangePush("deposit")
     if (WarpX::current_deposition_algo == CurrentDepositionAlgo::Esirkepov) {
         if (WarpX::nox == 1){
             doEsirkepovDepositionShapeN<1>(
@@ -516,6 +516,7 @@ WarpXParticleContainer::DepositCurrent (WarpXParIter& pti,
                 WarpX::load_balance_costs_update_algo);
         }
     }
+    nvtxRangePop()
     WARPX_PROFILE_VAR_STOP(blp_deposit);
 
 #ifndef AMREX_USE_GPU
