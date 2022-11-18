@@ -160,7 +160,7 @@ Pulsar::ReadParameters () {
                             * std::cos(m_Chi)
                           ) / PhysConst::q_e;
     // the factor of 2 is because B at pole = 2*B at equator
-    m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_injection_rate * m_max_ndens * 2. * PhysConst::mu0 * PhysConst::m_e
+    m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_injection_rate * m_max_ndens * PhysConst::mu0 * PhysConst::m_e
                                          * PhysConst::c * PhysConst::c);
     m_Sigma0_baseline = m_Sigma0_threshold;
 //    pp.get("Sigma0_threshold_init", m_Sigma0_threshold);
