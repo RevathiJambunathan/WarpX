@@ -114,6 +114,7 @@ int Pulsar::m_use_maxsigma_for_Sigma0 = 0;
 amrex::Real Pulsar::m_min_TCTP_ratio;
 amrex::Real Pulsar::m_maxsigma_fraction = 1;
 amrex::Real Pulsar::m_injRing_radius;
+amrex::Real Pulsar::m_part_bulkVelocity = 0.0;
 
 
 Pulsar::Pulsar ()
@@ -306,6 +307,7 @@ Pulsar::ReadParameters () {
     pp.get("min_TCTP_ratio",m_min_TCTP_ratio);
     pp.get("maxsigma_fraction", m_maxsigma_fraction);
     pp.get("injRing_radius", m_injRing_radius);
+    pp.get("BulkVelocity", m_part_bulkVelocity);
 }
 
 
