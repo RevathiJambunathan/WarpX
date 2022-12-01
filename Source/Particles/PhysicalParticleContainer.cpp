@@ -764,6 +764,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     const int WeightedParticleInjection = Pulsar::WeightedParticleInjection;
     const amrex::Real bufferdR_CCBounds = Pulsar::m_bufferdR_forCCBounds;
     const amrex::Real particle_scale_fac = Pulsar::m_particle_scale_fac;
+    // to initialize particles with a velocity-kick along the B-field
+    amrex::MultiFab* Bx_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 0);
+    amrex::MultiFab* By_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 1);
+    amrex::MultiFab* Bz_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 2);
+    amrex::Real particle_speed = Pulsar::m_part_bulkVelocity;
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -969,6 +974,9 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         amrex::Array4<amrex::Real> const& injected_cell = injected_cell_mf->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_reldiff = sigma_reldiff_mf->array(mfi);
         amrex::Array4<amrex::Real> const& pulsar_pcount = pcount_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& Bx = Bx_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& By = By_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& Bz = Bz_mf->array(mfi);
 #endif
 
         // Find the cells of part_box that overlap with tile_realbox
@@ -1432,7 +1440,30 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     }
 #endif
 
+#ifdef PULSAR
+                    amrex::Real Bx_cc = ( Bx(lo_tile_index[0]+i  , lo_tile_index[1]+j, lo_tile_index[2]+k)
+                                        + Bx(lo_tile_index[0]+i+1, lo_tile_index[1]+j, lo_tile_index[2]+k) )
+                                        / 2.0_rt;
+                    amrex::Real By_cc = ( By(lo_tile_index[0]+i, lo_tile_index[1]+j  , lo_tile_index[2]+k)
+                                        + By(lo_tile_index[0]+i, lo_tile_index[1]+j+1, lo_tile_index[2]+k) )
+                                        / 2.0_rt;
+                    amrex::Real Bz_cc = ( Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k  )
+                                        + Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k+1) )
+                                        / 2.0_rt;
+                    amrex::Real B_mag = std::sqrt( Bx_cc * Bx_cc + By_cc*By_cc + Bz_cc*Bz_cc);
+                    amrex::Real unit_Bx = Bx_cc/B_mag;
+                    amrex::Real unit_By = By_cc/B_mag;
+                    amrex::Real unit_Bz = Bz_cc/B_mag;
+                    amrex::Real vx = particle_speed * unit_Bx;
+                    amrex::Real vy = particle_speed * unit_By;
+                    amrex::Real vz = particle_speed * unit_Bz;
+                    amrex::Real gamma = 1._rt/(1._rt - (vx*vx + vy*vy + vz*vz));
+                    u.x = gamma * vx;
+                    u.y = gamma * vy;
+                    u.z = gamma * vz;
+#else
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
+#endif
 #ifdef PULSAR
                     // density computed using cell-center
                     dens = inj_rho->getDensity(x_cc, y_cc, z_cc);
