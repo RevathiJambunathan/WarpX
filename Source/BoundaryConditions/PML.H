@@ -57,6 +57,8 @@ struct SigmaBox
     void ComputePMLFactorsE (const amrex::Real* dx, amrex::Real dt);
 
     using SigmaVect = std::array<Sigma,AMREX_SPACEDIM>;
+    using value_type = void; // needed by amrex::FabArray
+
 
     SigmaVect sigma;
     SigmaVect sigma_cumsum;
