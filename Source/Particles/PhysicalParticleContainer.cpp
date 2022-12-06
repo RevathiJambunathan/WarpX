@@ -1457,7 +1457,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     amrex::Real vx = particle_speed * unit_Bx;
                     amrex::Real vy = particle_speed * unit_By;
                     amrex::Real vz = particle_speed * unit_Bz;
-                    amrex::Real gamma = 1._rt/(1._rt - (vx*vx + vy*vy + vz*vz));
+                    amrex::Real gamma = 1._rt/std::sqrt(1._rt - (vx*vx + vy*vy + vz*vz));
                     u.x = gamma * vx;
                     u.y = gamma * vy;
                     u.z = gamma * vz;
