@@ -102,11 +102,21 @@ struct InjectorPositionRegular
         //    ny = static_cast<int>(ceil(ref_fac*ppc.y*ninj_per_dim));
         //    nz = static_cast<int>(ceil(ref_fac*ppc.z*ninj_per_dim));
         //}
-        const amrex::Real pcount_per_dim = std::cbrt(particle_count);
+        amrex::Real pcount_per_dim = std::cbrt(particle_count);
         // integer conversion with ceil
-        const int pcount_x = static_cast<int>(ceil(pcount_per_dim));
-        const int pcount_y = static_cast<int>(ceil(pcount_per_dim));
-        const int pcount_z = static_cast<int>(ceil(pcount_per_dim));
+        int pcount_x = static_cast<int>(ceil(pcount_per_dim));
+        int pcount_y = 1;
+        int pcount_z = 1;
+        if (particle_count < 4) {
+            pcount_x = particle_count;
+        } else if (particle_count == 4) {
+            pcount_per_dim = std::sqrt(particle_count);
+            pcount_x = static_cast<int>(ceil(pcount_per_dim));
+            pcount_z = static_cast<int>(ceil(pcount_per_dim));
+        } else if (particle_count > 5) {
+            pcount_z = static_cast<int>(ceil(pcount_per_dim));
+            pcount_y = static_cast<int>(ceil(pcount_per_dim));
+        }
         int nx = ref_fac * pcount_x;
         int ny = ref_fac * pcount_y;
         int nz = ref_fac * pcount_z;
@@ -292,7 +302,7 @@ struct InjectorPosition
     bool
     insidePulsarBoundsCC (amrex::Real r_cell, amrex::Real r_min, amrex::Real r_max, amrex::Real dR_factor) const noexcept
     {
-        return (r_cell<=(r_max + dR_factor) and r_cell>=(r_min-dR_factor));
+        return (r_cell< (r_max + dR_factor) and r_cell> (r_min-dR_factor));
     }
 
     // bool: whether particle position specified is within pulsar injection region
@@ -301,7 +311,8 @@ struct InjectorPosition
     bool
     insidePulsarBounds (amrex::Real rp, amrex::Real r_min, amrex::Real r_max) const noexcept
     {
-        return (rp<=(r_max) and rp>=(r_min));
+        amrex::Real eps = 1.e-12;
+        return (rp< (r_max + eps) and rp> (r_min - eps));
     }
 
 #endif
