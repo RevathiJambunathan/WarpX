@@ -556,6 +556,8 @@ public:
     static amrex::Real m_max_particle_absorption_radius;
     static amrex::Real m_particle_inject_rmin;
     static amrex::Real m_particle_inject_rmax;
+    static amrex::Real m_cell_inject_rmin;
+    static amrex::Real m_cell_inject_rmax;
     static amrex::Real m_corotatingE_maxradius;
     static amrex::Real m_enforceDipoleB_maxradius;
     static int m_do_InitializeGrid_with_Pulsar_Bfield;
