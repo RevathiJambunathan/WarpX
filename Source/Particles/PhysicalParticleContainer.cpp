@@ -1495,6 +1495,25 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                   inj_pos->getPositionUnitBox(i_part, amrex::IntVect::TheUnitVector(), engine);
 #endif
                 auto pos = getCellCoords(overlap_corner, dx, r, iv);
+#ifdef PULSAR
+                if (pcounts[index] > 1 and pcounts[index]<8) {
+                    // convert xyz to rtheta phii
+                    amrex::Real rp, theta_p, phi_p;
+                    Pulsar::ConvertCartesianToSphericalCoord(pos.x, pos.y, pos.z, center_star_arr,
+                                                             rp, theta_p, phi_p);
+                    // change r
+                    const amrex::Real xc = center_star_arr[0];
+                    const amrex::Real yc = center_star_arr[1];
+                    const amrex::Real zc = center_star_arr[2];
+                    // pulsar bounds checked using cell-center
+                    const amrex::Real rad_cc = std::sqrt( (x_cc-xc)*(x_cc-xc) + (y_cc-yc)*(y_cc-yc) + (z_cc-zc)*(z_cc-zc));
+                    rp = rad_cc;
+                    // convert rthetaphi to xyz
+                    pos.x = center_star_arr[0] + rp * std::sin(theta_p) * std::cos(phi_p);
+                    pos.y = center_star_arr[1] + rp * std::sin(theta_p) * std::sin(phi_p);
+                    pos.z = center_star_arr[2] + rp * std::cos(theta_p);
+                }
+#endif
 
 #if defined(WARPX_DIM_3D)
                 if (!tile_realbox.contains(XDim3{pos.x,pos.y,pos.z})) {
@@ -1578,11 +1597,16 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     const amrex::Real yc = center_star_arr[1];
                     const amrex::Real zc = center_star_arr[2];
                     // pulsar bounds checked using cell-center
-                    const amrex::Real rad = std::sqrt( (x_cc-xc)*(x_cc-xc) + (y_cc-yc)*(y_cc-yc) + (z_cc-zc)*(z_cc-zc));
+                    const amrex::Real rad = std::sqrt( (pos.x-xc)*(pos.x-xc) + (pos.y-yc)*(pos.y-yc) + (z0-zc)*(z0-zc));
                     if ( !inj_pos->insidePulsarBounds(rad,pulsar_particle_inject_rmin,
                                                           pulsar_particle_inject_rmax))
                     {
-                        p.id() = -1;
+                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
                         continue;
                     }
                     // Remove particles within user-defined theta bounds
@@ -1590,7 +1614,12 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     if (rad > 0) theta_p = std::acos(amrex::Math::abs(z0-zc)/rad);
                     if (amrex::Math::abs(theta_p) > pulsar_removeparticle_theta_min*MathConst::pi/180. and
                         amrex::Math::abs(theta_p) < pulsar_removeparticle_theta_max*MathConst::pi/180.) {
-                        p.id() = -1;
+                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
                     }
 #endif
 

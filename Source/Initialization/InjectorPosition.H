@@ -103,6 +103,15 @@ struct InjectorPositionRegular
         int ny = ref_fac[1] * pcount_y;
         int nz = ref_fac[2] * pcount_z;
 #endif  // ifdef 3D
+        int const ix_part = i_part / (ny*nz);  // written this way backward compatibility
+        int const iz_part = (i_part-ix_part*(ny*nz)) / ny;
+        int const iy_part = (i_part-ix_part*(ny*nz)) - ny*iz_part;
+        return XDim3{
+            (0.5_rt + ix_part) / nx,
+            (0.5_rt + iy_part) / ny,
+            (0.5_rt + iz_part) / nz
+        };
+>>>>>>> ed68871f6 (add symmetry)
 
 #else // ifndef PULSAR
 
@@ -294,7 +303,7 @@ struct InjectorPosition
     bool
     insidePulsarBoundsCC (amrex::Real r_cell, amrex::Real r_min, amrex::Real r_max, amrex::Real dR_factor) const noexcept
     {
-        return (r_cell<=(r_max + dR_factor) and r_cell>=(r_min-dR_factor));
+        return (r_cell< (r_max + dR_factor) and r_cell> (r_min-dR_factor));
     }
 
     // bool: whether particle position specified is within pulsar injection region
@@ -303,7 +312,8 @@ struct InjectorPosition
     bool
     insidePulsarBounds (amrex::Real rp, amrex::Real r_min, amrex::Real r_max) const noexcept
     {
-        return (rp<=(r_max) and rp>=(r_min));
+        amrex::Real eps = 1.e-12;
+        return (rp< (r_max + eps) and rp> (r_min - eps));
     }
 
 #endif
