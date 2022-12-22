@@ -47,6 +47,8 @@ int Pulsar::m_verbose;
 amrex::Real Pulsar::m_max_particle_absorption_radius;
 amrex::Real Pulsar::m_particle_inject_rmin;
 amrex::Real Pulsar::m_particle_inject_rmax;
+amrex::Real Pulsar::m_cell_inject_rmin;
+amrex::Real Pulsar::m_cell_inject_rmax;
 amrex::Real Pulsar::m_corotatingE_maxradius;
 amrex::Real Pulsar::m_enforceDipoleB_maxradius;
 int Pulsar::m_do_InitializeGrid_with_Pulsar_Bfield = 1;
@@ -176,6 +178,8 @@ Pulsar::ReadParameters () {
     pp.query("particle_inj_rmax", m_particle_inject_rmax);
     amrex::Print() << " min radius of particle injection : " << m_particle_inject_rmin << "\n";
     amrex::Print() << " max radius of particle injection : " << m_particle_inject_rmax << "\n";
+    pp.get("cell_inj_rmin", m_cell_inject_rmin);
+    pp.get("cell_inj_rmax", m_cell_inject_rmax);
 
     pp.query("ModifyParticleWeight", m_ModifyParticleWtAtInjection);
     // The maximum radius within which particles are absorbed/deleted every timestep.
@@ -1795,8 +1799,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     for (int idim = 0; idim < 3; ++idim) {
         xc[idim] = m_center_star[idim];
     }
-    amrex::Real pulsar_particle_inject_rmin = m_particle_inject_rmin;
-    amrex::Real pulsar_particle_inject_rmax = m_particle_inject_rmax;
+    amrex::Real pulsar_cell_inject_rmin = m_cell_inject_rmin;
+    amrex::Real pulsar_cell_inject_rmax = m_cell_inject_rmax;
     amrex::Real Rstar = m_R_star;
     amrex::Real Sigma0_threshold = m_Sigma0_threshold;
     int modify_Sigma0_threshold = modify_sigma_threshold;
@@ -1845,8 +1849,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                 amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
                                            + (y-xc[1]) * (y-xc[1])
                                            + (z-xc[2]) * (z-xc[2]));
-
-                if ( (rad >= pulsar_particle_inject_rmin) and (rad <= pulsar_particle_inject_rmax) ){
+                amrex::Real eps = 1.e-12;
+                if ( (rad > (pulsar_cell_inject_rmin - eps)) and (rad < (pulsar_cell_inject_rmax + eps)) ){
                     inj_ring(i,j,k) = 1;
                     sigma_inj_ring(i, j, k) = sigma(i, j, k);
                     amrex::Real Sigma_threshold = Sigma0_threshold;
@@ -1910,8 +1914,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
                                                    + (y-xc[1]) * (y-xc[1])
                                                    + (z-xc[2]) * (z-xc[2]));
-
-                        if ( (rad >= pulsar_particle_inject_rmin) and (rad <= pulsar_particle_inject_rmax) ){
+                        amrex::Real eps = 1.e-12;
+                        if ( (rad > (pulsar_cell_inject_rmin - eps)) and (rad < (pulsar_cell_inject_rmax + eps)) ){
                             inj_ring(i,j,k) = 1;
                             sigma_inj_ring(i, j, k) = sigma(i, j, k);
                             amrex::Real Sigma_threshold = Sigma0_threshold;
