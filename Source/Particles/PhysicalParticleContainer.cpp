@@ -1641,13 +1641,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     amrex::Real vy = particle_speed * unit_By;
                     amrex::Real vz = particle_speed * unit_Bz;
                     amrex::Real gamma = 1._rt/std::sqrt(1._rt - (vx*vx + vy*vy + vz*vz));
-                    if (z0 < center_star_arr[i]) {
-                        u.x = -1._rt * gamma * vx;
-                        u.y = -1._rt * gamma * vy;
+                    u.x = gamma * vx;
+                    u.y = gamma * vy;
+                    if (z0 < center_star_arr[2]) {
                         u.z = -1._rt * gamma * vz;
                     } else {
-                        u.x = gamma * vx;
-                        u.y = gamma * vy;
                         u.z = gamma * vz;
                     }
 #else
