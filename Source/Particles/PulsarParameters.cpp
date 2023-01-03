@@ -160,8 +160,8 @@ Pulsar::ReadParameters () {
     // injection rate is set for the entire simulation
     m_GJ_injection_rate = ( 8._rt * MathConst::pi * PhysConst::ep0 * m_B_star
                             * m_omega_star * m_omega_star * m_R_star * m_R_star * m_R_star
-                            * std::cos(m_Chi)
                           ) / PhysConst::q_e;
+//                            * std::cos(m_Chi)
     // the factor of 2 is because B at pole = 2*B at equator
     m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_injection_rate * m_max_ndens * PhysConst::mu0 * PhysConst::m_e
                                          * PhysConst::c * PhysConst::c);
