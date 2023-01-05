@@ -769,6 +769,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::MultiFab* By_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 1);
     amrex::MultiFab* Bz_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 2);
     amrex::Real particle_speed = Pulsar::m_part_bulkVelocity;
+    auto pos_random_ptr = WarpX::GetInstance().getPulsar().pos_random.data();
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -1340,7 +1341,15 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                   pcounts[index]
 #endif
                                                );
+                XDim3 r_pulsar;
+                r_pulsar.x = pos_random_ptr[3*ip];
+                r_pulsar.y = pos_random_ptr[3*ip+1];
+                r_pulsar.z = pos_random_ptr[3*ip+2];
+#ifdef PULSAR
+                auto pos = getCellCoords(overlap_corner, dx, r_pulsar, iv);
+#else
                 auto pos = getCellCoords(overlap_corner, dx, r, iv);
+#endif
 #ifdef PULSAR
                 if (pcounts[index] > 1 and pcounts[index]<8) {
                     // convert xyz to rtheta phii

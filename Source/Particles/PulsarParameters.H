@@ -668,6 +668,7 @@ public:
     static amrex::Real m_maxsigma_fraction;
     static amrex::Real m_injRing_radius;
     static amrex::Real m_part_bulkVelocity;
+    amrex::Gpu::DeviceVector<amrex::Real> pos_random;
 private:
 };
 

@@ -1943,7 +1943,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     }
     amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
     amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
-    
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -1980,4 +1979,14 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     }
     amrex::Real TotalInjectedCells = SumInjectedCells();
     amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n"; 
+    int total_pcount = m_pcount[lev]->sum();
+    amrex::Print() << " total_pcount : " << total_pcount << "\n";
+    int total_new_positions = 3*total_pcount;
+    pos_random.resize(total_new_positions);
+    auto pos_rand = pos_random.data();
+    amrex::ParallelForRNG(total_new_positions,
+        [=] AMREX_GPU_DEVICE (int ip, amrex::RandomEngine const& engine) noexcept
+        {
+            pos_rand[ip] = amrex::Random(engine);
+        });
 }
