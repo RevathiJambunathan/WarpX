@@ -338,7 +338,7 @@ Pulsar::InitDataAtRestart ()
     const int magnetization_comps = 1;
 
     for (int lev = 0; lev < nlevs_max; ++lev) {
-        amrex::BoxArray ba = warpx.boxArray(lev);
+        const amrex::BoxArray& ba = warpx.boxArray(lev);
         amrex::DistributionMapping dm = warpx.DistributionMap(lev);
         const amrex::IntVect ng_EB_alloc = warpx.getngEB();
         // allocate cell-centered number density multifab
@@ -1944,9 +1944,20 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
     amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
     // fill pcounts and injected cell flag
+//    const amrex::BoxArray& ba_inj = m_injection_flag[lev]->local_size();
+    int num_grids = m_injection_flag[lev]->local_size();
+    particles_per_grid.resize(num_grids);
+    offset_per_grid.resize(num_grids);
+    auto p_PartPerGrid = particles_per_grid.data();
+    auto p_offset_per_grid = offset_per_grid.data();
+    int total_part = 0;
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tb = mfi.tilebox(iv);
+        amrex::Gpu::DeviceVector<int> counts(tb.numPts(), 0);
+        amrex::Gpu::DeviceVector<int> offset(tb.numPts());
+        auto pcount_vec = counts.data();
+
         amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& pcount = m_pcount[lev]->array(mfi);
@@ -1974,19 +1985,29 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         injected_cell(i,j,k) = 1;
                     }
                 }
+                amrex::IntVect iv(AMREX_D_DECL(i,j,k));
+                auto index = tb.index(iv);
+                pcount_vec[index] = pcount(i,j,k);
             }
         );
+        p_offset_per_grid[mfi.index()] = total_part;
+        p_PartPerGrid[mfi.index()] = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offset.data());
+        amrex::Print() << " p_PartPerGrid : " << p_PartPerGrid[mfi.index()] << "\n";
+        total_part += p_PartPerGrid[mfi.index()];
+        amrex::Gpu::synchronize();
     }
     amrex::Real TotalInjectedCells = SumInjectedCells();
     amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n"; 
-    int total_pcount = m_pcount[lev]->sum();
-    amrex::Print() << " total_pcount : " << total_pcount << "\n";
-    int total_new_positions = 3*total_pcount;
+//    int total_pcount = m_pcount[lev]->sum();
+    amrex::Print() << " total_part : " << total_part << "\n";
+    int total_new_positions = 3*total_part;
+    amrex::Print() << " total new pos : " << total_new_positions << "\n";
     pos_random.resize(total_new_positions);
     auto pos_rand = pos_random.data();
     amrex::ParallelForRNG(total_new_positions,
         [=] AMREX_GPU_DEVICE (int ip, amrex::RandomEngine const& engine) noexcept
         {
             pos_rand[ip] = amrex::Random(engine);
+            amrex::Print() << "ip : " << ip << " pos rand : " << pos_rand[ip] << "\n";
         });
 }

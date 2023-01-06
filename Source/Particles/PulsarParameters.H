@@ -669,6 +669,8 @@ public:
     static amrex::Real m_injRing_radius;
     static amrex::Real m_part_bulkVelocity;
     amrex::Gpu::DeviceVector<amrex::Real> pos_random;
+    amrex::Gpu::DeviceVector<int> particles_per_grid;
+    amrex::Gpu::DeviceVector<int> offset_per_grid;
 private:
 };
 

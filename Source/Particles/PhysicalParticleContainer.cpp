@@ -770,6 +770,8 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
     amrex::MultiFab* Bz_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 2);
     amrex::Real particle_speed = Pulsar::m_part_bulkVelocity;
     auto pos_random_ptr = WarpX::GetInstance().getPulsar().pos_random.data();
+    auto part_per_grid_ptr = WarpX::GetInstance().getPulsar().particles_per_grid.data();
+    auto offset_per_grid_ptr = WarpX::GetInstance().getPulsar().offset_per_grid.data();
 #endif
 
     const auto dx = geom.CellSizeArray();
@@ -953,7 +955,6 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 //    // distribute injection between selected cells as num_ppc
 //    int modified_num_ppc = static_cast<int>((TotalParticlesToBeInjected*1.)/(TotalInjectionCells));
 //    amrex::Print() << " particles_per_cell : " << modified_num_ppc <<"\n";
- 
     for (MFIter mfi = MakeMFIter(lev, info); mfi.isValid(); ++mfi)
     {
         if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)
@@ -966,6 +967,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
         const RealBox tile_realbox = WarpX::getRealBox(tile_box, lev);
 
 #ifdef PULSAR
+        int grid_particle_offset = offset_per_grid_ptr[mfi.index()];
         const GpuArray<int, AMREX_SPACEDIM> lo_tile_index
             {AMREX_D_DECL(tile_box.smallEnd(0), tile_box.smallEnd(1), tile_box.smallEnd(2))};
         amrex::Real Rstar = Pulsar::m_R_star;
@@ -1341,11 +1343,11 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                   pcounts[index]
 #endif
                                                );
-                XDim3 r_pulsar;
-                r_pulsar.x = pos_random_ptr[3*ip];
-                r_pulsar.y = pos_random_ptr[3*ip+1];
-                r_pulsar.z = pos_random_ptr[3*ip+2];
 #ifdef PULSAR
+                XDim3 r_pulsar;
+                r_pulsar.x = pos_random_ptr[3*(ip+grid_particle_offset)];
+                r_pulsar.y = pos_random_ptr[3*(ip+grid_particle_offset)+1];
+                r_pulsar.z = pos_random_ptr[3*(ip+grid_particle_offset)+2];
                 auto pos = getCellCoords(overlap_corner, dx, r_pulsar, iv);
 #else
                 auto pos = getCellCoords(overlap_corner, dx, r, iv);
