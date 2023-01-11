@@ -117,6 +117,7 @@ amrex::Real Pulsar::m_min_TCTP_ratio;
 amrex::Real Pulsar::m_maxsigma_fraction = 1;
 amrex::Real Pulsar::m_injRing_radius;
 amrex::Real Pulsar::m_part_bulkVelocity = 0.0;
+int Pulsar::m_pair_injection_flag = 1; // default is to inject particles in pairs
 
 
 Pulsar::Pulsar ()
@@ -312,6 +313,7 @@ Pulsar::ReadParameters () {
     pp.get("maxsigma_fraction", m_maxsigma_fraction);
     pp.get("injRing_radius", m_injRing_radius);
     pp.get("BulkVelocity", m_part_bulkVelocity);
+    pp.query("pair_injection", m_pair_injection_flag);
 }
 
 

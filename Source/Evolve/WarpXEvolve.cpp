@@ -130,7 +130,11 @@ WarpX::Evolve (int numsteps)
                 if ( cur_time >= Pulsar::m_injection_time &&
                      cur_time <= Pulsar::m_injection_time + 0.5_rt*dt[0]) {
                     // inject single particle-pair
-                    mypc->PulsarParticleInjection();
+                    if (Pulsar::m_pair_injection_flag == 1) {
+                        mypc->PulsarPairInjection();
+                    } else {
+                        mypc->PulsarParticleInjection();
+                    }
                     // call redistribute
                     mypc->Redistribute();
                 }
@@ -138,7 +142,11 @@ WarpX::Evolve (int numsteps)
                 //particle injected every timestep after user-defined injection time
                 if (cur_time > Pulsar::m_injection_time) {
                     // particle injection call
-                    mypc->PulsarParticleInjection();
+                    if (Pulsar::m_pair_injection_flag == 1) {
+                        mypc->PulsarPairInjection();
+                    } else {
+                        mypc->PulsarParticleInjection();
+                    }
                     // redistribute
                     mypc->Redistribute();
                 }
@@ -149,8 +157,11 @@ WarpX::Evolve (int numsteps)
                 cur_time <= Pulsar::m_injection_endtime) {
                     m_pulsar->FlagCellsForInjectionWithPcounts();
                     // particle injection call
-//                    mypc->PulsarParticleInjection();
-                    mypc->PulsarPairInjection();
+                    if (Pulsar::m_pair_injection_flag == 1) {
+                        mypc->PulsarPairInjection();
+                    } else {
+                        mypc->PulsarParticleInjection();
+                    }
                     m_pulsar->TotalParticlesInjected();
                     // redistribute
                     mypc->Redistribute();
