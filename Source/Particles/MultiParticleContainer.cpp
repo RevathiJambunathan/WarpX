@@ -80,6 +80,86 @@
 
 using namespace amrex;
 
+#ifdef PULSAR
+namespace
+{
+
+    using ParticleType = WarpXParticleContainer::ParticleType;
+
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    XDim3 getCellCoords (const GpuArray<Real, AMREX_SPACEDIM>& lo_corner,
+                         const GpuArray<Real, AMREX_SPACEDIM>& dx,
+                         const XDim3& r, const IntVect& iv) noexcept
+    {
+        XDim3 pos;
+#if defined(WARPX_DIM_3D)
+        pos.x = lo_corner[0] + (iv[0]+r.x)*dx[0];
+        pos.y = lo_corner[1] + (iv[1]+r.y)*dx[1];
+        pos.z = lo_corner[2] + (iv[2]+r.z)*dx[2];
+#elif defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
+        pos.x = lo_corner[0] + (iv[0]+r.x)*dx[0];
+        pos.y = 0.0_rt;
+#if   defined WARPX_DIM_XZ
+        pos.z = lo_corner[1] + (iv[1]+r.y)*dx[1];
+#elif defined WARPX_DIM_RZ
+        // Note that for RZ, r.y will be theta
+        pos.z = lo_corner[1] + (iv[1]+r.z)*dx[1];
+#endif
+#else
+        pos.x = 0.0_rt;
+        pos.y = 0.0_rt;
+        pos.z = lo_corner[0] + (iv[0]+r.z)*dx[0];
+#endif
+        return pos;
+    }
+
+
+    /**
+     * \brief This function is called in AddPlasma when we want a particle to be removed at the
+     * next call to redistribute. It initializes all the particle properties to zero (to be safe
+     * and avoid any possible undefined behavior before the next call to redistribute) and sets
+     * the particle id to -1 so that it can be effectively deleted.
+     *
+     * \param p particle aos data
+     * \param pa particle soa data
+     * \param ip index for soa data
+     * \param do_field_ionization whether species has ionization
+     * \param pi ionization level data
+     * \param has_quantum_sync whether species has quantum synchrotron
+     * \param p_optical_depth_QSR quantum synchrotron optical depth data
+     * \param has_breit_wheeler whether species has Breit-Wheeler
+     * \param p_optical_depth_BW Breit-Wheeler optical depth data
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void ZeroInitializeAndSetNegativeID (
+        ParticleType& p, const GpuArray<ParticleReal*,PIdx::nattribs>& pa, long& ip
+#ifdef WARPX_QED
+        ,const bool& has_quantum_sync, amrex::ParticleReal* p_optical_depth_QSR
+        ,const bool& has_breit_wheeler, amrex::ParticleReal* p_optical_depth_BW
+#endif
+        ) noexcept
+    {
+        p.pos(0) = 0._rt;
+#if (AMREX_SPACEDIM >= 2)
+        p.pos(1) = 0._rt;
+#endif
+#if defined(WARPX_DIM_3D)
+        p.pos(2) = 0._rt;
+#endif
+        pa[PIdx::w ][ip] = 0._rt;
+        pa[PIdx::ux][ip] = 0._rt;
+        pa[PIdx::uy][ip] = 0._rt;
+        pa[PIdx::uz][ip] = 0._rt;
+#ifdef WARPX_QED
+        if (has_quantum_sync) {p_optical_depth_QSR[ip] = 0._rt;}
+        if (has_breit_wheeler) {p_optical_depth_BW[ip] = 0._rt;}
+#endif
+        p.id() = -1;
+    }
+
+}
+#endif
+
 namespace
 {
     /** A little collection to transport six Array4 that point to the EM fields */
@@ -1710,5 +1790,440 @@ MultiParticleContainer::PulsarParticleRemoval()
     for (auto& pc : allcontainers) {
         pc->PulsarParticleRemoval();
     }
+}
+
+void
+MultiParticleContainer::PulsarPairInjection ()
+{
+
+    const int lev = 0;
+    amrex::Print() << " pulsar pair injection \n";
+    // Assuming there are only two species
+    amrex::Print() << " nspecies : " << nSpecies() << "\n";
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+        nSpecies() == 2,"Pair injection works only for two species");
+
+    auto& species1 = GetParticleContainerFromName(species_names[0]);
+    auto& species2 = GetParticleContainerFromName(species_names[1]);
+
+
+    const amrex::Real pulsar_injection_fraction = Pulsar::m_Ninj_fraction;
+    const int pulsar_modifyParticleWtAtInjection = Pulsar::m_ModifyParticleWtAtInjection;
+    amrex::GpuArray<amrex::Real, 3> center_star_arr;
+    for (int i = 0; i < 3; ++i) {
+        center_star_arr[i] = Pulsar::m_center_star[i];
+    }
+    const amrex::Real pulsar_particle_inject_rmin = Pulsar::m_particle_inject_rmin;
+    const amrex::Real pulsar_particle_inject_rmax = Pulsar::m_particle_inject_rmax;
+    const amrex::Real pulsar_dR_star = Pulsar::m_dR_star;
+    const amrex::Real pulsar_removeparticle_theta_min = Pulsar::m_removeparticle_theta_min;
+    const amrex::Real pulsar_removeparticle_theta_max = Pulsar::m_removeparticle_theta_max;
+    amrex::Real Sigma0_threshold = Pulsar::m_Sigma0_threshold;
+    const MultiFab& magnetization_mf = WarpX::GetInstance().getPulsar().get_magnetization(lev);
+    amrex::MultiFab* injection_flag_mf = WarpX::GetInstance().getPulsar().get_pointer_injection_flag(lev);
+    amrex::MultiFab* injected_cell_mf = WarpX::GetInstance().getPulsar().get_pointer_injected_cell(lev);
+    amrex::MultiFab* sigma_reldiff_mf = WarpX::GetInstance().getPulsar().get_pointer_sigma_reldiff(lev);
+    amrex::MultiFab* pcount_mf = WarpX::GetInstance().getPulsar().get_pointer_pcount(lev);
+    const int modify_sigma_threshold = Pulsar::modify_sigma_threshold;
+    const int EnforceParticleInjection = Pulsar::EnforceParticleInjection;
+    const amrex::Real injection_sigma_reldiff = Pulsar::m_injection_sigma_reldiff;
+    const int WeightedParticleInjection = Pulsar::WeightedParticleInjection;
+    const amrex::Real bufferdR_CCBounds = Pulsar::m_bufferdR_forCCBounds;
+    const amrex::Real particle_scale_fac = Pulsar::m_particle_scale_fac;
+    amrex::Real part_weight = Pulsar::m_max_ndens * particle_scale_fac;
+    // to initialize particles with a velocity-kick along the B-field
+    amrex::MultiFab* Bx_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 0);
+    amrex::MultiFab* By_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 1);
+    amrex::MultiFab* Bz_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 2);
+    amrex::Real particle_speed = Pulsar::m_part_bulkVelocity;
+
+    amrex::Geometry const & geom = WarpX::GetInstance().Geom(lev);
+    const amrex::RealBox& part_realbox = geom.ProbDomain();
+    const auto dx = geom.CellSizeArray();
+    const auto problo = geom.ProbLoArray();
+
+    species1.defineAllParticleTiles();
+    species2.defineAllParticleTiles();
+
+    amrex::Real t = WarpX::GetInstance().gett_new(lev);
+
+
+    MFItInfo info;
+#ifdef AMREX_USE_OMP
+    info.SetDynamic(true);
+#pragma omp parallel if (not WarpX::serialize_initial_conditions)
+#endif
+
+    for (MFIter mfi = species1.MakeMFIter(lev, info); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box& tile_box = mfi.tilebox();
+        const amrex::RealBox& tile_realbox = WarpX::getRealBox(tile_box, lev);
+        const GpuArray<int, AMREX_SPACEDIM> lo_tile_index
+            {AMREX_D_DECL(tile_box.smallEnd(0), tile_box.smallEnd(1), tile_box.smallEnd(2))};
+        amrex::Array4<amrex::Real> const& pulsar_pcount = pcount_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& Bx = Bx_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& By = By_mf->array(mfi);
+        amrex::Array4<amrex::Real> const& Bz = Bz_mf->array(mfi);
+
+        // Find the cells of part_box that overlap with tile_realbox
+        // If there is no overlap, just go to the next tile in the loop
+        RealBox overlap_realbox;
+        Box overlap_box;
+        IntVect shifted;
+        bool no_overlap = false;
+
+        for (int dir=0; dir<AMREX_SPACEDIM; dir++) {
+            if ( tile_realbox.lo(dir) <= part_realbox.hi(dir) ) {
+                Real ncells_adjust = std::floor( (tile_realbox.lo(dir) - part_realbox.lo(dir))/dx[dir] );
+                overlap_realbox.setLo( dir, part_realbox.lo(dir) + std::max(ncells_adjust, 0._rt) * dx[dir]);
+            } else {
+                no_overlap = true; break;
+            }
+            if ( tile_realbox.hi(dir) >= part_realbox.lo(dir) ) {
+                Real ncells_adjust = std::floor( (part_realbox.hi(dir) - tile_realbox.hi(dir))/dx[dir] );
+                overlap_realbox.setHi( dir, part_realbox.hi(dir) - std::max(ncells_adjust, 0._rt) * dx[dir]);
+            } else {
+                no_overlap = true; break;
+            }
+            // Count the number of cells in this direction in overlap_realbox
+            overlap_box.setSmall( dir, 0 );
+            overlap_box.setBig( dir,
+                int( std::round((overlap_realbox.hi(dir)-overlap_realbox.lo(dir))
+                                /dx[dir] )) - 1);
+            shifted[dir] =
+                static_cast<int>(std::round((overlap_realbox.lo(dir)-problo[dir])/dx[dir]));
+            // shifted is exact in non-moving-window direction.  That's all we care.
+        }
+        if (no_overlap == 1) {
+            continue; // Go to the next tile
+        }
+
+        const int grid_id = mfi.index();
+        const int tile_id = mfi.LocalTileIndex();
+
+        const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> overlap_corner
+            {AMREX_D_DECL(overlap_realbox.lo(0),
+                          overlap_realbox.lo(1),
+                          overlap_realbox.lo(2))};
+
+        // counter number of particle-pairs to be added that each cell in overlap_box
+        amrex::Gpu::DeviceVector<int> counts(overlap_box.numPts(), 0);
+        amrex::Gpu::DeviceVector<int> offset(overlap_box.numPts());
+        auto pcounts = counts.data();
+        amrex::ParallelFor(overlap_box,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            amrex::IntVect iv(AMREX_D_DECL(i, j, k));
+            auto lo = getCellCoords(overlap_corner, dx, {0._rt, 0._rt, 0._rt}, iv);
+            auto hi = getCellCoords(overlap_corner, dx, {1._rt, 1._rt, 1._rt}, iv);
+            auto index = overlap_box.index(iv);
+            pcounts[index] = pulsar_pcount(lo_tile_index[0] + i,
+                                           lo_tile_index[1] + j,
+                                           lo_tile_index[2] + k);
+        });
+
+        int max_new_particles_per_species = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offset.data());
+        Long pid_sp1, pid_sp2;
+#ifdef AMREX_USE_OMP
+#pragma omp critical (add_plasma_nextid)
+#endif
+        {
+            pid_sp1 = ParticleType::NextID();
+            ParticleType::NextID(pid_sp1 + max_new_particles_per_species);
+            pid_sp2 = ParticleType::NextID();
+            ParticleType::NextID(pid_sp2 + max_new_particles_per_species);
+        }
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            static_cast<Long>(pid_sp1 + max_new_particles_per_species) < LastParticleID,
+            "ERROR : overflow on particle id numbers for species 1");
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            static_cast<Long>(pid_sp2 + max_new_particles_per_species) < LastParticleID,
+            "ERROR : overflow on particle id numbers for species 2");
+
+        const int cpuid = ParallelDescriptor::MyProc();
+
+        auto& particle_tile_sp1 = species1.GetParticles(lev)[std::make_pair(grid_id,tile_id)];
+        auto& particle_tile_sp2 = species2.GetParticles(lev)[std::make_pair(grid_id,tile_id)];
+
+        if ( (species1.NumRuntimeRealComps()>0 || species1.NumRuntimeIntComps()>0) ) {
+            species1.DefineAndReturnParticleTile(lev, grid_id, tile_id);
+        }
+        if ( (species2.NumRuntimeRealComps()>0 || species2.NumRuntimeIntComps()>0) ) {
+            species2.DefineAndReturnParticleTile(lev, grid_id, tile_id);
+        }
+
+        // Resize Particle tile for species 1
+        auto old_size_sp1 = particle_tile_sp1.GetArrayOfStructs().size();
+        auto new_size_sp1 = old_size_sp1 + max_new_particles_per_species;
+        particle_tile_sp1.resize(new_size_sp1);
+
+        // Resize Particle tile for species 2
+        auto old_size_sp2 = particle_tile_sp2.GetArrayOfStructs().size();
+        auto new_size_sp2 = old_size_sp2 + max_new_particles_per_species;
+        particle_tile_sp2.resize(new_size_sp2);
+
+        ParticleType* pp_sp1 = particle_tile_sp1.GetArrayOfStructs()().data() + old_size_sp1;
+        auto& soa_sp1 = particle_tile_sp1.GetStructOfArrays();
+        amrex::GpuArray<amrex::ParticleReal*, PIdx::nattribs> pa_sp1;
+        for (int ia = 0; ia < PIdx::nattribs; ++ia) {
+            pa_sp1[ia] = soa_sp1.GetRealData(ia).data() + old_size_sp1;
+        }
+
+        ParticleType* pp_sp2 = particle_tile_sp2.GetArrayOfStructs()().data() + old_size_sp2;
+        auto& soa_sp2 = particle_tile_sp2.GetStructOfArrays();
+        amrex::GpuArray<amrex::ParticleReal*, PIdx::nattribs> pa_sp2;
+        for (int ia = 0; ia < PIdx::nattribs; ++ia) {
+            pa_sp2[ia] = soa_sp2.GetRealData(ia).data() + old_size_sp2;
+        }
+
+        // user-defined integer and real attributes
+        const int n_user_int_attribs_sp1 = species1.user_int_attribs_size();
+        const int n_user_int_attribs_sp2 = species2.user_int_attribs_size();
+        const int n_user_real_attribs_sp1 = species1.user_real_attribs_size();
+        const int n_user_real_attribs_sp2 = species2.user_real_attribs_size();
+
+        amrex::Gpu::PinnedVector<int*> pa_user_int_pinned_sp1(n_user_int_attribs_sp1);
+        amrex::Gpu::PinnedVector<int*> pa_user_int_pinned_sp2(n_user_int_attribs_sp2);
+        amrex::Gpu::PinnedVector<amrex::ParticleReal*> pa_user_real_pinned_sp1(n_user_real_attribs_sp1);
+        amrex::Gpu::PinnedVector<amrex::ParticleReal*> pa_user_real_pinned_sp2(n_user_real_attribs_sp2);
+        amrex::Gpu::PinnedVector< amrex::ParserExecutor<7> > user_int_attrib_parserexec_pinned_sp1(n_user_int_attribs_sp1);
+        amrex::Gpu::PinnedVector< amrex::ParserExecutor<7> > user_int_attrib_parserexec_pinned_sp2(n_user_int_attribs_sp2);
+        amrex::Gpu::PinnedVector< amrex::ParserExecutor<7> > user_real_attrib_parserexec_pinned_sp1(n_user_real_attribs_sp1);
+        amrex::Gpu::PinnedVector< amrex::ParserExecutor<7> > user_real_attrib_parserexec_pinned_sp2(n_user_real_attribs_sp2);
+
+        for (int ia = 0; ia < n_user_int_attribs_sp1; ++ia) {
+            pa_user_int_pinned_sp1[ia] = soa_sp1.GetIntData( species1.particle_icomps[species1.user_int_attribs(ia)]).data()
+                                                            + old_size_sp1;
+            user_int_attrib_parserexec_pinned_sp1[ia] = species1.user_int_attrib_parser(ia)->compile<7>();
+        }
+        for (int ia = 0; ia < n_user_int_attribs_sp2; ++ia) {
+            pa_user_int_pinned_sp2[ia] = soa_sp2.GetIntData( species2.particle_icomps[species2.user_int_attribs(ia)]).data()
+                                                            + old_size_sp2;
+            user_int_attrib_parserexec_pinned_sp2[ia] = species2.user_int_attrib_parser(ia)->compile<7>();
+        }
+        for (int ia = 0; ia < n_user_real_attribs_sp1; ++ia) {
+            pa_user_real_pinned_sp1[ia] = soa_sp1.GetRealData( species1.particle_comps[species1.user_real_attribs(ia)]).data()
+                                                              + old_size_sp1;
+            user_real_attrib_parserexec_pinned_sp1[ia] = species1.user_real_attrib_parser(ia)->compile<7>();
+        }
+        for (int ia = 0; ia < n_user_real_attribs_sp2; ++ia) {
+            pa_user_real_pinned_sp2[ia] = soa_sp2.GetRealData( species2.particle_comps[species1.user_real_attribs(ia)]).data()
+                                                              + old_size_sp2;
+            user_real_attrib_parserexec_pinned_sp2[ia] = species2.user_real_attrib_parser(ia)->compile<7>();
+        }
+#ifdef AMREX_USE_GPU
+        // To avoid using managed memory, we first define pinned memory vector, initialize on cpu,
+        // and them memcpy to device from host
+        amrex::Gpu::DeviceVector<int*> d_pa_user_int_sp1(n_user_int_attribs_sp1);
+        amrex::Gpu::DeviceVector<ParticleReal*> d_pa_user_real_sp1(n_user_real_attribs_sp1);
+        amrex::Gpu::DeviceVector< amrex::ParserExecutor<7> > d_user_int_attrib_parserexec_sp1(n_user_int_attribs_sp1);
+        amrex::Gpu::DeviceVector< amrex::ParserExecutor<7> > d_user_real_attrib_parserexec_sp1(n_user_real_attribs_sp1);
+        amrex::Gpu::DeviceVector<int*> d_pa_user_int_sp2(n_user_int_attribs_sp2);
+        amrex::Gpu::DeviceVector<ParticleReal*> d_pa_user_real_sp2(n_user_real_attribs_sp2);
+        amrex::Gpu::DeviceVector< amrex::ParserExecutor<7> > d_user_int_attrib_parserexec_sp2(n_user_int_attribs_sp2);
+        amrex::Gpu::DeviceVector< amrex::ParserExecutor<7> > d_user_real_attrib_parserexec_sp2(n_user_real_attribs_sp2);
+        amrex::Gpu::copyAsync(Gpu::hostToDevice, pa_user_int_pinned_sp1.begin(),
+                              pa_user_int_pinned_sp1.end(), d_pa_user_int_sp1.begin());
+        amrex::Gpu::copyAsync(Gpu::hostToDevice, pa_user_real_pinned_sp1.begin(),
+                              pa_user_real_pinned_sp1.end(), d_pa_user_real_sp1.begin());
+        amrex::Gpu::copyAsync(Gpu::hostToDevice, user_int_attrib_parserexec_pinned_sp1.begin(),
+                              user_int_attrib_parserexec_pinned_sp1.end(), d_user_int_attrib_parserexec_sp1.begin());
+        amrex::Gpu::copyAsync(Gpu::hostToDevice, user_real_attrib_parserexec_pinned_sp1.begin(),
+                              user_real_attrib_parserexec_pinned_sp1.end(), d_user_real_attrib_parserexec_sp1.begin());
+        amrex::Gpu::copyAsync(Gpu::hostToDevice, pa_user_int_pinned_sp2.begin(),
+                              pa_user_int_pinned_sp2.end(), d_pa_user_int_sp2.begin());
+        amrex::Gpu::copyAsync(Gpu::hostToDevice, pa_user_real_pinned_sp2.begin(),
+                              pa_user_real_pinned_sp2.end(), d_pa_user_real_sp2.begin());
+        amrex::Gpu::copyAsync(Gpu::hostToDevice, user_int_attrib_parserexec_pinned_sp2.begin(),
+                              user_int_attrib_parserexec_pinned_sp2.end(), d_user_int_attrib_parserexec_sp2.begin());
+        amrex::Gpu::copyAsync(Gpu::hostToDevice, user_real_attrib_parserexec_pinned_sp2.begin(),
+                              user_real_attrib_parserexec_pinned_sp2.end(), d_user_real_attrib_parserexec_sp2.begin());
+        int** pa_user_int_data_sp1 = d_pa_user_int_sp1.dataPtr();
+        ParticleReal** pa_user_real_data_sp1 = d_pa_user_real_sp1.dataPtr();
+        amrex::ParserExecutor<7> const* user_int_parserexec_data_sp1 = d_user_int_attrib_parserexec_sp1.dataPtr();
+        amrex::ParserExecutor<7> const* user_real_parserexec_data_sp1 = d_user_real_attrib_parserexec_sp1.dataPtr();
+        int** pa_user_int_data_sp2 = d_pa_user_int_sp2.dataPtr();
+        ParticleReal** pa_user_real_data_sp2 = d_pa_user_real_sp2.dataPtr();
+        amrex::ParserExecutor<7> const* user_int_parserexec_data_sp2 = d_user_int_attrib_parserexec_sp2.dataPtr();
+        amrex::ParserExecutor<7> const* user_real_parserexec_data_sp2 = d_user_real_attrib_parserexec_sp2.dataPtr();
+#else
+        int** pa_user_int_data_sp1 = pa_user_int_pinned_sp1.dataPtr();
+        ParticleReal** pa_user_real_data_sp1 = pa_user_real_pinned_sp1.dataPtr();
+        amrex::ParserExecutor<7> const* user_int_parserexec_data_sp1 = user_int_attrib_parserexec_pinned_sp1.dataPtr();
+        amrex::ParserExecutor<7> const* user_real_parserexec_data_sp1 = user_real_attrib_parserexec_pinned_sp1.dataPtr();
+        int** pa_user_int_data_sp2 = pa_user_int_pinned_sp2.dataPtr();
+        ParticleReal** pa_user_real_data_sp2 = pa_user_real_pinned_sp2.dataPtr();
+        amrex::ParserExecutor<7> const* user_int_parserexec_data_sp2 = user_int_attrib_parserexec_pinned_sp2.dataPtr();
+        amrex::ParserExecutor<7> const* user_real_parserexec_data_sp2 = user_real_attrib_parserexec_pinned_sp2.dataPtr();
+#endif
+        // to include QED, initialize necessary attributes
+#ifdef WARPX_QED
+        //Pointer to the optical depth component
+        amrex::ParticleReal* p_optical_depth_QSR_sp1 = nullptr;
+        amrex::ParticleReal* p_optical_depth_BW_sp1  = nullptr;
+        amrex::ParticleReal* p_optical_depth_QSR_sp2 = nullptr;
+        amrex::ParticleReal* p_optical_depth_BW_sp2  = nullptr;
+
+        // If a QED effect is enabled, the corresponding optical depth
+        // has to be initialized
+        bool loc_has_quantum_sync_sp1 = species1.has_quantum_sync();
+        bool loc_has_breit_wheeler_sp1 = species1.has_breit_wheeler();
+        bool loc_has_quantum_sync_sp2 = species2.has_quantum_sync();
+        bool loc_has_breit_wheeler_sp2 = species2.has_breit_wheeler();
+        if (loc_has_quantum_sync_sp1) {
+            p_optical_depth_QSR_sp1 = soa_sp1.GetRealData(
+                species1.particle_comps["opticalDepthQSR"]).data() + old_size_sp1;
+        }
+        if (loc_has_quantum_sync_sp2) {
+            p_optical_depth_QSR_sp2 = soa_sp2.GetRealData(
+                species2.particle_comps["opticalDepthQSR"]).data() + old_size_sp2;
+        }
+        if(loc_has_breit_wheeler_sp1) {
+            p_optical_depth_BW_sp1 = soa_sp1.GetRealData(
+                species1.particle_comps["opticalDepthBW"]).data() + old_size_sp1;
+        }
+        if(loc_has_breit_wheeler_sp1) {
+            p_optical_depth_BW_sp2 = soa_sp2.GetRealData(
+                species2.particle_comps["opticalDepthBW"]).data() + old_size_sp2;
+        }
+
+        //If needed, get the appropriate functors from the engines
+        QuantumSynchrotronGetOpticalDepth quantum_sync_get_opt;
+        BreitWheelerGetOpticalDepth breit_wheeler_get_opt;
+        if(loc_has_quantum_sync_sp1){
+            quantum_sync_get_opt =
+                m_shr_p_qs_engine->build_optical_depth_functor();
+        }
+        if(loc_has_breit_wheeler_sp1){
+            breit_wheeler_get_opt =
+                m_shr_p_bw_engine->build_optical_depth_functor();
+        }
+#endif
+
+        // Loop over particle-pair and inject them.
+        const auto poffset = offset.data();
+        amrex::ParallelForRNG(overlap_box,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
+        {
+            amrex::IntVect iv = amrex::IntVect(AMREX_D_DECL(i,j,k));
+            const auto index = overlap_box.index(iv);
+            for (int ipair = 0; ipair < pcounts[index]; ++ipair)
+            {
+                long ip = poffset[index] + ipair;
+                // Species 1 id for the ip particle and cpuid
+                ParticleType& p_sp1 = pp_sp1[ip];
+                p_sp1.id() = pid_sp1 + ip;
+                p_sp1.cpu() = cpuid;
+
+                // Species 2 id for the ip particle and cpuid
+                ParticleType& p_sp2 = pp_sp2[ip];
+                p_sp2.id() = pid_sp2 + ip;
+                p_sp2.cpu() = cpuid;
+
+                // Random value for xpos, ypos, zpos stored in r
+                // Use the same random number for species 1 and species 2
+                // so that they are initialized in the same location
+                const XDim3 r = amrex::XDim3{amrex::Random(engine), amrex::Random(engine), amrex::Random(engine)};
+                auto pos = getCellCoords(overlap_corner, dx, r, iv);
+
+                //Remove particles within user-defined theta bounds
+                amrex::Real theta_p = 0._rt;
+                const amrex::Real xc = center_star_arr[0];
+                const amrex::Real yc = center_star_arr[1];
+                const amrex::Real zc = center_star_arr[2];
+                const amrex::Real rad = std::sqrt( (pos.x-xc)*(pos.x-xc)
+                                                 + (pos.y-yc)*(pos.y-yc)
+                                                 + (pos.z-zc)*(pos.z-zc));
+                if (rad > 0) theta_p = std::acos(amrex::Math::abs(pos.z-zc)/rad);
+                if (amrex::Math::abs(theta_p) > pulsar_removeparticle_theta_min*MathConst::pi/180. and
+                    amrex::Math::abs(theta_p) < pulsar_removeparticle_theta_max*MathConst::pi/180.) {
+                    ZeroInitializeAndSetNegativeID(p_sp1, pa_sp1, ip
+#ifdef WARPX_QED
+                                               ,loc_has_quantum_sync_sp1, p_optical_depth_QSR_sp1
+                                               ,loc_has_breit_wheeler_sp1, p_optical_depth_BW_sp1
+#endif
+                                               );
+                    ZeroInitializeAndSetNegativeID(p_sp2, pa_sp2, ip
+#ifdef WARPX_QED
+                                               ,loc_has_quantum_sync_sp2, p_optical_depth_QSR_sp2
+                                               ,loc_has_breit_wheeler_sp2, p_optical_depth_BW_sp2
+#endif
+                                               );
+                }
+                // Initialize particle velocity along the Bfield line
+                XDim3 u;
+                amrex::Real Bx_cc = ( Bx(lo_tile_index[0]+i  , lo_tile_index[1]+j, lo_tile_index[2]+k)
+                                    + Bx(lo_tile_index[0]+i+1, lo_tile_index[1]+j, lo_tile_index[2]+k) )
+                                    / 2.0_rt;
+                amrex::Real By_cc = ( By(lo_tile_index[0]+i, lo_tile_index[1]+j  , lo_tile_index[2]+k)
+                                    + By(lo_tile_index[0]+i, lo_tile_index[1]+j+1, lo_tile_index[2]+k) )
+                                    / 2.0_rt;
+                amrex::Real Bz_cc = ( Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k  )
+                                    + Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k+1) )
+                                    / 2.0_rt;
+                amrex::Real B_mag = std::sqrt( Bx_cc * Bx_cc + By_cc*By_cc + Bz_cc*Bz_cc);
+                amrex::Real unit_Bx = Bx_cc/B_mag;
+                amrex::Real unit_By = By_cc/B_mag;
+                amrex::Real unit_Bz = Bz_cc/B_mag;
+                amrex::Real vx = particle_speed * unit_Bx;
+                amrex::Real vy = particle_speed * unit_By;
+                amrex::Real vz = particle_speed * unit_Bz;
+                amrex::Real gamma = 1._rt/std::sqrt(1._rt - (vx*vx + vy*vy + vz*vz));
+                if (pos.z < center_star_arr[2]) {
+                    u.x = -1._rt * gamma * vx;
+                    u.y = -1._rt * gamma * vy;
+                    u.z = -1._rt * gamma * vz;
+                } else {
+                    u.x = gamma * vx;
+                    u.y = gamma * vy;
+                    u.z = gamma * vz;
+                }
+
+                u.x *= PhysConst::c;
+                u.y *= PhysConst::c;
+                u.z *= PhysConst::c;
+
+                // use parser for user-defined part attributes
+                for (int ia = 0; ia < n_user_int_attribs_sp1; ++ia) {
+                    pa_user_int_data_sp1[ia][ip] = static_cast<int>(user_int_parserexec_data_sp1[ia](
+                                                                    pos.x, pos.y, pos.z, u.x, u.y, u.z, t));
+                }
+                for (int ia = 0; ia < n_user_int_attribs_sp2; ++ia) {
+                    pa_user_int_data_sp2[ia][ip] = static_cast<int>(user_int_parserexec_data_sp2[ia](
+                                                                    pos.x, pos.y, pos.z, u.x, u.y, u.z, t));
+                }
+                for (int ia = 0; ia < n_user_real_attribs_sp1; ++ia) {
+                    pa_user_real_data_sp1[ia][ip] = user_real_parserexec_data_sp1[ia](
+                                                                    pos.x, pos.y, pos.z, u.x, u.y, u.z, t);
+                }
+                for (int ia = 0; ia < n_user_real_attribs_sp2; ++ia) {
+                    pa_user_real_data_sp2[ia][ip] = user_real_parserexec_data_sp2[ia](
+                                                                    pos.x, pos.y, pos.z, u.x, u.y, u.z, t);
+                }
+                amrex::Real weight = part_weight;
+
+                pa_sp1[PIdx::w][ip] = weight;
+                pa_sp1[PIdx::ux][ip] = u.x;
+                pa_sp1[PIdx::uy][ip] = u.y;
+                pa_sp1[PIdx::uz][ip] = u.z;
+
+                p_sp1.pos(0) = pos.x;
+                p_sp1.pos(1) = pos.y;
+                p_sp1.pos(2) = pos.z;
+
+                pa_sp2[PIdx::w][ip] = weight;
+                pa_sp2[PIdx::ux][ip] = u.x;
+                pa_sp2[PIdx::uy][ip] = u.y;
+                pa_sp2[PIdx::uz][ip] = u.z;
+
+                p_sp2.pos(0) = pos.x;
+                p_sp2.pos(1) = pos.y;
+                p_sp2.pos(2) = pos.z;
+            }
+        });
+        amrex::Gpu::synchronize();
+
+    } // close MFIter
+
 }
 #endif

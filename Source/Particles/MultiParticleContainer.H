@@ -332,6 +332,8 @@ public:
     void PulsarParticleRemoval ();
     // plasma injection
     void PulsarParticleInjection ();
+    // plasma pair-injection
+    void PulsarPairInjection ();
 #endif
 
 protected:
