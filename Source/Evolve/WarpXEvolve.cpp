@@ -150,7 +150,8 @@ WarpX::Evolve (int numsteps)
                 cur_time <= Pulsar::m_injection_endtime) {
                     m_pulsar->FlagCellsForInjectionWithPcounts();
                     // particle injection call
-                    mypc->PulsarParticleInjection();
+//                    mypc->PulsarParticleInjection();
+                    mypc->PulsarPairInjection();
                     m_pulsar->TotalParticlesInjected();
                     // redistribute
                     mypc->Redistribute();
