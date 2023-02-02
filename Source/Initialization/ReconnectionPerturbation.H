@@ -84,21 +84,28 @@ public:
         Complex i(0.0, 1.);
 
         amrex::Real prefactor = (2._rt * B0) / ( (pi_val/2._rt) + nd_ratio - 1._rt);
-        amrex::Real term1 = pi_val/4._rt * (x - 2._rt * xcs);
+        // Take advantage of the fact that the integral is an odd function, so we won't
+        // run into numerical issues for very negative values of x.
+        amrex::Real x_eval = fabs(x);
+
+        amrex::Real term1 = pi_val/4._rt * (x_eval - 2._rt * xcs);
         amrex::Real term2 = 0.5_rt * (nd_ratio - 1._rt)
-                          * ( delta * std::log( std::cosh ( (x-xcs) / delta) )
-                            - delta * std::log( std::cosh ( (x+xcs) / delta) )
-                            + x
+                          * ( delta * std::log( std::cosh ( (x_eval-xcs) / delta) )
+                            - delta * std::log( std::cosh ( (x_eval+xcs) / delta) )
+                            + x_eval
                             );
         Complex term3 = delta * i / 2.0_rt
-                                     * ( getComplexDilog( -i * std::exp( -(x-xcs)/delta) )
-                                       - getComplexDilog(  i * std::exp( -(x-xcs)/delta) )
+                                     * ( getComplexDilog( -i * std::exp( -(x_eval-xcs)/delta) )
+                                       - getComplexDilog(  i * std::exp( -(x_eval-xcs)/delta) )
                                        );
         Complex term4 = - delta * i / 2.0_rt
-                                     * ( getComplexDilog( -i * std::exp( -(x+xcs)/delta) )
-                                       - getComplexDilog(  i * std::exp( -(x+xcs)/delta) )
+                                     * ( getComplexDilog( -i * std::exp( -(x_eval+xcs)/delta) )
+                                       - getComplexDilog(  i * std::exp( -(x_eval+xcs)/delta) )
                                        );
-        Complex IntegralBz_val = prefactor * ( term1 + term2 + term3 + term4);
+        // Flip the sign if x is negative, to make function odd
+        amrex::Real x_sign = 1.;
+        if (x < 0) x_sign = -1.;
+        Complex IntegralBz_val = x_sign * prefactor * (term1 + term2 + term3 + term4);
         return IntegralBz_val.real();
     }
 

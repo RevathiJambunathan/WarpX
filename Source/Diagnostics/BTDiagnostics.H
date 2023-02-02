@@ -10,6 +10,7 @@
 #include "Diagnostics.H"
 #include "Diagnostics/ComputeDiagFunctors/ComputeDiagFunctor.H"
 #include "Utils/WarpXConst.H"
+#include "Utils/Parser/IntervalsParser.H"
 
 #include <AMReX_Box.H>
 #include <AMReX_Geometry.H>
@@ -37,6 +38,8 @@ private:
     bool m_plot_raw_fields_guards = false;
     /** Read relevant parameters for BTD */
     void ReadParameters ();
+    /** Determines timesteps at which BTD diagnostics are written to file */
+    utils::parser::BTDIntervalsParser m_intervals;
     /** \brief Flush m_mf_output and particles to file.
      * Currently, a temporary customized output format for the buffer
      * data is implemented and called in this function.
@@ -71,6 +74,25 @@ private:
      *                is initialized.
      */
     void InitializeFieldFunctors (int lev) override;
+    /** Initialize functors that store pointers to the fields in RZ requested by the user.
+     *  Additionally, the cell-center functors that stores pointers to all fields,
+     *  namely, Er, Et, Ez, Br, Bt, Bz, jr, jt, jz, and rho is also initialized.
+     * \param[in] lev level on which the vector of unique_ptrs to field functors
+     *                is initialized.
+     */
+    void InitializeFieldFunctorsRZopenPMD (int lev) override;
+    /** Populating m_varnames with real and imaginary parts of each RZ mode.
+     *  Modes are numbered from 0 to (nmodes-1) and mode 0 is purely real.
+     *  Both m_cellcenter_varnames (storing cell-centered data) and
+     *  m_varnames (storing back-transformed field data) are modified to include RZ modes to include
+     *  field_modeid_real/imag. For example, for Er with two modes, the varnames are
+     *  Er_0_real, Er_1_real, Er_1_imag
+     * \param[in] field field-name
+     * \param[in] ncomp number of rz components (if 2 modes, the ncomp is 2*nmodes-1)
+     * \param[in] cellcenter_data if true, m_cellcenter_varnames are updated
+                                  if false, m_varnames is updated
+     */
+    void AddRZModesToOutputNames (const std::string& field, const int ncomp, bool cellcenter_data);
     /** This function allocates and initializes particle buffers for all the snapshots.
      * This is currently an empty function:
      * The particle containers required for this must be added to populate this function.
@@ -149,9 +171,6 @@ private:
 
     /** Vector of lab-frame time corresponding to each snapshot */
     amrex::Vector<amrex::Real> m_t_lab;
-    /** Vector of lab-frame physical domain corresponding to the boosted-frame simulation
-     *  domain at lab-frame time corresponding to each snapshot*/
-    amrex::Vector<amrex::RealBox> m_prob_domain_lab;
     /** Vector of user-defined physical region for diagnostics in lab-frame
      *  for each back-transformed snapshot */
     amrex::Vector<amrex::RealBox> m_snapshot_domain_lab;
@@ -210,6 +229,7 @@ private:
     /** Vector of counters tracking number of times the buffer of multifab is
      *  flushed out and emptied before being refilled again for each snapshot */
     amrex::Vector<int> m_buffer_flush_counter;
+    amrex::Vector<int> m_buffer_k_index_hi;
     /** Multi-level cell-centered multifab with all field-data components, namely,
      *  Ex, Ey, Ez, Bx, By, Bz, jx, jy, jz, and rho.
      *  This cell-centered data extending over the entire domain
@@ -279,7 +299,7 @@ private:
                when buffer counter is equal to m_buffer_size
      */
     bool buffer_full (int i_buffer) {
-        return ( m_buffer_counter[i_buffer] == m_buffer_size );
+        return (k_index_zlab(i_buffer,0) == m_buffer_box[i_buffer].smallEnd(m_moving_window_dir));
     }
 
     /** whether field buffer is empty.
@@ -312,9 +332,20 @@ private:
      *  All the fields are stored regardless of the specific fields to plot selected
      *  by the user.
      */
+#ifdef WARPX_DIM_RZ
+    amrex::Vector< std::string > m_cellcenter_varnames = {"Er", "Et", "Ez",
+                                                          "Br", "Bt", "Bz",
+                                                          "jr", "jt", "jz", "rho"};
+    amrex::Vector< std::string > m_cellcenter_varnames_fields = {"Er", "Et", "Ez",
+                                                                 "Br", "Bt", "Bz",
+                                                                 "jr", "jt", "jz",
+                                                                 "rho"};
+#else
     amrex::Vector< std::string > m_cellcenter_varnames = {"Ex", "Ey", "Ez",
                                                           "Bx", "By", "Bz",
                                                           "jx", "jy", "jz", "rho"};
+#endif
+
 
     /** Merge the lab-frame buffer multifabs so it can be visualized as
      *  a single plotfile
@@ -355,6 +386,7 @@ private:
     void ClearParticleBuffer(int i_buffer);
     /** Redistributes particles to the buffer box array in the lab-frame */
     void RedistributeParticleBuffer (const int i_buffer);
+    void UpdateVarnamesForRZopenPMD();
 
 };
 #endif // WARPX_BTDIAGNOSTICS_H_

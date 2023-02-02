@@ -45,7 +45,7 @@ warpx.use_filter = 1
 #################################
 ########## DIAGNOSTICS ##########
 #################################
-diagnostics.diags_names = diags
+diagnostics.diags_names = diags chk
 diags.intervals = 5
 diags.diag_type = Full
 diags.fields_to_plot = Ex Ey Ez Bx By Bz jx jy jz rho_electrons divB divE
@@ -90,6 +90,10 @@ diags.particle_fields.energy_upstream.filter(x,y,z,ux,uy,uz,upstream) = upstream
 
 diags.particle_fields.upstream(x,y,z,ux,uy,uz,upstream) = upstream
 diags.particle_fields_species = ions electrons
+
+chk.format = checkpoint
+chk.intervals = 5
+chk.diag_type = Full
 
 electrons.addRealAttributes = upstream track
 electrons.attribute.upstream(x,y,z,ux,uy,uz,t) = 1 - heaviside((x-xcs) + delta * ds,0) * heaviside(-(x-xcs)+delta * ds,0) - heaviside(-(x+xcs)+delta*ds,0)*heaviside(x+xcs+delta * ds,0)
