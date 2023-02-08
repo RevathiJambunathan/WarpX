@@ -53,10 +53,17 @@ Reconnection_Perturbation::AddBfieldPerturbation (amrex::MultiFab *Bx,
                               amrex::MultiFab *Bz,
                               amrex::ParserExecutor<3> const& xfield_parser,
                               amrex::ParserExecutor<3> const& yfield_parser,
-                              amrex::ParserExecutor<3> const& zfield_parser, const int lev)
+                              amrex::ParserExecutor<3> const& zfield_parser, const int lev,
+                              PatchType patch_type)
 {
     auto &warpx = WarpX::GetInstance();
-    const auto dx_lev = warpx.Geom(lev).CellSizeArray();
+    auto dx_lev = warpx.Geom(lev).CellSizeArray();
+    amrex::IntVect refratio = (lev > 0 ) ? WarpX::RefRatio(lev-1) : amrex::IntVect(1);
+    if (patch_type == PatchType::coarse) {
+        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+            dx_lev[idim] = dx_lev[idim] * refratio[idim];
+        }
+    }
     const RealBox& real_box = warpx.Geom(lev).ProbDomain();
     amrex::IntVect x_nodal_flag = Bx->ixType().toIntVect();
     amrex::IntVect z_nodal_flag = Bz->ixType().toIntVect();
