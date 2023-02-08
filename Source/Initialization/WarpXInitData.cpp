@@ -794,7 +794,24 @@ WarpX::InitLevelData (int lev, Real /*time*/)
                                Bfield_fp[lev][2].get(),
                                Bxfield_parser->compile<3>(),
                                Byfield_parser->compile<3>(),
-                               Bzfield_parser->compile<3>(), lev);
+                               Bzfield_parser->compile<3>(), lev, PatchType::fine);
+
+        if (lev > 0) {
+        Reconnection_Perturbation::AddBfieldPerturbation (Bfield_aux[lev][0].get(),
+                               Bfield_aux[lev][1].get(),
+                               Bfield_aux[lev][2].get(),
+                               Bxfield_parser->compile<3>(),
+                               Byfield_parser->compile<3>(),
+                               Bzfield_parser->compile<3>(), lev, PatchType::fine);
+
+        Reconnection_Perturbation::AddBfieldPerturbation (Bfield_cp[lev][0].get(),
+                               Bfield_cp[lev][1].get(),
+                               Bfield_cp[lev][2].get(),
+                               Bxfield_parser->compile<3>(),
+                               Byfield_parser->compile<3>(),
+                               Bzfield_parser->compile<3>(), lev, PatchType::coarse);
+        }
+
 #endif
     }
 

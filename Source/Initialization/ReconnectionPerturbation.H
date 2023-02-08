@@ -55,7 +55,8 @@ public:
                               amrex::MultiFab *Bz,
                               amrex::ParserExecutor<3> const& xfield_parser,
                               amrex::ParserExecutor<3> const& yfield_parser,
-                              amrex::ParserExecutor<3> const& zfield_parser, const int lev);
+                              amrex::ParserExecutor<3> const& zfield_parser, const int lev,
+                              PatchType patch_type);
 
     AMREX_FORCE_INLINE
     static Complex getComplexDilog ( const Complex z_arg) {
