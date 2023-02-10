@@ -349,22 +349,22 @@ public:
     virtual void PulsarParticleRemoval () override;
     virtual void PulsarParticleInjection () override;
     PlasmaInjector* getPlasmaInjector () {return plasma_injector.get();}
-    int user_int_attribs_size() {
+    int user_int_attribs_size() override {
         return m_user_int_attribs.size();
     }
-    int user_real_attribs_size() {
+    int user_real_attribs_size() override {
         return m_user_real_attribs.size();
     }
-    std::string user_int_attribs(int ia) {
+    std::string user_int_attribs(int ia) override {
         return m_user_int_attribs[ia];
     }
-    std::string user_real_attribs(int ia) {
+    std::string user_real_attribs(int ia) override {
         return m_user_real_attribs[ia];
     }
-    amrex::Parser* user_int_attrib_parser (int ia) {
+    amrex::Parser* user_int_attrib_parser (int ia) override {
         return m_user_int_attrib_parser[ia].get();
     }
-    amrex::Parser* user_real_attrib_parser (int ia) {
+    amrex::Parser* user_real_attrib_parser (int ia) override {
         return m_user_real_attrib_parser[ia].get();
     }
 #endif
