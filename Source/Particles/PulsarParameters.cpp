@@ -1592,7 +1592,7 @@ Pulsar::TotalParticlesToBeInjected (amrex::Real scale_factor)
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     amrex::Real part_weight = m_max_ndens * scale_factor;
     m_particle_wt = part_weight;
-   
+
     if (TotalParticlesIsSumOfSpecies == 1) {
         return (specified_injection_rate * dt / part_weight) / 2._rt;
     } else {
@@ -1945,7 +1945,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     }
     amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
     amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
-    
+
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -1981,5 +1981,5 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         );
     }
     amrex::Real TotalInjectedCells = SumInjectedCells();
-    amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n"; 
+    amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n";
 }
