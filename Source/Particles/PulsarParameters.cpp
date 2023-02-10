@@ -117,6 +117,7 @@ amrex::Real Pulsar::m_min_TCTP_ratio;
 amrex::Real Pulsar::m_maxsigma_fraction = 1;
 amrex::Real Pulsar::m_injRing_radius;
 amrex::Real Pulsar::m_part_bulkVelocity = 0.0;
+int Pulsar::m_pair_injection_flag = 1; // default is to inject particles in pairs
 
 
 Pulsar::Pulsar ()
@@ -312,6 +313,7 @@ Pulsar::ReadParameters () {
     pp.get("maxsigma_fraction", m_maxsigma_fraction);
     pp.get("injRing_radius", m_injRing_radius);
     pp.get("BulkVelocity", m_part_bulkVelocity);
+    pp.query("pair_injection", m_pair_injection_flag);
 }
 
 
@@ -1590,7 +1592,7 @@ Pulsar::TotalParticlesToBeInjected (amrex::Real scale_factor)
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     amrex::Real part_weight = m_max_ndens * scale_factor;
     m_particle_wt = part_weight;
-   
+
     if (TotalParticlesIsSumOfSpecies == 1) {
         return (specified_injection_rate * dt / part_weight) / 2._rt;
     } else {
@@ -1943,7 +1945,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     }
     amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
     amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
-    
+
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -1979,5 +1981,5 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         );
     }
     amrex::Real TotalInjectedCells = SumInjectedCells();
-    amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n"; 
+    amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n";
 }

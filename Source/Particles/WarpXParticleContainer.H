@@ -381,6 +381,20 @@ public:
 #ifdef PULSAR
     virtual void PulsarParticleInjection () {};
     virtual void PulsarParticleRemoval () {};
+    virtual int user_int_attribs_size() {return 0;}
+    virtual int user_real_attribs_size() {return 0;}
+    virtual std::string user_int_attribs(int ia) {amrex::ignore_unused(ia); return "none";}
+    virtual std::string user_real_attribs(int ia) {amrex::ignore_unused(ia); return "none";}
+    virtual amrex::Parser* user_int_attrib_parser (int ia) {
+        amrex::ignore_unused(ia);
+        std::unique_ptr<amrex::Parser> parser;
+        return parser.get();
+    }
+    virtual amrex::Parser* user_real_attrib_parser (int ia) {
+        amrex::ignore_unused(ia);
+        std::unique_ptr<amrex::Parser> parser;
+        return parser.get();
+    }
 #endif
 
 protected:
