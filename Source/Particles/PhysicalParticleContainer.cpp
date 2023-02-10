@@ -1080,7 +1080,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 //    // distribute injection between selected cells as num_ppc
 //    int modified_num_ppc = static_cast<int>((TotalParticlesToBeInjected*1.)/(TotalInjectionCells));
 //    amrex::Print() << " particles_per_cell : " << modified_num_ppc <<"\n";
- 
+
     for (MFIter mfi = MakeMFIter(lev, info); mfi.isValid(); ++mfi)
     {
         if (cost && WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Timers)

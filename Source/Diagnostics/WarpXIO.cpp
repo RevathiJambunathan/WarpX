@@ -247,7 +247,7 @@ WarpX::InitFromCheckpoint ()
             is >> sigma_threshold;
             m_pulsar->sigma_list.push_back(sigma_threshold);
             GotoNextLine(is);
-        }        
+        }
         is >> m_pulsar->m_InjCell_sum;
         GotoNextLine(is);
         is >> m_pulsar->InjCell_list_size;
