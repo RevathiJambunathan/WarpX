@@ -4,8 +4,9 @@
 #include "Particles/PhysicalParticleContainer.H"
 #include "Utils/WarpXUtil.H"
 #include "Utils/WarpXConst.H"
-#include "Utils/CoarsenIO.H"
-#include "Utils/IntervalsParser.H"
+#include <ablastr/coarsen/sample.H>
+#include "Utils/Parser/IntervalsParser.H"
+#include "Utils/Parser/ParserUtils.H"
 #include "WarpX.H"
 #include <AMReX_ParmParse.H>
 #include <AMReX_Print.H>
@@ -83,7 +84,7 @@ amrex::Real Pulsar::m_injection_rate;
 amrex::Real Pulsar::m_GJ_injection_rate;
 amrex::Real Pulsar::m_Sigma0_threshold;
 amrex::Real Pulsar::m_Sigma0_baseline;
-IntervalsParser Pulsar::m_injection_tuning_interval;
+utils::parser::IntervalsParser Pulsar::m_injection_tuning_interval;
 amrex::Real Pulsar::m_min_Sigma0;
 amrex::Real Pulsar::m_max_Sigma0;
 amrex::Real Pulsar::m_sum_injection_rate = 0.;
@@ -254,9 +255,9 @@ Pulsar::ReadParameters () {
     pp.query("AddMonopoleInsideRstarOnGrid", m_AddMonopoleInsideRstarOnGrid);
     pp.query("EnforceTheoreticalEBInGrid", m_EnforceTheoreticalEBInGrid);
     if (pp.query("conductor_function(x,y,z)", m_str_conductor_function)) {
-        Store_parserString(pp, "conductor_function(x,y,z)", m_str_conductor_function);
+        utils::parser::Store_parserString(pp, "conductor_function(x,y,z)", m_str_conductor_function);
         m_conductor_parser = std::make_unique<amrex::Parser>(
-                                  makeParser(m_str_conductor_function,{"x","y","z"}));
+                                  utils::parser::makeParser(m_str_conductor_function,{"x","y","z"}));
         m_do_conductor = true;
         amrex::Print() << " do conductor : " << m_do_conductor << "\n";
         pp.query("ApplyEfieldBCusingConductor", m_ApplyEfieldBCusingConductor);
@@ -275,7 +276,7 @@ Pulsar::ReadParameters () {
     pp.query("ParticleInjectionEndTime",m_injection_endtime);
     std::vector<std::string> intervals_string_vec = {"0"};
     pp.getarr("injection_tuning_interval", intervals_string_vec);
-    m_injection_tuning_interval = IntervalsParser(intervals_string_vec);
+    m_injection_tuning_interval = utils::parser::IntervalsParser(intervals_string_vec);
     pp.get("sigma_tune_method",m_sigma_tune_method);
     amrex::Print() << " sigma tune method " << m_sigma_tune_method << "\n";
     pp.get("ROI_avg_size",ROI_avg_window_size);

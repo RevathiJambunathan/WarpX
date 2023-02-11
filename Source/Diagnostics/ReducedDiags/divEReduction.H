@@ -9,8 +9,9 @@
 #define WARPX_DIAGNOSTICS_REDUCEDDIAGS_DIVEREDUCTION_H_
 
 #include "ReducedDiags.H"
-#include "Utils/CoarsenIO.H"
 #include "WarpX.H"
+
+#include <ablastr/coarsen/sample.H>
 
 #include <AMReX_Array.H>
 #include <AMReX_Box.H>

@@ -1273,7 +1273,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 //                    }
 //                }
 //            }
-            amrex::ignore_unused(lrefine_injection, lfine_box, lrrfac);
+            amrex::ignore_unused(fine_overlap_box, lrrfac);
 #else // not PULSAR
             if (inj_pos->overlapsWith(lo, hi))
             {

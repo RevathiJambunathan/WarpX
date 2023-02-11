@@ -1,6 +1,6 @@
 #include "EdotBFunctor.H"
-#include "Utils/CoarsenIO.H"
 #include "WarpX.H"
+#include <ablastr/coarsen/sample.H>
 #include <AMReX_IntVect.H>
 #include <AMReX_GpuControl.H>
 #include <AMReX_GpuDevice.H>
@@ -97,17 +97,17 @@ EdotBFunctor::ComputeEdotB(amrex::MultiFab& mf_dst, int dcomp) const
         amrex::ParallelFor (bx, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n)
             {
-                amrex::Real Ex_cc = CoarsenIO::Interp(Ex_arr, sf_Ex, s_dst, cr,
-                                                      i, j, k, n);
-                amrex::Real Ey_cc = CoarsenIO::Interp(Ey_arr, sf_Ey, s_dst, cr,
-                                                      i, j, k, n);
-                amrex::Real Ez_cc = CoarsenIO::Interp(Ez_arr, sf_Ez, s_dst, cr,
-                                                      i, j, k, n);
-                amrex::Real Bx_cc = CoarsenIO::Interp(Bx_arr, sf_Bx, s_dst, cr,
-                                                      i, j, k, n);
-                amrex::Real By_cc = CoarsenIO::Interp(By_arr, sf_By, s_dst, cr,
-                                                      i, j, k, n);
-                amrex::Real Bz_cc = CoarsenIO::Interp(Bz_arr, sf_Bz, s_dst, cr,
+                amrex::Real Ex_cc = ablastr::coarsen::sample::Interp(Ex_arr, sf_Ex, s_dst, cr,
+                                            i, j, k, n);
+                amrex::Real Ey_cc = ablastr::coarsen::sample::Interp(Ey_arr, sf_Ey, s_dst, cr,
+                                            i, j, k, n);
+                amrex::Real Ez_cc = ablastr::coarsen::sample::Interp(Ez_arr, sf_Ez, s_dst, cr,
+                                            i, j, k, n);
+                amrex::Real Bx_cc = ablastr::coarsen::sample::Interp(Bx_arr, sf_Bx, s_dst, cr,
+                                            i, j, k, n);
+                amrex::Real By_cc = ablastr::coarsen::sample::Interp(By_arr, sf_By, s_dst, cr,
+                                            i, j, k, n);
+                amrex::Real Bz_cc = ablastr::coarsen::sample::Interp(Bz_arr, sf_Bz, s_dst, cr,
                                                       i, j, k, n);
                 arr_dst(i,j,k,n+dcomp) = Ex_cc * Bx_cc + Ey_cc * By_cc + Ez_cc * Bz_cc;
             });

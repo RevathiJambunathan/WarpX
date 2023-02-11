@@ -1,7 +1,7 @@
 #ifndef PULSAR_PARAMETERS_H
 #define PULSAR_PARAMETERS_H
 
-#include "Utils/IntervalsParser.H"
+#include "Utils/Parser/IntervalsParser.H"
 #include <AMReX_RealVect.H>
 #include <AMReX_REAL.H>
 #include <AMReX_GpuQualifiers.H>
@@ -589,7 +589,7 @@ public:
     static int m_AddVacuumEFieldsIntAndExt;
     static int m_AddVacuumBFieldsIntAndExt;
     static amrex::Real m_injection_endtime;
-    static IntervalsParser m_injection_tuning_interval;
+    static utils::parser::IntervalsParser m_injection_tuning_interval;
     static amrex::Real m_sum_injection_rate;
     /** Number density of the species, one for electrons and one for positrons for pair-plasma simulations*/
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_plasma_number_density;

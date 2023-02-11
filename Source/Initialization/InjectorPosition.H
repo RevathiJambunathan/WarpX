@@ -103,15 +103,6 @@ struct InjectorPositionRegular
         int ny = ref_fac[1] * pcount_y;
         int nz = ref_fac[2] * pcount_z;
 #endif  // ifdef 3D
-        int const ix_part = i_part / (ny*nz);  // written this way backward compatibility
-        int const iz_part = (i_part-ix_part*(ny*nz)) / ny;
-        int const iy_part = (i_part-ix_part*(ny*nz)) - ny*iz_part;
-        return XDim3{
-            (0.5_rt + ix_part) / nx,
-            (0.5_rt + iy_part) / ny,
-            (0.5_rt + iz_part) / nz
-        };
->>>>>>> ed68871f6 (add symmetry)
 
 #else // ifndef PULSAR
 
@@ -236,25 +227,6 @@ struct InjectorPosition
         }
         };
     }
-
-#ifdef PULSAR
-    AMREX_GPU_HOST_DEVICE
-    amrex::XDim3
-    getppcInEachDim () const noexcept
-    {
-        switch (type)
-        {
-        case Type::regular:
-        {
-            return object.regular.getppcInEachDim();
-        }
-        default:
-        {
-            return object.regular.getppcInEachDim();
-        }
-        };
-    }
-#endif
 
     /* \brief Flags whether the point (x, y, z) is inside the plasma region
      *        or on the lower boundary

@@ -1,6 +1,5 @@
 #include "NumberDensityFunctor.H"
-
-#include "Utils/CoarsenIO.H"
+#include <ablastr/coarsen/sample.H>
 #include "Utils/TextMsg.H"
 #ifdef WARPX_DIM_RZ
 #   include "WarpX.H"
@@ -24,7 +23,7 @@ NumberDensityFunctor::operator()(amrex::MultiFab& mf_dst, int dcomp, const int /
     amrex::Print() << " ndens : " << m_scomp << " ncomp " << nComp() << " dcomp " << dcomp << "\n";
     // In cartesian geometry, coarsen and interpolate from simulation MultiFab, m_mf_src,
     // to output diagnostic MultiFab, mf_dst.
-    CoarsenIO::Coarsen( mf_dst, *m_mf_src, dcomp, m_scomp, nComp(), mf_dst.nGrowVect(), m_crse_ratio);
+    ablastr::coarsen::sample::Coarsen( mf_dst, *m_mf_src, dcomp, m_scomp, nComp(), mf_dst.nGrowVect(), m_crse_ratio);
     amrex::ignore_unused(m_lev);
 #endif
 }

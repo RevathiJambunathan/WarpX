@@ -1,9 +1,9 @@
 #include "SphericalComponentFunctor.H"
-#include "Utils/CoarsenIO.H"
 #ifdef PULSAR
     #include "Particles/PulsarParameters.H"
 #endif
 #include "WarpX.H"
+#include <ablastr/coarsen/sample.H>
 #include <AMReX_IntVect.H>
 #include <AMReX_GpuControl.H>
 #include <AMReX_GpuDevice.H>
@@ -96,11 +96,11 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
         amrex::ParallelFor ( bx, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n)
             {
-                amrex::Real cc_xfield = CoarsenIO::Interp(xarr_src, sfx, s_dst, cr,
+                amrex::Real cc_xfield = ablastr::coarsen::sample::Interp(xarr_src, sfx, s_dst, cr,
                                         i, j, k, n);
-                amrex::Real cc_yfield = CoarsenIO::Interp(yarr_src, sfy, s_dst, cr,
+                amrex::Real cc_yfield = ablastr::coarsen::sample::Interp(yarr_src, sfy, s_dst, cr,
                                         i, j, k, n);
-                amrex::Real cc_zfield = CoarsenIO::Interp(zarr_src, sfz, s_dst, cr,
+                amrex::Real cc_zfield = ablastr::coarsen::sample::Interp(zarr_src, sfz, s_dst, cr,
                                         i, j, k, n);
                 // convert to spherical coordinates
                 // compute cell coordinates

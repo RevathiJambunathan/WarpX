@@ -1,5 +1,5 @@
 #include "PoyntingVectorFunctor.H"
-#include "Utils/CoarsenIO.H"
+#include <ablastr/coarsen/sample.H>
 #include "Utils/WarpXConst.H"
 #include "WarpX.H"
 #include <AMReX_IntVect.H>
@@ -102,17 +102,17 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
         amrex::ParallelFor (bx, ncomp,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, int n)
             {
-                amrex::Real Ex_cc = CoarsenIO::Interp(Ex_arr, sf_Ex, s_dst, cr,
+                amrex::Real Ex_cc = ablastr::coarsen::sample::Interp(Ex_arr, sf_Ex, s_dst, cr,
                                                       i, j, k, n);
-                amrex::Real Ey_cc = CoarsenIO::Interp(Ey_arr, sf_Ey, s_dst, cr,
+                amrex::Real Ey_cc = ablastr::coarsen::sample::Interp(Ey_arr, sf_Ey, s_dst, cr,
                                                       i, j, k, n);
-                amrex::Real Ez_cc = CoarsenIO::Interp(Ez_arr, sf_Ez, s_dst, cr,
+                amrex::Real Ez_cc = ablastr::coarsen::sample::Interp(Ez_arr, sf_Ez, s_dst, cr,
                                                       i, j, k, n);
-                amrex::Real Bx_cc = CoarsenIO::Interp(Bx_arr, sf_Bx, s_dst, cr,
-                                                      i, j, k, n);
-                amrex::Real By_cc = CoarsenIO::Interp(By_arr, sf_By, s_dst, cr,
-                                                      i, j, k, n);
-                amrex::Real Bz_cc = CoarsenIO::Interp(Bz_arr, sf_Bz, s_dst, cr,
+                amrex::Real Bx_cc = ablastr::coarsen::sample::Interp(Bx_arr, sf_Bx, s_dst, cr,
+                                                    i, j, k, n);
+                amrex::Real By_cc = ablastr::coarsen::sample::Interp(By_arr, sf_By, s_dst, cr,
+                                                    i, j, k, n);
+                amrex::Real Bz_cc = ablastr::coarsen::sample::Interp(Bz_arr, sf_Bz, s_dst, cr,
                                                       i, j, k, n);
                 if (vectorcomp == 0) {
                     arr_dst(i,j,k,n+dcomp) = Ey_cc * Bz_cc - Ez_cc * By_cc;
