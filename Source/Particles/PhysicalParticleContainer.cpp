@@ -3102,6 +3102,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     for (int idim = 0; idim < 3; ++idim) {
         center_star_arr[idim] = Pulsar::m_center_star[idim];
     }
+    amrex::Real crr_gammarad_real = Pulsar::m_gammarad_real;
+    amrex::Real crr_gammarad_scaled = Pulsar::m_gammarad_scaled;
 #endif
 
 
@@ -3271,7 +3273,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 #ifdef WARPX_QED
                               t_chi_max,
 #endif
-                              dt);
+                              dt
+#ifdef PULSAR
+                              , crr_gammarad_real, crr_gammarad_scaled
+#endif			      
+			      );
         }
 #ifdef WARPX_QED
         else {
@@ -3282,7 +3288,11 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                   ion_lev ? ion_lev[ip] : 0,
                                   m, q, pusher_algo, do_crr, do_copy,
                                   t_chi_max,
-                                  dt);
+                                  dt
+#ifdef PULSAR
+                              , crr_gammarad_real, crr_gammarad_scaled
+#endif			      
+			      );
             }
         }
 #endif

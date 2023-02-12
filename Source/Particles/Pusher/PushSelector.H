@@ -65,7 +65,12 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #ifdef WARPX_QED
                     const amrex::Real t_chi_max,
 #endif
-                    const amrex::Real dt)
+                    const amrex::Real dt
+#ifdef PULSAR
+                    , const amrex::Real crr_gammarad_real,
+                    const amrex::Real crr_gammarad_scaled
+#endif		    
+		    )
 {
     amrex::ParticleReal qp = a_q;
     if (ion_lev) { qp *= ion_lev; }
@@ -81,7 +86,11 @@ void doParticlePush(const GetParticlePosition& GetPosition,
             if (chi < t_chi_max) {
                 UpdateMomentumBorisWithRadiationReaction(ux, uy, uz,
                                                          Ex, Ey, Ez, Bx,
-                                                         By, Bz, qp, m, dt);
+                                                         By, Bz, qp, m, dt
+#ifdef PULSAR
+                                                         , crr_gammarad_real, crr_gammarad_scaled
+#endif							 
+							 );
             }
             else {
                 UpdateMomentumBoris( ux, uy, uz,
@@ -98,7 +107,11 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 
             UpdateMomentumBorisWithRadiationReaction(ux, uy, uz,
                                                      Ex, Ey, Ez, Bx,
-                                                     By, Bz, qp, m, dt);
+                                                     By, Bz, qp, m, dt
+#ifdef PULSAR
+                                                     , crr_gammarad_real, crr_gammarad_scaled
+#endif							 
+						     );
             amrex::ParticleReal x, y, z;
             GetPosition(i, x, y, z);
             UpdatePosition(x, y, z, ux, uy, uz, dt );
