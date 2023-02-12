@@ -329,7 +329,10 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                        const MultiFab& Bx, const MultiFab& By, const MultiFab& Bz)
 {
     WARPX_PROFILE("RigidInjectedParticleContainer::PushP");
-
+#ifdef PULSAR
+    amrex::Real crr_gammarad_real = Pulsar::m_gammarad_real;
+    amrex::Real crr_gammarad_scaled = Pulsar::m_gammarad_scaled;
+#endif
     if (do_not_push) return;
 
     const std::array<Real,3>& dx = WarpX::CellSize(std::max(lev,0));
@@ -431,9 +434,17 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                 if (ion_lev) { qp *= ion_lev[ip]; }
 
                 if (do_crr) {
+#ifdef PULSAR
+                    UpdateMomentumBorisWithRadiationReaction(uxpp[ip], uypp[ip], uzpp[ip],
+                                                             Exp, Eyp, Ezp, Bxp,
+                                                             Byp, Bzp, qp, m, dt,
+                                                             crr_gammarad_real,
+                                                             crr_gammarad_scaled);
+#else
                     UpdateMomentumBorisWithRadiationReaction(uxpp[ip], uypp[ip], uzpp[ip],
                                                              Exp, Eyp, Ezp, Bxp,
                                                              Byp, Bzp, qp, m, dt);
+#endif
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
                     UpdateMomentumBoris( uxpp[ip], uypp[ip], uzpp[ip],
                                          Exp, Eyp, Ezp, Bxp,
