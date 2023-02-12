@@ -2849,6 +2849,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     for (int idim = 0; idim < 3; ++idim) {
         center_star_arr[idim] = Pulsar::m_center_star[idim];
     }
+    amrex::Real crr_gammarad_real = Pulsar::m_gammarad_real;
+    amrex::Real crr_gammarad_scaled = Pulsar::m_gammarad_scaled;
 #endif
 
 #ifdef AMREX_USE_OMP
@@ -2966,9 +2968,17 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                 if (do_crr) {
                     amrex::Real qp = q;
                     if (ion_lev) { qp *= ion_lev[ip]; }
+#ifdef PULSAR
+                    UpdateMomentumBorisWithRadiationReaction(ux[ip], uy[ip], uz[ip],
+                                                             Exp, Eyp, Ezp, Bxp,
+                                                             Byp, Bzp, qp, m, dt,
+                                                             crr_gammarad_real,
+                                                             crr_gammarad_scaled);
+#else
                     UpdateMomentumBorisWithRadiationReaction(ux[ip], uy[ip], uz[ip],
                                                              Exp, Eyp, Ezp, Bxp,
                                                              Byp, Bzp, qp, m, dt);
+#endif
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
                     amrex::Real qp = q;
                     if (ion_lev) { qp *= ion_lev[ip]; }
