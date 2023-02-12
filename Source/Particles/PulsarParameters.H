@@ -669,6 +669,8 @@ public:
     static amrex::Real m_injRing_radius;
     static amrex::Real m_part_bulkVelocity;
     static int m_pair_injection_flag;
+    static amrex::Real m_gammarad_real;
+    static amrex::Real m_gammarad_scaled;
 private:
 };
 
