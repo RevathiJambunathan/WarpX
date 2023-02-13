@@ -95,8 +95,10 @@ Reconnection_Perturbation::AddBfieldPerturbation (amrex::MultiFab *Bx,
         auto const& Bx_array = Bx->array(mfi);
         auto const& Bz_array = Bz->array(mfi);
 
-        const amrex::Box& tbx = mfi.tilebox( x_nodal_flag, Bx->nGrowVect() );
-        const amrex::Box& tbz = mfi.tilebox( z_nodal_flag, Bz->nGrowVect() );
+        //const amrex::Box& tbx = mfi.tilebox( x_nodal_flag, Bx->nGrowVect() );
+        //const amrex::Box& tbz = mfi.tilebox( z_nodal_flag, Bz->nGrowVect() );
+        const amrex::Box& tbx = mfi.tilebox( x_nodal_flag );
+        const amrex::Box& tbz = mfi.tilebox( z_nodal_flag );
         // Compute perturbation and add to Bx
         amrex::Print() << " tbx : " << tbx << " " << tbz << "\n";
         amrex::LoopOnCpu( tbx, [=] (int i, int j, int k)
