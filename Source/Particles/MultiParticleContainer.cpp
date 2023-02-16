@@ -1800,12 +1800,14 @@ MultiParticleContainer::PulsarPairInjection ()
     amrex::Print() << " pulsar pair injection \n";
     // Assuming there are only two species
     amrex::Print() << " nspecies : " << nSpecies() << "\n";
-    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
-        nSpecies() == 2,"Pair injection works only for two species");
+//    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+//        nSpecies() == 2,"Pair injection works only for two species");
 
     auto& species1 = GetParticleContainerFromName(species_names[0]);
     auto& species2 = GetParticleContainerFromName(species_names[1]);
+//    auto& species3 = GetParticleContainerFromName(species_names[2]);
 
+    amrex::Print() << "injecting pair of " << species_names[0] << " " << species_names[1] << "\n";
 
     const amrex::Real pulsar_injection_fraction = Pulsar::m_Ninj_fraction;
     const int pulsar_modifyParticleWtAtInjection = Pulsar::m_ModifyParticleWtAtInjection;
@@ -1844,6 +1846,7 @@ MultiParticleContainer::PulsarPairInjection ()
 
     species1.defineAllParticleTiles();
     species2.defineAllParticleTiles();
+//    species3.defineAllParticleTiles();
 
     amrex::Real t = WarpX::GetInstance().gett_new(lev);
 
@@ -2182,6 +2185,21 @@ MultiParticleContainer::PulsarPairInjection ()
                 u.x *= PhysConst::c;
                 u.y *= PhysConst::c;
                 u.z *= PhysConst::c;
+
+#ifdef WARPX_QED
+                if(loc_has_quantum_sync_sp1){
+                    p_optical_depth_QSR_sp1[ip] = quantum_sync_get_opt(engine);
+                }
+                if(loc_has_quantum_sync_sp2){
+                    p_optical_depth_QSR_sp2[ip] = quantum_sync_get_opt(engine);
+                }
+                if(loc_has_breit_wheeler_sp1){
+                    p_optical_depth_BW_sp1[ip] = breit_wheeler_get_opt(engine);
+                }
+                if(loc_has_breit_wheeler_sp2){
+                    p_optical_depth_BW_sp2[ip] = breit_wheeler_get_opt(engine);
+                }
+#endif		
 
                 // use parser for user-defined part attributes
                 for (int ia = 0; ia < n_user_int_attribs_sp1; ++ia) {

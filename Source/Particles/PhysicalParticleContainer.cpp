@@ -1496,23 +1496,23 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 #endif
                 auto pos = getCellCoords(overlap_corner, dx, r, iv);
 #ifdef PULSAR
-                if (pcounts[index] > 1 and pcounts[index]<8) {
-                    // convert xyz to rtheta phii
-                    amrex::Real rp, theta_p, phi_p;
-                    Pulsar::ConvertCartesianToSphericalCoord(pos.x, pos.y, pos.z, center_star_arr,
-                                                             rp, theta_p, phi_p);
-                    // change r
-                    const amrex::Real xc = center_star_arr[0];
-                    const amrex::Real yc = center_star_arr[1];
-                    const amrex::Real zc = center_star_arr[2];
-                    // pulsar bounds checked using cell-center
-                    const amrex::Real rad_cc = std::sqrt( (x_cc-xc)*(x_cc-xc) + (y_cc-yc)*(y_cc-yc) + (z_cc-zc)*(z_cc-zc));
-                    rp = rad_cc;
-                    // convert rthetaphi to xyz
-                    pos.x = center_star_arr[0] + rp * std::sin(theta_p) * std::cos(phi_p);
-                    pos.y = center_star_arr[1] + rp * std::sin(theta_p) * std::sin(phi_p);
-                    pos.z = center_star_arr[2] + rp * std::cos(theta_p);
-                }
+               // if (pcounts[index] > 1 and pcounts[index]<8) {
+               //     // convert xyz to rtheta phii
+               //     amrex::Real rp, theta_p, phi_p;
+               //     Pulsar::ConvertCartesianToSphericalCoord(pos.x, pos.y, pos.z, center_star_arr,
+               //                                              rp, theta_p, phi_p);
+               //     // change r
+               //     const amrex::Real xc = center_star_arr[0];
+               //     const amrex::Real yc = center_star_arr[1];
+               //     const amrex::Real zc = center_star_arr[2];
+               //     // pulsar bounds checked using cell-center
+               //     const amrex::Real rad_cc = std::sqrt( (x_cc-xc)*(x_cc-xc) + (y_cc-yc)*(y_cc-yc) + (z_cc-zc)*(z_cc-zc));
+               //     rp = rad_cc;
+               //     // convert rthetaphi to xyz
+               //     pos.x = center_star_arr[0] + rp * std::sin(theta_p) * std::cos(phi_p);
+               //     pos.y = center_star_arr[1] + rp * std::sin(theta_p) * std::sin(phi_p);
+               //     pos.z = center_star_arr[2] + rp * std::cos(theta_p);
+               // }
 #endif
 
 #if defined(WARPX_DIM_3D)
@@ -1598,17 +1598,17 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     const amrex::Real zc = center_star_arr[2];
                     // pulsar bounds checked using cell-center
                     const amrex::Real rad = std::sqrt( (pos.x-xc)*(pos.x-xc) + (pos.y-yc)*(pos.y-yc) + (z0-zc)*(z0-zc));
-                    if ( !inj_pos->insidePulsarBounds(rad,pulsar_particle_inject_rmin,
-                                                          pulsar_particle_inject_rmax))
-                    {
-                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
-#ifdef WARPX_QED
-                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
-                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
-#endif
-                                                   );
-                        continue;
-                    }
+//                    if ( !inj_pos->insidePulsarBounds(rad,pulsar_particle_inject_rmin,
+//                                                          pulsar_particle_inject_rmax))
+//                    {
+//                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+//#ifdef WARPX_QED
+//                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+//                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+//#endif
+//                                                   );
+//                        continue;
+//                    }
                     // Remove particles within user-defined theta bounds
                     amrex::Real theta_p = 0.0_rt;
                     if (rad > 0) theta_p = std::acos(amrex::Math::abs(z0-zc)/rad);
@@ -1624,32 +1624,33 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
 #endif
 
 #ifdef PULSAR
-                    amrex::Real Bx_cc = ( Bx(lo_tile_index[0]+i  , lo_tile_index[1]+j, lo_tile_index[2]+k)
-                                        + Bx(lo_tile_index[0]+i+1, lo_tile_index[1]+j, lo_tile_index[2]+k) )
-                                        / 2.0_rt;
-                    amrex::Real By_cc = ( By(lo_tile_index[0]+i, lo_tile_index[1]+j  , lo_tile_index[2]+k)
-                                        + By(lo_tile_index[0]+i, lo_tile_index[1]+j+1, lo_tile_index[2]+k) )
-                                        / 2.0_rt;
-                    amrex::Real Bz_cc = ( Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k  )
-                                        + Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k+1) )
-                                        / 2.0_rt;
-                    amrex::Real B_mag = std::sqrt( Bx_cc * Bx_cc + By_cc*By_cc + Bz_cc*Bz_cc);
-                    amrex::Real unit_Bx = Bx_cc/B_mag;
-                    amrex::Real unit_By = By_cc/B_mag;
-                    amrex::Real unit_Bz = Bz_cc/B_mag;
-                    amrex::Real vx = particle_speed * unit_Bx;
-                    amrex::Real vy = particle_speed * unit_By;
-                    amrex::Real vz = particle_speed * unit_Bz;
-                    amrex::Real gamma = 1._rt/std::sqrt(1._rt - (vx*vx + vy*vy + vz*vz));
-                    if (z0 < center_star_arr[2]) {
-                        u.x = -1._rt * gamma * vx;
-                        u.y = -1._rt * gamma * vy;
-                        u.z = -1._rt * gamma * vz;
-                    } else {
-                        u.x = gamma * vx;
-                        u.y = gamma * vy;
-                        u.z = gamma * vz;
-                    }
+                    //amrex::Real Bx_cc = ( Bx(lo_tile_index[0]+i  , lo_tile_index[1]+j, lo_tile_index[2]+k)
+                    //                    + Bx(lo_tile_index[0]+i+1, lo_tile_index[1]+j, lo_tile_index[2]+k) )
+                    //                    / 2.0_rt;
+                    //amrex::Real By_cc = ( By(lo_tile_index[0]+i, lo_tile_index[1]+j  , lo_tile_index[2]+k)
+                    //                    + By(lo_tile_index[0]+i, lo_tile_index[1]+j+1, lo_tile_index[2]+k) )
+                    //                    / 2.0_rt;
+                    //amrex::Real Bz_cc = ( Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k  )
+                    //                    + Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k+1) )
+                    //                    / 2.0_rt;
+                    //amrex::Real B_mag = std::sqrt( Bx_cc * Bx_cc + By_cc*By_cc + Bz_cc*Bz_cc);
+                    //amrex::Real unit_Bx = Bx_cc/B_mag;
+                    //amrex::Real unit_By = By_cc/B_mag;
+                    //amrex::Real unit_Bz = Bz_cc/B_mag;
+                    //amrex::Real vx = particle_speed * unit_Bx;
+                    //amrex::Real vy = particle_speed * unit_By;
+                    //amrex::Real vz = particle_speed * unit_Bz;
+                    //amrex::Real gamma = 1._rt/std::sqrt(1._rt - (vx*vx + vy*vy + vz*vz));
+                    //if (z0 < center_star_arr[2]) {
+                    //    u.x = -1._rt * gamma * vx;
+                    //    u.y = -1._rt * gamma * vy;
+                    //    u.z = -1._rt * gamma * vz;
+                    //} else {
+                    //    u.x = gamma * vx;
+                    //    u.y = gamma * vy;
+                    //    u.z = gamma * vz;
+                    //}
+                    u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
 #else
                     u = inj_mom->getMomentum(pos.x, pos.y, z0, engine);
 #endif
@@ -3484,7 +3485,9 @@ void PhysicalParticleContainer::PulsarParticleInjection ()
     if (Pulsar::m_singleParticleTest == 1) {
         AddParticles(0); // add particle on level 0
     } else {
-        AddPlasma(0);  // add plasma on level 0
+        if ( plasma_injector->doInjection() ) {
+            AddPlasma(0);  // add plasma on level 0
+	}
     }
 }
 

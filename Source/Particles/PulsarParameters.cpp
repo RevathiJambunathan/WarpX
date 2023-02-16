@@ -1206,7 +1206,7 @@ Pulsar::ComputePlasmaNumberDensity ()
     auto &warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.finestLevel() + 1;
     std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
-    const int nspecies = species_names.size();
+    const int nspecies = species_names.size() - 1;
     for (int lev = 0; lev < nlevs_max; ++lev) {
         m_plasma_number_density[lev]->setVal(0._rt);
         for (int isp = 0; isp < nspecies; ++isp) {
@@ -1276,7 +1276,7 @@ Pulsar::ComputePlasmaMagnetization ()
     auto& warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.finestLevel() + 1;
     std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
-    const int nspecies = species_names.size();
+    const int nspecies = species_names.size() - 1;
     const amrex::Real min_ndens = m_lbound_ndens_magnetization;
     constexpr amrex::Real mu0_m_c2_inv = 1._rt / (PhysConst::mu0 * PhysConst::m_e
                                                  * PhysConst::c * PhysConst::c);
@@ -1328,7 +1328,7 @@ Pulsar::TuneSigma0Threshold (const int step)
 {
     auto& warpx = WarpX::GetInstance();
     std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
-    const int nspecies = species_names.size();
+    const int nspecies = species_names.size() - 1;
     amrex::Real total_weight_allspecies = 0._rt;
     amrex::Real dt = warpx.getdt(0);
     // Total number of cells that have injected particles
@@ -1610,7 +1610,7 @@ Pulsar::TotalParticles ()
 {
     auto& warpx = WarpX::GetInstance();
     std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
-    const int nspecies = species_names.size();
+    const int nspecies = species_names.size() - 1;
     amrex::Long total_particles = 0;
 
     for (int isp = 0; isp < nspecies; ++isp) {
@@ -1751,7 +1751,7 @@ Pulsar::TotalParticlesInjected ()
 {
     auto& warpx = WarpX::GetInstance();
     std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
-    const int nspecies = species_names.size();
+    const int nspecies = species_names.size() - 1;
     amrex::Real total_weight_allspecies = 0._rt;
     amrex::Real dt = warpx.getdt(0);
     // Total number of cells that have injected particles
@@ -1779,8 +1779,8 @@ Pulsar::TotalParticlesInjected ()
                             amrex::ParticleReal wp = p.rdata(PIdx::w);
                             amrex::Real filter = 0._rt;
                             amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[0][i];
-                            if ( injectiontime < cur_time + 0.1_rt*dt and
-                                 injectiontime > cur_time - 0.1_rt*dt ) {
+                            if ( injectiontime < cur_time + 0.5_rt*dt and
+                                 injectiontime > cur_time - 0.5_rt*dt ) {
                                 filter = 1._rt;
                             }
                             return (filter);
