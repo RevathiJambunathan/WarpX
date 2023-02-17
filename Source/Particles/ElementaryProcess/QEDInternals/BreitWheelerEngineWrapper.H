@@ -170,9 +170,16 @@ public:
         const auto gamma_photon = pxr_p::compute_gamma_photon<
                 amrex::ParticleReal, pxr_p::unit_system::SI>(
                     px, py, pz);
-        if (gamma_photon < pxr_m::two<amrex::ParticleReal> ||
+#ifdef PULSAR	
+        if (gamma_photon < 0.25 ||
             chi_phot < m_bw_minimum_chi_phot)
             return 0;
+#else
+        //if (gamma_photon < pxr_m::two<amrex::ParticleReal> ||
+        if (gamma_photon < 0. ||
+            chi_phot < m_bw_minimum_chi_phot)
+            return 0;
+#endif	
 
         const auto is_out = pxr_bw::evolve_optical_depth<
             amrex::ParticleReal,

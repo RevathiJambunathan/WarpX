@@ -1523,7 +1523,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                    ,loc_has_breit_wheeler, p_optical_depth_BW
 #endif
                                                    );
-                    continue;
+                    //continue;
                 }
 #elif defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
                 amrex::ignore_unused(k);
@@ -1534,7 +1534,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                    ,loc_has_breit_wheeler, p_optical_depth_BW
 #endif
                                                    );
-                    continue;
+                    //continue;
                 }
 #else
                 amrex::ignore_unused(j,k);
@@ -1545,7 +1545,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                    ,loc_has_breit_wheeler, p_optical_depth_BW
 #endif
                                                    );
-                    continue;
+                    //continue;
                 }
 #endif
 
@@ -1587,7 +1587,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                    ,loc_has_breit_wheeler, p_optical_depth_BW
 #endif
                                                    );
-                        continue;
+                        //continue;
                     }
 
 #ifdef PULSAR
@@ -1598,17 +1598,17 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                     const amrex::Real zc = center_star_arr[2];
                     // pulsar bounds checked using cell-center
                     const amrex::Real rad = std::sqrt( (pos.x-xc)*(pos.x-xc) + (pos.y-yc)*(pos.y-yc) + (z0-zc)*(z0-zc));
-//                    if ( !inj_pos->insidePulsarBounds(rad,pulsar_particle_inject_rmin,
-//                                                          pulsar_particle_inject_rmax))
-//                    {
-//                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
-//#ifdef WARPX_QED
-//                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
-//                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
-//#endif
-//                                                   );
-//                        continue;
-//                    }
+                    if ( !inj_pos->insidePulsarBounds(rad,pulsar_particle_inject_rmin,
+                                                          pulsar_particle_inject_rmax))
+                    {
+                        ZeroInitializeAndSetNegativeID(p, pa, ip, loc_do_field_ionization, pi
+#ifdef WARPX_QED
+                                                   ,loc_has_quantum_sync, p_optical_depth_QSR
+                                                   ,loc_has_breit_wheeler, p_optical_depth_BW
+#endif
+                                                   );
+                        //continue;
+                    }
                     // Remove particles within user-defined theta bounds
                     amrex::Real theta_p = 0.0_rt;
                     if (rad > 0) theta_p = std::acos(amrex::Math::abs(z0-zc)/rad);
@@ -1669,7 +1669,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                    ,loc_has_breit_wheeler, p_optical_depth_BW
 #endif
                                                    );
-                        continue;
+//                        //continue;
                     }
                     // Cut density if above threshold
                     dens = amrex::min(dens, density_max);
@@ -1687,7 +1687,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                    ,loc_has_breit_wheeler, p_optical_depth_BW
 #endif
                                                    );
-                        continue;
+//                        //continue;
                     }
                     // call `getDensity` with lab-frame parameters
                     dens = inj_rho->getDensity(pos.x, pos.y, z0_lab);
@@ -1699,7 +1699,7 @@ PhysicalParticleContainer::AddPlasma (int lev, RealBox part_realbox)
                                                    ,loc_has_breit_wheeler, p_optical_depth_BW
 #endif
                                                    );
-                        continue;
+//                        //continue;
                     }
                     // Cut density if above threshold
                     dens = amrex::min(dens, density_max);
@@ -1991,7 +1991,7 @@ PhysicalParticleContainer::AddPlasmaFlux (amrex::Real dt)
         // Max number of new particles. All of them are created,
         // and invalid ones are then discarded
         int max_new_particles = Scan::ExclusiveSum(counts.size(), counts.data(), offset.data());
-
+        amrex::Print() << " mx new part " << max_new_particles << "\n";
         // Update NextID to include particles created in this function
         Long pid;
 #ifdef AMREX_USE_OMP
@@ -2484,6 +2484,7 @@ PhysicalParticleContainer::Evolve (int lev,
                            cEx->nGrowVect(), e_is_nodal,
                            nfine_gather, np-nfine_gather,
                            lev, lev-1, dt, ScaleFields(false), a_dt_type);
+                    amrex::Gpu::synchronize();
                 }
 
                 WARPX_PROFILE_VAR_STOP(blp_fg);
@@ -2941,6 +2942,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                 getExternalEB(ip, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
 
 #ifdef PULSAR
+		if (q > 1.e-38 || q < -1.e-38 ) {
                 // Convert particle position from (x,y,z) to (r,theta,phi)
                 amrex::ParticleReal r_p, theta_p, phi_p;
                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
@@ -2964,17 +2966,20 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                     Bstar_data, Rstar_data, dRstar_data,
                                     Exp, Eyp, Ezp, Bxp, Byp, Bzp);
                 }
+		}
 #endif
 
                 if (do_crr) {
                     amrex::Real qp = q;
                     if (ion_lev) { qp *= ion_lev[ip]; }
 #ifdef PULSAR
+		if (q > 1.e-38 || q < -1.e-38 ) {
                     UpdateMomentumBorisWithRadiationReaction(ux[ip], uy[ip], uz[ip],
                                                              Exp, Eyp, Ezp, Bxp,
                                                              Byp, Bzp, qp, m, dt,
                                                              crr_gammarad_real,
                                                              crr_gammarad_scaled);
+		}
 #else
                     UpdateMomentumBorisWithRadiationReaction(ux[ip], uy[ip], uz[ip],
                                                              Exp, Eyp, Ezp, Bxp,
@@ -3237,6 +3242,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         scaleFields(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp);
 
 #ifdef PULSAR
+		if (q > 1.e-38 || q < -1.e-38 ) {
                 // Convert particle position from (x,y,z) to (r,theta,phi)
                 amrex::ParticleReal r_p, theta_p, phi_p;
                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
@@ -3259,6 +3265,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                     cur_time, omega_star_data, ramp_omega_time_data,
                                     Bstar_data, Rstar_data, dRstar_data,
                                     Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+                }
                 }
 #endif
 

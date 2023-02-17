@@ -119,8 +119,8 @@ amrex::Real Pulsar::m_maxsigma_fraction = 1;
 amrex::Real Pulsar::m_injRing_radius;
 amrex::Real Pulsar::m_part_bulkVelocity = 0.0;
 int Pulsar::m_pair_injection_flag = 1; // default is to inject particles in pairs
-amrex::Real Pulsar::m_gammarad_real;
-amrex::Real Pulsar::m_gammarad_scaled;
+amrex::Real Pulsar::m_gammarad_real = 1.;
+amrex::Real Pulsar::m_gammarad_scaled = 1.;
 
 
 Pulsar::Pulsar ()
@@ -1206,7 +1206,7 @@ Pulsar::ComputePlasmaNumberDensity ()
     auto &warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.finestLevel() + 1;
     std::vector<std::string> species_names = warpx.GetPartContainer().GetSpeciesNames();
-    const int nspecies = species_names.size() - 1;
+    const int nspecies = species_names.size();
     for (int lev = 0; lev < nlevs_max; ++lev) {
         m_plasma_number_density[lev]->setVal(0._rt);
         for (int isp = 0; isp < nspecies; ++isp) {
@@ -1344,6 +1344,9 @@ Pulsar::TuneSigma0Threshold (const int step)
     for (int isp = 0; isp < nspecies; ++isp) {
         amrex::Real ws_total = 0._rt;
         auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
+        auto pcomps = pc.getParticleComps();
+        const int i_injtime = pcomps["injectiontime"] - PIdx::nattribs;
+        amrex::Print() << " i injtime " << i_injtime << "\n";
         amrex::ReduceOps<amrex::ReduceOpSum> reduce_ops;
         amrex::Real cur_time = warpx.gett_new(0);
         auto ws_r = amrex::ParticleReduce<
@@ -1354,7 +1357,7 @@ Pulsar::TuneSigma0Threshold (const int step)
                             auto p = ptd.getSuperParticle(i);
                             amrex::ParticleReal wp = p.rdata(PIdx::w);
                             amrex::Real filter = 0._rt;
-                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[0][i];
+                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[i_injtime][i];
                             if ( injectiontime < cur_time + 0.1_rt*dt and
                                  injectiontime > cur_time - 0.1_rt*dt ) {
                                 filter = 1._rt;
@@ -1768,6 +1771,9 @@ Pulsar::TotalParticlesInjected ()
     for (int isp = 0; isp < nspecies; ++isp) {
         amrex::Real ws_total = 0._rt;
         auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
+        auto pcomps = pc.getParticleComps();
+        const int i_injtime = pcomps["injectiontime"] - PIdx::nattribs;
+        amrex::Print() << " i injtime " << i_injtime << "\n";
         amrex::ReduceOps<amrex::ReduceOpSum> reduce_ops;
         amrex::Real cur_time = warpx.gett_new(0);
         auto ws_r = amrex::ParticleReduce<
@@ -1778,7 +1784,7 @@ Pulsar::TotalParticlesInjected ()
                             auto p = ptd.getSuperParticle(i);
                             amrex::ParticleReal wp = p.rdata(PIdx::w);
                             amrex::Real filter = 0._rt;
-                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[0][i];
+                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[i_injtime][i];
                             if ( injectiontime < cur_time + 0.5_rt*dt and
                                  injectiontime > cur_time - 0.5_rt*dt ) {
                                 filter = 1._rt;
