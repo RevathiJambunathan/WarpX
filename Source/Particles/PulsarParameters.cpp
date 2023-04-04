@@ -91,6 +91,7 @@ int Pulsar::m_print_injected_celldata;
 int Pulsar::m_print_celldata_starttime;
 amrex::Real Pulsar::m_lbound_ndens_magnetization = 1.e-16;
 amrex::Real Pulsar::m_ubound_reldiff_sigma0 = 0.1;
+amrex::Real Pulsar::m_Chi;
 
 
 Pulsar::Pulsar ()
@@ -100,6 +101,7 @@ Pulsar::Pulsar ()
 
 void
 Pulsar::ReadParameters () {
+    amrex::Print() << " pulsar read data \n";
     amrex::ParmParse pp("pulsar");
     pp.query("pulsarType",m_pulsar_type);
 
@@ -250,6 +252,11 @@ Pulsar::ReadParameters () {
     if (m_sigma_tune_method == "relative_difference") {
         pp.query("upperBound_reldiff_sigma0", m_ubound_reldiff_sigma0);
     }
+    // Obliquity of the pulsar
+    pp.get("Chi", m_Chi);
+    // convert degrees to radians
+    m_Chi = m_Chi * MathConst::pi / 180._rt;
+    amrex::Print() << "Oblique angle between B-axis and Omega-axis " << m_Chi << " radians \n";
 }
 
 
@@ -309,6 +316,7 @@ Pulsar::InitDataAtRestart ()
 void
 Pulsar::InitData ()
 {
+    amrex::Print() << " pulsar init data \n";
     auto & warpx = WarpX::GetInstance();
     const int nlevs_max = warpx.finestLevel() + 1;
     //allocate number density multifab
@@ -458,6 +466,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
         z_IndexType[idim] = z_nodal_flag[idim];
         center_star_arr[idim] = m_center_star[idim];
     }
+    amrex::Real chi = m_Chi;
     amrex::Real omega_star_data = m_omega_star;
     amrex::Real ramp_omega_time_data = m_omega_ramp_time;
     amrex::Real Bstar_data = m_B_star;
@@ -497,12 +506,16 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                 if (init_Bfield == 1) {
                     if (LimitDipoleBInit_data == 1) {
                         if (r < DipoleB_init_maxradius_data) {
-                            ExternalBFieldSpherical( r, theta, phi, cur_time,
+                            ExternalBFieldSpherical( r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
                                                     Fr, Ftheta, Fphi);
                         }
                     } else {
-                        ExternalBFieldSpherical( r, theta, phi, cur_time,
+                        ExternalBFieldSpherical( r, theta, phi, chi, cur_time,
+                                                omega_star_data,
+                                                ramp_omega_time_data,
                                                 Bstar_data, Rstar_data, dRstar_data,
                                                 Fr, Ftheta, Fphi);
                     }
@@ -512,7 +525,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                         if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 ) {
                             // Edge-centered Efield is fully immersed in conductor
                             // Therefore, apply corotating electric field E = v X B
-                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                            CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
                                                       omega_star_data,
                                                       ramp_omega_time_data,
                                                       Bstar_data, Rstar_data, dRstar_data,
@@ -523,7 +536,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                         // Apply corotating electric field E = v X B, if edge-centered Efield is fully immersed
                         // in conductor
                         if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1) ApplyCorotatingEField = 1;
-                        ExternalEFieldSpherical(r, theta, phi, cur_time,
+                        ExternalEFieldSpherical(r, theta, phi, chi, cur_time,
                                                 omega_star_data,
                                                 ramp_omega_time_data,
                                                 Bstar_data, Rstar_data,
@@ -550,12 +563,16 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                 if (init_Bfield == 1) {
                     if (LimitDipoleBInit_data == 1) {
                         if (r < DipoleB_init_maxradius_data) {
-                            ExternalBFieldSpherical( r, theta, phi, cur_time,
+                            ExternalBFieldSpherical( r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
                                                     Fr, Ftheta, Fphi);
                         }
                     } else {
-                        ExternalBFieldSpherical( r, theta, phi, cur_time,
+                        ExternalBFieldSpherical( r, theta, phi, chi, cur_time,
+                                                omega_star_data,
+                                                ramp_omega_time_data,
                                                 Bstar_data, Rstar_data, dRstar_data,
                                                 Fr, Ftheta, Fphi);
                     }
@@ -565,7 +582,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                         if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1 ) {
                             // Edge-centered Efield is fully immersed in conductor
                             // Therefore, apply corotating electric field E = v X B
-                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                            CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
                                                       omega_star_data,
                                                       ramp_omega_time_data,
                                                       Bstar_data, Rstar_data, dRstar_data,
@@ -576,7 +593,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                         // Apply corotating electric field E = v X B, if edge-centered Efield is fully immersed
                         // in conductor
                         if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1) ApplyCorotatingEField = 1;
-                        ExternalEFieldSpherical(r, theta, phi, cur_time,
+                        ExternalEFieldSpherical(r, theta, phi, chi, cur_time,
                                                 omega_star_data,
                                                 ramp_omega_time_data,
                                                 Bstar_data, Rstar_data,
@@ -603,12 +620,16 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                 if (init_Bfield == 1) {
                     if (LimitDipoleBInit_data == 1) {
                         if (r < DipoleB_init_maxradius_data) {
-                            ExternalBFieldSpherical( r, theta, phi, cur_time,
+                            ExternalBFieldSpherical( r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
                                                     Fr, Ftheta, Fphi);
                         }
                     } else {
-                        ExternalBFieldSpherical( r, theta, phi, cur_time,
+                        ExternalBFieldSpherical( r, theta, phi, chi, cur_time,
+                                                omega_star_data,
+                                                ramp_omega_time_data,
                                                 Bstar_data, Rstar_data, dRstar_data,
                                                 Fr, Ftheta, Fphi);
                     }
@@ -619,7 +640,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                         if (conductor(i,j,k)==1 and conductor(i,j,k+1)==1 ) {
                             // Edge-centered Efield is fully immersed in conductor
                             // Therefore, apply corotating electric field E = v X B
-                            CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                            CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
                                                       omega_star_data,
                                                       ramp_omega_time_data,
                                                       Bstar_data, Rstar_data, dRstar_data,
@@ -630,7 +651,7 @@ Pulsar::InitializeExternalPulsarFieldsOnGrid ( amrex::MultiFab *mfx, amrex::Mult
                         // Apply corotating electric field E = v X B, if edge-centered Efield is fully immersed
                         // in conductor
                         if (conductor(i,j,k)==1 and conductor(i,j,k+1)==1) ApplyCorotatingEField = 1;
-                        ExternalEFieldSpherical(r, theta, phi, cur_time,
+                        ExternalEFieldSpherical(r, theta, phi, chi, cur_time,
                                                 omega_star_data,
                                                 ramp_omega_time_data,
                                                 Bstar_data, Rstar_data,
@@ -668,6 +689,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
         z_IndexType[idim] = z_nodal_flag[idim];
         center_star_arr[idim] = m_center_star[idim];
     }
+    amrex::Real chi = m_Chi;
     amrex::Real omega_star_data = m_omega_star;
     amrex::Real ramp_omega_time_data = m_omega_ramp_time;
     amrex::Real Bstar_data = m_B_star;
@@ -702,7 +724,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1) {
-                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                        CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
                                                   omega_star_data,
                                                   ramp_omega_time_data,
                                                   Bstar_data, Rstar_data, dRstar_data,
@@ -713,7 +735,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 } else {
                     int ApplyCorotatingEField = 0;
                     if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1) ApplyCorotatingEField = 1;
-                    ExternalEFieldSpherical(r, theta, phi, cur_time,
+                    ExternalEFieldSpherical(r, theta, phi, chi, cur_time,
                                             omega_star_data,
                                             ramp_omega_time_data,
                                             Bstar_data, Rstar_data,
@@ -736,7 +758,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1) {
-                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                        CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
                                                   omega_star_data,
                                                   ramp_omega_time_data,
                                                   Bstar_data, Rstar_data, dRstar_data,
@@ -747,7 +769,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 } else {
                     int ApplyCorotatingEField = 0;
                     if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1) ApplyCorotatingEField = 1;
-                    ExternalEFieldSpherical(r, theta, phi, cur_time,
+                    ExternalEFieldSpherical(r, theta, phi, chi, cur_time,
                                             omega_star_data,
                                             ramp_omega_time_data,
                                             Bstar_data, Rstar_data,
@@ -771,7 +793,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                                  r, theta, phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (conductor(i,j,k)==1 and conductor(i,j,k+1)==1) {
-                        CorotatingEfieldSpherical(r, theta, phi, cur_time,
+                        CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
                                                   omega_star_data,
                                                   ramp_omega_time_data,
                                                   Bstar_data, Rstar_data, dRstar_data,
@@ -782,7 +804,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 } else {
                     int ApplyCorotatingEField = 0;
                     if (conductor(i,j,k)==1 and conductor(i,j,k+1)==1) ApplyCorotatingEField = 1;
-                    ExternalEFieldSpherical(r, theta, phi, cur_time,
+                    ExternalEFieldSpherical(r, theta, phi, chi, cur_time,
                                             omega_star_data,
                                             ramp_omega_time_data,
                                             Bstar_data, Rstar_data,
@@ -821,6 +843,9 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
         z_IndexType[idim] = z_nodal_flag[idim];
         center_star_arr[idim] = m_center_star[idim];
     }
+    amrex::Real chi = m_Chi;
+    amrex::Real omega_star_data = m_omega_star;
+    amrex::Real ramp_omega_time_data = m_omega_ramp_time;
     amrex::Real Bstar_data = m_B_star;
     amrex::Real Rstar_data = m_R_star;
     amrex::Real dRstar_data = m_dR_star;
@@ -858,7 +883,9 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                         if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1 and conductor(i,j,k+1)==1 and conductor(i,j+1,k+1)==1) {
                             // Enforce magnetic field boundary condition (dipole field) if face-centered
                             // Bfield location is completely embedded in the conductor
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
                                                     Fr, Ftheta, Fphi);
                             ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
@@ -871,9 +898,11 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                         // to radius where corotating electric field is enforced.
                         if (DampBDipoleInRing_data == 1) {
                             // from inner ring to outer ring
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                   Bstar_data, Rstar_data, dRstar_data,
-                                                   Fr, Ftheta, Fphi);
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
+                                                    Bstar_data, Rstar_data, dRstar_data,
+                                                    Fr, Ftheta, Fphi);
                             amrex::Real Bx_dipole;
                             ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Bx_dipole);
@@ -891,9 +920,11 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                     }
                 } else {
                     // Theoretical Bfield enforced everywhere on the grid
-                    ExternalBFieldSpherical(r, theta, phi, cur_time,
+                    ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                            omega_star_data,
+                                            ramp_omega_time_data,
                                             Bstar_data, Rstar_data, dRstar_data,
-                                           Fr, Ftheta, Fphi);
+                                            Fr, Ftheta, Fphi);
                     ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                            r, theta, phi, Bx_arr(i,j,k));
                 }
@@ -913,9 +944,11 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                         if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 and conductor(i,j,k+1)==1 and conductor(i+1,j,k+1)==1) {
                             // Enforce magnetic field boundary condition (dipole field) if face-centered
                             // Bfield location is completely embedded in the conductor
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
-                                                   Fr, Ftheta, Fphi);
+                                                    Fr, Ftheta, Fphi);
                             ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, By_arr(i,j,k));
                         }
@@ -925,9 +958,11 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                         // to radius where corotating electric field is enforced.
                         if (DampBDipoleInRing_data == 1) {
                             // from inner ring to outer ring
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
-                                                   Fr, Ftheta, Fphi);
+                                                    Fr, Ftheta, Fphi);
                             amrex::Real By_dipole;
                             ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, By_dipole);
@@ -940,9 +975,11 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                     }
                 } else {
                     // Theoretical Bfield enforced everywhere on the grid
-                    ExternalBFieldSpherical(r, theta, phi, cur_time,
+                    ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                            omega_star_data,
+                                            ramp_omega_time_data,
                                             Bstar_data, Rstar_data, dRstar_data,
-                                           Fr, Ftheta, Fphi);
+                                            Fr, Ftheta, Fphi);
                     ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                            r, theta, phi, By_arr(i,j,k));
                 }
@@ -962,9 +999,11 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                         if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 and conductor(i,j+1,k)==1 and conductor(i+1,j+1,k)==1) {
                             // Enforce magnetic field boundary condition (dipole field) if face-centered
                             // Bfield location is completely embedded in the conductor
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                   Bstar_data, Rstar_data, dRstar_data,
-                                                   Fr, Ftheta, Fphi);
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
+                                                    Bstar_data, Rstar_data, dRstar_data,
+                                                    Fr, Ftheta, Fphi);
                             ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Bz_arr(i,j,k));
                         }
@@ -974,9 +1013,11 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                         // to radius where corotating electric field is enforced.
                         if (DampBDipoleInRing_data == 1) {
                             // from inner ring to outer ring
-                            ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                                   Bstar_data, Rstar_data, dRstar_data,
-                                                   Fr, Ftheta, Fphi);
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
+                                                    Bstar_data, Rstar_data, dRstar_data,
+                                                    Fr, Ftheta, Fphi);
                             amrex::Real Bz_dipole;
                             ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Bz_dipole);
@@ -989,9 +1030,11 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                     }
                 } else {
                     // Theoretical Bfield enforced everywhere on the grid
-                    ExternalBFieldSpherical(r, theta, phi, cur_time,
-                                           Bstar_data, Rstar_data, dRstar_data,
-                                           Fr, Ftheta, Fphi);
+                    ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                            omega_star_data,
+                                            ramp_omega_time_data,
+                                            Bstar_data, Rstar_data, dRstar_data,
+                                            Fr, Ftheta, Fphi);
                     ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                            r, theta, phi, Bz_arr(i,j,k));
                 }
