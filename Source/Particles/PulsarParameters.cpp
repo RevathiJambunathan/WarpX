@@ -119,7 +119,16 @@ amrex::Real Pulsar::m_maxsigma_fraction = 1;
 amrex::Real Pulsar::m_injRing_radius;
 amrex::Real Pulsar::m_part_bulkVelocity = 0.0;
 int Pulsar::m_pair_injection_flag = 1; // default is to inject particles in pairs
-
+amrex::Real Pulsar::m_RLC;
+amrex::Real Pulsar::m_PC_radius;
+amrex::Real Pulsar::m_PC_theta;
+int Pulsar::m_flag_polarcap;
+int Pulsar::m_use_FixedSigmaInput = 0;       // if sigma is fixed, then inject in sigma > sigma_fixed
+int Pulsar::m_onlyPCinjection = 0;           // if 1, always inject particles in PC region
+int Pulsar::m_usePCflagcount_minInjCell = 1; // count cells with sigma > sigma0, and ensure it is greater than
+                                     // fraction of minInjCell which is obtained from fraction * totalPCcells
+amrex::Real Pulsar::m_PCInjectionCellFraction = 1.; // between  0 and 1 , 1 will choose all cells in Polar cap
+amrex::Real Pulsar::m_totalpolarcap_cells;
 
 Pulsar::Pulsar ()
 {
@@ -167,6 +176,7 @@ Pulsar::ReadParameters () {
     // the factor of 2 is because B at pole = 2*B at equator
     m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_injection_rate * m_max_ndens * PhysConst::mu0 * PhysConst::m_e
                                          * PhysConst::c * PhysConst::c);
+    amrex::Print() << " compute sigma0 at init " << m_Sigma0_threshold << "\n";
     m_Sigma0_baseline = m_Sigma0_threshold;
 //    pp.get("Sigma0_threshold_init", m_Sigma0_threshold);
     amrex::Print() << " injection rate : " << m_injection_rate << " GJ injection rate " << m_GJ_injection_rate << " Sigma0 " << m_Sigma0_threshold << "\n";
@@ -315,6 +325,23 @@ Pulsar::ReadParameters () {
     pp.get("injRing_radius", m_injRing_radius);
     pp.get("BulkVelocity", m_part_bulkVelocity);
     pp.query("pair_injection", m_pair_injection_flag);
+    // polar cap radius
+    m_RLC = PhysConst::c / m_omega_star;
+    m_PC_radius = m_R_star * std::sqrt(m_R_star/m_RLC);
+    m_PC_theta = std::asin(m_PC_radius/m_R_star);
+    pp.query("use_sigmainput",m_use_FixedSigmaInput);
+    if (m_use_FixedSigmaInput == 1) {
+        pp.get("sigma0_threshold", m_Sigma0_threshold);
+        m_flag_polarcap = 1;
+        m_onlyPCinjection = 0;
+        pp.get("usePCflagcount_minInjCell",m_usePCflagcount_minInjCell);
+        pp.get("PCInjectionCellFraction",m_PCInjectionCellFraction);
+        amrex::Print() << " m sigma0 " << m_Sigma0_threshold << "\n";
+    }
+    pp.query("onlyPCinjection",m_onlyPCinjection);
+    amrex::Print() << " RLC : " << m_RLC << "\n";
+    amrex::Print() << " PC radius " << m_PC_radius << "\n";
+    amrex::Print() << " PC theta " << m_PC_theta << "\n";
 }
 
 
@@ -364,7 +391,8 @@ Pulsar::InitDataAtRestart ()
         m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_threshold[lev] = std::make_unique<amrex::MultiFab>(
-                    ba, dm, 1, ng_EB_alloc);
+                                ba, dm, 1, ng_EB_alloc);
+ 
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -376,7 +404,22 @@ Pulsar::InitDataAtRestart ()
         m_pcount[lev]->setVal(0._rt);
         m_injection_ring[lev]->setVal(0._rt);
         m_sigma_inj_ring[lev]->setVal(0._rt);
-    m_sigma_threshold[lev]->setVal(0._rt);
+        m_sigma_threshold[lev]->setVal(0._rt);
+    }
+
+    if (m_flag_polarcap == 1) {
+        m_PC_flag.resize(nlevs_max);
+        for (int lev = 0; lev < nlevs_max; ++lev) {
+            amrex::BoxArray ba = warpx.boxArray(lev);
+            amrex::DistributionMapping dm = warpx.DistributionMap(lev);
+            amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
+            const amrex::IntVect ng_EB_alloc = warpx.getngEB() + amrex::IntVect::TheNodeVector()*2;
+            m_PC_flag[lev] = std::make_unique<amrex::MultiFab>(
+                                    ba, dm, 1, ng_EB_alloc);
+            FlagCellsInPolarCap(m_PC_flag[lev].get(),lev,m_cell_inject_rmin,m_cell_inject_rmax);
+        }
+        m_totalpolarcap_cells = SumPolarCapFlag();
+        amrex::Print() << " total cells in PC " << m_totalpolarcap_cells << "\n";
     }
 
     if (m_do_conductor == true) {
@@ -441,7 +484,7 @@ Pulsar::InitData ()
         m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_threshold[lev] = std::make_unique<amrex::MultiFab>(
-                    ba, dm, 1, ng_EB_alloc);
+                                ba, dm, 1, ng_EB_alloc);
         // initialize number density
         m_plasma_number_density[lev]->setVal(0._rt);
         // initialize magnetization
@@ -456,6 +499,20 @@ Pulsar::InitData ()
         m_sigma_threshold[lev]->setVal(0._rt);
     }
 
+    if (m_flag_polarcap == 1) {
+        m_PC_flag.resize(nlevs_max);
+        for (int lev = 0; lev < nlevs_max; ++lev) {
+            amrex::BoxArray ba = warpx.boxArray(lev);
+            amrex::DistributionMapping dm = warpx.DistributionMap(lev);
+            amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
+            const amrex::IntVect ng_EB_alloc = warpx.getngEB() + amrex::IntVect::TheNodeVector()*2;
+            m_PC_flag[lev] = std::make_unique<amrex::MultiFab>(
+                                    ba, dm, 1, ng_EB_alloc);
+            FlagCellsInPolarCap(m_PC_flag[lev].get(),lev,m_cell_inject_rmin,m_cell_inject_rmax);
+        }
+        m_totalpolarcap_cells = SumPolarCapFlag();
+        amrex::Print() << " total cells in PC " << m_totalpolarcap_cells << "\n"; 
+    }
 
     if (m_do_conductor == true) {
         m_conductor_fp.resize(nlevs_max);
@@ -506,6 +563,75 @@ Pulsar::InitData ()
             }
         }
     }
+
+}
+
+void
+Pulsar::FlagCellsInPolarCap(const int lev)
+{
+    if (m_flag_polarcap == 1) {
+        FlagCellsInPolarCap(m_PC_flag[lev].get(),lev,m_cell_inject_rmin,m_cell_inject_rmax);
+    }
+    if (lev == 0) {
+        m_totalpolarcap_cells = SumPolarCapFlag();
+        amrex::Print() << " total cells in PC " << m_totalpolarcap_cells << "\n";
+    }
+}
+
+void
+Pulsar::FlagCellsInPolarCap(
+        amrex::MultiFab *mf, const int lev, amrex::Real cell_inject_rmin, amrex::Real cell_inject_rmax)
+{
+    WarpX& warpx = WarpX::GetInstance();
+    const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx_lev = warpx.Geom(lev).CellSizeArray();
+    const amrex::RealBox& real_box = warpx.Geom(lev).ProbDomain();
+    amrex::IntVect iv = mf->ixType().toIntVect();
+
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> xc;
+    for (int idim = 0; idim < 3; ++idim) {
+        xc[idim] = m_center_star[idim];
+    }
+    amrex::Real PC_theta = m_PC_theta;
+    amrex::Real PC_radius = m_PC_radius;
+    amrex::Print() << "pc theta : " << PC_theta << "\n";
+
+
+    for (amrex::MFIter mfi(*mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+        // includes guard cells
+        const amrex::Box& tb = mfi.tilebox(iv, mf->nGrowVect());
+        amrex::Array4<amrex::Real> const& PC_fab = mf->array(mfi);
+        amrex::ParallelFor(tb,
+             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                // Shift x, y, z position based on index type
+                amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+#if (AMREX_SPACEDIM==2)
+                amrex::Real y = 0._rt;
+                amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+#else
+                amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+#endif
+                amrex::Real r, theta, phi;
+                ConvertCartesianToSphericalCoord(x, y, z, xc,
+                                                 r, theta, phi);
+                amrex::Real eps = 1.e-12;
+                PC_fab(i,j,k) = 0.;
+                if ( (r > (cell_inject_rmin - eps)) and (r < (cell_inject_rmax + eps)) ){
+                    amrex::Real rcyl = std::sqrt( (x-xc[0])*(x-xc[0]) + (y-xc[1])*(y-xc[1]) );
+                    //if (rcyl < (cell_inject_rmax * std::sin(PC_theta))) {
+                    if (rcyl < (PC_radius)) {
+                       //( (theta < (0.5*3.14 + PC_theta) ) and ( theta > (0.5*3.14_rt - PC_theta)) ) ) {
+                        PC_fab(i,j,k) = 1.;
+                    }
+                }
+             }
+        );
+    }
+
 }
 
 void
@@ -1427,7 +1553,7 @@ Pulsar::TuneSigma0Threshold (const int step)
     amrex::Print() << " sigma list size : " << sigma_list_size << " sigma sum " << m_sigma_threshold_sum << " current sigma " << m_Sigma0_threshold << " avg : " << avg_sigma_threshold << "\n";
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
     amrex::Real max_sigma = MaxMagnetization();
-    if (m_injection_tuning_interval.contains(step+1) ) {
+    if (m_injection_tuning_interval.contains(step+1) and m_use_FixedSigmaInput==0 ) {
         // Sigma0 before modification
         amrex::Real m_Sigma0_pre = m_Sigma0_threshold;
         // running average of injection rate over average window
@@ -1521,7 +1647,7 @@ Pulsar::TuneSigma0Threshold (const int step)
         amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
     }
     if (total_injection_cells <= m_min_TCTP_ratio * ParticlesToBeInjected) {
-        if (m_use_maxsigma_for_Sigma0 == 1) {
+        if (m_use_maxsigma_for_Sigma0 == 1 and m_use_FixedSigmaInput == 0) {
             amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
             amrex::Real new_sigma0_threshold = m_maxsigma_fraction * max_sigma * r_rstar_fac * r_rstar_fac * r_rstar_fac;
             amrex::Print() << " injec cell is " << total_injection_cells << " <= " << m_min_TCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
@@ -1615,6 +1741,12 @@ Pulsar::TotalParticles ()
         amrex::ParallelDescriptor::ReduceLongSum(np_total);
         total_particles += np_total;
     }
+}
+
+amrex::Real
+Pulsar::SumPolarCapFlag ()
+{
+    return m_PC_flag[0]->sum();
 }
 
 amrex::Real
@@ -1806,6 +1938,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Real pulsar_cell_inject_rmax = m_cell_inject_rmax;
     amrex::Real Rstar = m_R_star;
     amrex::Real Sigma0_threshold = m_Sigma0_threshold;
+    amrex::Print() << "sigma0 threshold used to check sigma_loc " << m_Sigma0_threshold << "\n";
     int modify_Sigma0_threshold = modify_sigma_threshold;
 
     //particles to be injected
@@ -1875,7 +2008,14 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Print() << " total inj cells : " << TotalInjectionCells << "\n";
 
     int num_ppc_modified = 0;
-    if (TotalInjectionCells < 1) {
+    int minInjectionCells = 1;
+    if (m_use_FixedSigmaInput == 1 and m_usePCflagcount_minInjCell == 1)
+    {
+        minInjectionCells = m_totalpolarcap_cells * m_PCInjectionCellFraction;
+        amrex::Print() << " total pc cells " << m_totalpolarcap_cells << " " << m_PCInjectionCellFraction << "\n";
+    }
+    amrex::Print() << " min injection cell : " << minInjectionCells << "\n";
+    if (TotalInjectionCells < minInjectionCells) {
         if (m_use_maxsigma_for_Sigma0 == 1) {
             amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
             amrex::Real max_sigma = MaxMagnetization();
@@ -1936,6 +2076,28 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
             }
         TotalInjectionCells = SumInjectionFlag();
         amrex::Print() << " redefined sigma to get total inj cells : " << TotalInjectionCells << "\n";
+        } else if (m_use_FixedSigmaInput == 1 and m_usePCflagcount_minInjCell==1) {
+            m_injection_flag[lev]->setVal(0);
+            m_injected_cell[lev]->setVal(0);
+            m_injection_ring[lev]->setVal(0);
+            m_pcount[lev]->setVal(0);
+            for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+            {
+                //InitializeGhost Cells also
+                const amrex::Box& tb = mfi.tilebox(iv);
+                amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
+                amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
+                amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
+                amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
+                amrex::ParallelFor(tb,
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                        injection_flag(i,j,k) = PCflag(i,j,k);
+                        inj_ring(i,j,k) = injection_flag(i,j,k);
+                    }
+                );
+            }
+            TotalInjectionCells = SumInjectionFlag();
+            amrex::Print() << " total inj cells is equal to totalPCCells: " << TotalInjectionCells << " total PC cells " << m_totalpolarcap_cells << "\n";
         }
     }
     num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);

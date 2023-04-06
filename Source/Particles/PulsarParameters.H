@@ -51,7 +51,9 @@ public:
     amrex::Real MaxMagnetization ();
     amrex::Real MaxThresholdSigma();
     amrex::Real LeastSquareFitforTC ();
-
+    void FlagCellsInPolarCap (const int lev);
+    void FlagCellsInPolarCap (amrex::MultiFab *mf, const int lev, amrex::Real cell_inject_rmin, amrex::Real cell_inject_rmax);
+    amrex::Real SumPolarCapFlag ();
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static amrex::Real Omega(const amrex::Real omegastar, const amrex::Real cur_time, amrex::Real omega_ramp_time)
@@ -606,6 +608,7 @@ public:
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_ring;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_inj_ring;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_threshold;
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_PC_flag;
     amrex::MultiFab* get_pointer_sigma_threshold (int lev) const {return m_sigma_threshold[lev].get();}
     amrex::MultiFab& get_sigma_threshold (int lev) const {return *m_sigma_threshold[lev];}
     /** get pointer to number density */
@@ -623,6 +626,8 @@ public:
     amrex::MultiFab& get_pcount (int lev) {return *m_pcount[lev];}
     amrex::MultiFab* get_pointer_injection_ring (int lev) const {return m_injection_ring[lev].get();}
     amrex::MultiFab& get_injection_ring (int lev) {return *m_injection_ring[lev];}
+    amrex::MultiFab* get_pointer_PC_flag (int lev) const {return m_PC_flag[lev].get();}
+    amrex::MultiFab& get_PC_flag (int lev) {return *m_PC_flag[lev];}
     static std::string m_sigma_tune_method;
     std::list<amrex::Real> ROI_list;
     int list_size = 0;
@@ -669,6 +674,15 @@ public:
     static amrex::Real m_injRing_radius;
     static amrex::Real m_part_bulkVelocity;
     static int m_pair_injection_flag;
+    static amrex::Real m_RLC;
+    static amrex::Real m_PC_radius;
+    static amrex::Real m_PC_theta;
+    static int m_flag_polarcap;
+    static int m_use_FixedSigmaInput;
+    static int m_onlyPCinjection;
+    static int m_usePCflagcount_minInjCell;
+    static amrex::Real m_PCInjectionCellFraction;
+    static amrex::Real m_totalpolarcap_cells;
 private:
 };
 
