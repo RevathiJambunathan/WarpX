@@ -221,6 +221,7 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
         RemakeMultiFab(m_pulsar->m_injection_ring[lev], dm, true);
         RemakeMultiFab(m_pulsar->m_sigma_inj_ring[lev], dm, true);
         RemakeMultiFab(m_pulsar->m_sigma_threshold[lev], dm, true);
+        RemakeMultiFab(m_pulsar->m_PC_flag[lev], dm, false);
         m_pulsar->FlagCellsInPolarCap(lev);
 #endif
 
