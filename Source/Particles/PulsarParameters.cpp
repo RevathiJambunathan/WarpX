@@ -1940,6 +1940,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Real Sigma0_threshold = m_Sigma0_threshold;
     amrex::Print() << "sigma0 threshold used to check sigma_loc " << m_Sigma0_threshold << "\n";
     int modify_Sigma0_threshold = modify_sigma_threshold;
+    int onlyPCinjection = m_onlyPCinjection;
 
     //particles to be injected
     auto& pc = warpx.GetPartContainer().GetParticleContainer(0);
@@ -1966,6 +1967,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
         amrex::ParallelFor(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 sigma_threshold_loc(i,j,k) = 0.;
@@ -1986,17 +1988,25 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                                            + (y-xc[1]) * (y-xc[1])
                                            + (z-xc[2]) * (z-xc[2]));
                 amrex::Real eps = 1.e-12;
-                if ( (rad > (pulsar_cell_inject_rmin - eps)) and (rad < (pulsar_cell_inject_rmax + eps)) ){
-                    inj_ring(i,j,k) = 1;
-                    sigma_inj_ring(i, j, k) = sigma(i, j, k);
-                    amrex::Real Sigma_threshold = Sigma0_threshold;
-                    if (modify_Sigma0_threshold == 1) {
-                        Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
-                    }
-                    sigma_threshold_loc(i,j,k) = Sigma_threshold;
-                    // flag cells with sigma > sigma0_threshold
-                    if (sigma(i,j,k) > Sigma_threshold ) {
+                if (onlyPCinjection == 1) {
+                    if ( PCflag(i,j,k) == 1 || PCflag(i+1,j,k) == 1 || PCflag(i,j+1,k)==1
+                       || PCflag(i,j,k+1) == 1 || PCflag(i+1,j+1,k) == 1 || PCflag(i+1,j,k+1) == 1
+                       || PCflag(i,j+1,k+1) == 1 || PCflag(i+1,j+1,k+1) == 1) {
                         injection_flag(i,j,k) = 1;
+                    }
+                } else {
+                    if ( (rad > (pulsar_cell_inject_rmin - eps)) and (rad < (pulsar_cell_inject_rmax + eps)) ){
+                        inj_ring(i,j,k) = 1;
+                        sigma_inj_ring(i, j, k) = sigma(i, j, k);
+                        amrex::Real Sigma_threshold = Sigma0_threshold;
+                        if (modify_Sigma0_threshold == 1) {
+                            Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                        }
+                        sigma_threshold_loc(i,j,k) = Sigma_threshold;
+                        // flag cells with sigma > sigma0_threshold
+                        if (sigma(i,j,k) > Sigma_threshold ) {
+                            injection_flag(i,j,k) = 1;
+                        }
                     }
                 }
             }
@@ -2091,8 +2101,12 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                 amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
                 amrex::ParallelFor(tb,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                        injection_flag(i,j,k) = PCflag(i,j,k);
-                        inj_ring(i,j,k) = injection_flag(i,j,k);
+                        if ( PCflag(i,j,k) == 1 || PCflag(i+1,j,k) == 1 || PCflag(i,j+1,k)==1
+                        || PCflag(i,j,k+1) == 1 || PCflag(i+1,j+1,k) == 1 || PCflag(i+1,j,k+1) == 1
+                        || PCflag(i,j+1,k+1) == 1 || PCflag(i+1,j+1,k+1) == 1) {
+                            injection_flag(i,j,k) = 1;
+                            inj_ring(i,j,k) = injection_flag(i,j,k);
+                        }
                     }
                 );
             }
