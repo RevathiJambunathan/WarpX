@@ -387,7 +387,7 @@ Pulsar::InitDataAtRestart ()
         m_pcount[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_injection_ring[lev] = std::make_unique<amrex::MultiFab>(
-                                ba, dm, 1, ng_EB_alloc);
+                                amrex::convert(ba,amrex::IntVect::TheNodeVector()), dm, 1, ng_EB_alloc);
         m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_threshold[lev] = std::make_unique<amrex::MultiFab>(
@@ -405,6 +405,8 @@ Pulsar::InitDataAtRestart ()
         m_injection_ring[lev]->setVal(0._rt);
         m_sigma_inj_ring[lev]->setVal(0._rt);
         m_sigma_threshold[lev]->setVal(0._rt);
+
+        FlagCellsInInjectionRing(m_injection_ring[lev].get(), lev, m_cell_inject_rmin, m_cell_inject_rmax);
     }
 
     if (m_flag_polarcap == 1) {
@@ -412,10 +414,10 @@ Pulsar::InitDataAtRestart ()
         for (int lev = 0; lev < nlevs_max; ++lev) {
             amrex::BoxArray ba = warpx.boxArray(lev);
             amrex::DistributionMapping dm = warpx.DistributionMap(lev);
-            amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
+            amrex::IntVect PC_nodal_flag = amrex::IntVect::TheNodeVector();
             const amrex::IntVect ng_EB_alloc = warpx.getngEB() + amrex::IntVect::TheNodeVector()*2;
             m_PC_flag[lev] = std::make_unique<amrex::MultiFab>(
-                                    ba, dm, 1, ng_EB_alloc);
+                                    amrex::convert(ba,PC_nodal_flag), dm, 1, ng_EB_alloc);
             FlagCellsInPolarCap(m_PC_flag[lev].get(),lev,m_cell_inject_rmin,m_cell_inject_rmax);
         }
         m_totalpolarcap_cells = SumPolarCapFlag();
@@ -480,7 +482,7 @@ Pulsar::InitData ()
         m_pcount[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_injection_ring[lev] = std::make_unique<amrex::MultiFab>(
-                                ba, dm, 1, ng_EB_alloc);
+                                amrex::convert(ba,amrex::IntVect::TheNodeVector() ), dm, 1, ng_EB_alloc);
         m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_threshold[lev] = std::make_unique<amrex::MultiFab>(
@@ -497,6 +499,8 @@ Pulsar::InitData ()
         m_injection_ring[lev]->setVal(0._rt);
         m_sigma_inj_ring[lev]->setVal(0._rt);
         m_sigma_threshold[lev]->setVal(0._rt);
+
+        FlagCellsInInjectionRing(m_injection_ring[lev].get(), lev, m_cell_inject_rmin, m_cell_inject_rmax);
     }
 
     if (m_flag_polarcap == 1) {
@@ -504,10 +508,10 @@ Pulsar::InitData ()
         for (int lev = 0; lev < nlevs_max; ++lev) {
             amrex::BoxArray ba = warpx.boxArray(lev);
             amrex::DistributionMapping dm = warpx.DistributionMap(lev);
-            amrex::IntVect conductor_nodal_flag = amrex::IntVect::TheNodeVector();
+            amrex::IntVect PC_nodal_flag = amrex::IntVect::TheNodeVector();
             const amrex::IntVect ng_EB_alloc = warpx.getngEB() + amrex::IntVect::TheNodeVector()*2;
             m_PC_flag[lev] = std::make_unique<amrex::MultiFab>(
-                                    ba, dm, 1, ng_EB_alloc);
+                                    amrex::convert(ba,PC_nodal_flag), dm, 1, ng_EB_alloc);
             FlagCellsInPolarCap(m_PC_flag[lev].get(),lev,m_cell_inject_rmin,m_cell_inject_rmax);
         }
         m_totalpolarcap_cells = SumPolarCapFlag();
@@ -565,6 +569,60 @@ Pulsar::InitData ()
     }
 
 }
+
+
+void
+Pulsar::FlagCellsInInjectionRing(const int lev)
+{
+    FlagCellsInInjectionRing(m_injection_ring[lev].get(), lev, m_cell_inject_rmin, m_cell_inject_rmax);
+}
+
+void
+Pulsar::FlagCellsInInjectionRing(
+        amrex::MultiFab *mf, const int lev, amrex::Real cell_inject_rmin, amrex::Real cell_inject_rmax)
+{
+    WarpX& warpx = WarpX::GetInstance();
+    const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx_lev = warpx.Geom(lev).CellSizeArray();
+    const amrex::RealBox& real_box = warpx.Geom(lev).ProbDomain();
+    amrex::IntVect iv = mf->ixType().toIntVect();
+
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> xc;
+    for (int idim = 0; idim < 3; ++idim) {
+        xc[idim] = m_center_star[idim];
+    }
+
+    for (amrex::MFIter mfi(*mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+        // includes guard cells
+        const amrex::Box& tb = mfi.tilebox(iv, mf->nGrowVect());
+        amrex::Array4<amrex::Real> const& inj_ring_fab = mf->array(mfi);
+        amrex::ParallelFor(tb,
+             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                // Shift x, y, z position based on index type
+                amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+#if (AMREX_SPACEDIM==2)
+                amrex::Real y = 0._rt;
+                amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+#else
+                amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+#endif
+                amrex::Real r, theta, phi;
+                ConvertCartesianToSphericalCoord(x, y, z, xc,
+                                                 r, theta, phi);
+                amrex::Real eps = 1.e-12;
+                inj_ring_fab(i,j,k) = 0.;
+                if ( (r > (cell_inject_rmin - eps)) and (r < (cell_inject_rmax + eps)) ){
+                    inj_ring_fab(i,j,k) = 1.;
+                }
+            }
+        );
+    }
+}
+
 
 void
 Pulsar::FlagCellsInPolarCap(const int lev)
@@ -1955,7 +2013,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     m_injection_flag[lev]->setVal(0);
     m_injected_cell[lev]->setVal(0);
     m_sigma_inj_ring[lev]->setVal(0);
-    m_injection_ring[lev]->setVal(0);
     m_pcount[lev]->setVal(0);
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -1971,23 +2028,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::ParallelFor(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 sigma_threshold_loc(i,j,k) = 0.;
-                // cell-centered position based on index type
-                amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
-                amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
-#if (AMREX_SPACEDIM==2)
-                amrex::Real y = 0._rt;
-                amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
-                amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
-#else
-                amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
-                amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
-                amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
-                amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
-#endif
-                amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
-                                           + (y-xc[1]) * (y-xc[1])
-                                           + (z-xc[2]) * (z-xc[2]));
-                amrex::Real eps = 1.e-12;
                 if (onlyPCinjection == 1) {
                     if ( PCflag(i,j,k) == 1 || PCflag(i+1,j,k) == 1 || PCflag(i,j+1,k)==1
                        || PCflag(i,j,k+1) == 1 || PCflag(i+1,j+1,k) == 1 || PCflag(i+1,j,k+1) == 1
@@ -1995,8 +2035,26 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         injection_flag(i,j,k) = 1;
                     }
                 } else {
-                    if ( (rad > (pulsar_cell_inject_rmin - eps)) and (rad < (pulsar_cell_inject_rmax + eps)) ){
-                        inj_ring(i,j,k) = 1;
+                    if ( inj_ring(i,j,k) == 1 || inj_ring(i+1,j,k) == 1 || inj_ring(i,j+1,k) == 1
+                       || inj_ring(i,j,k+1) == 1 || inj_ring(i+1,j+1,k) == 1 || inj_ring(i,j+1,k+1) == 1
+                       || inj_ring(i,j+1,k+1) == 1 || inj_ring(i+1,j+1,k+1) == 1) {
+
+                        // cell-centered position based on index type
+                        amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                        amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+#if (AMREX_SPACEDIM==2)
+                        amrex::Real y = 0._rt;
+                        amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                        amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+#else
+                        amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                        amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                        amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                        amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+#endif
+                        amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
+                                                   + (y-xc[1]) * (y-xc[1])
+                                                   + (z-xc[2]) * (z-xc[2]));
                         sigma_inj_ring(i, j, k) = sigma(i, j, k);
                         amrex::Real Sigma_threshold = Sigma0_threshold;
                         if (modify_Sigma0_threshold == 1) {
@@ -2036,7 +2094,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
             m_injection_flag[lev]->setVal(0);
             m_injected_cell[lev]->setVal(0);
             m_sigma_inj_ring[lev]->setVal(0);
-            m_injection_ring[lev]->setVal(0);
             m_pcount[lev]->setVal(0);
             for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
             {
@@ -2051,25 +2108,26 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                 amrex::ParallelFor(tb,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                         sigma_threshold_loc(i,j,k) = 0.;
-                        // cell-centered position based on index type
-                        amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
-                        amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+                        if ( inj_ring(i,j,k) == 1 || inj_ring(i+1,j,k) == 1 || inj_ring(i,j+1,k)
+                           || inj_ring(i,j,k+1) == 1 || inj_ring(i+1,j+1,k) == 1 || inj_ring(i,j+1,k+1) == 1
+                           || inj_ring(i,j+1,k+1) == 1 || inj_ring(i+1,j+1,k+1) == 1) {
+                            // cell-centered position based on index type
+                            amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                            amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
 #if (AMREX_SPACEDIM==2)
-                        amrex::Real y = 0._rt;
-                        amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
-                        amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+                            amrex::Real y = 0._rt;
+                            amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                            amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
 #else
-                        amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
-                        amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
-                        amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
-                        amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+                            amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                            amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                            amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                            amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
 #endif
-                        amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
-                                                   + (y-xc[1]) * (y-xc[1])
-                                                   + (z-xc[2]) * (z-xc[2]));
-                        amrex::Real eps = 1.e-12;
-                        if ( (rad > (pulsar_cell_inject_rmin - eps)) and (rad < (pulsar_cell_inject_rmax + eps)) ){
-                            inj_ring(i,j,k) = 1;
+                            amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
+                                                       + (y-xc[1]) * (y-xc[1])
+                                                       + (z-xc[2]) * (z-xc[2]));
+
                             sigma_inj_ring(i, j, k) = sigma(i, j, k);
                             amrex::Real Sigma_threshold = Sigma0_threshold;
                             if (modify_Sigma0_threshold == 1) {
@@ -2089,7 +2147,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         } else if (m_use_FixedSigmaInput == 1 and m_usePCflagcount_minInjCell==1) {
             m_injection_flag[lev]->setVal(0);
             m_injected_cell[lev]->setVal(0);
-            m_injection_ring[lev]->setVal(0);
             m_pcount[lev]->setVal(0);
             for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
             {
@@ -2097,7 +2154,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                 const amrex::Box& tb = mfi.tilebox(iv);
                 amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
                 amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
-                amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
                 amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
                 amrex::ParallelFor(tb,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k) {
@@ -2105,7 +2161,6 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         || PCflag(i,j,k+1) == 1 || PCflag(i+1,j+1,k) == 1 || PCflag(i+1,j,k+1) == 1
                         || PCflag(i,j+1,k+1) == 1 || PCflag(i+1,j+1,k+1) == 1) {
                             injection_flag(i,j,k) = 1;
-                            inj_ring(i,j,k) = injection_flag(i,j,k);
                         }
                     }
                 );

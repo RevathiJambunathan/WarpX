@@ -54,6 +54,8 @@ public:
     void FlagCellsInPolarCap (const int lev);
     void FlagCellsInPolarCap (amrex::MultiFab *mf, const int lev, amrex::Real cell_inject_rmin, amrex::Real cell_inject_rmax);
     amrex::Real SumPolarCapFlag ();
+    void FlagCellsInInjectionRing (const int lev);
+    void FlagCellsInInjectionRing (amrex::MultiFab *mf, const int lev, amrex::Real cell_inject_rmin, amrex::Real cell_inject_rmax);
 
     AMREX_GPU_HOST_DEVICE AMREX_INLINE
     static amrex::Real Omega(const amrex::Real omegastar, const amrex::Real cur_time, amrex::Real omega_ramp_time)
