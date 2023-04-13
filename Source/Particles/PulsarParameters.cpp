@@ -2036,7 +2036,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     }
                 } else {
                     if ( inj_ring(i,j,k) == 1 || inj_ring(i+1,j,k) == 1 || inj_ring(i,j+1,k) == 1
-                       || inj_ring(i,j,k+1) == 1 || inj_ring(i+1,j+1,k) == 1 || inj_ring(i,j+1,k+1) == 1
+                       || inj_ring(i,j,k+1) == 1 || inj_ring(i+1,j+1,k) == 1 || inj_ring(i+1,j,k+1) == 1
                        || inj_ring(i,j+1,k+1) == 1 || inj_ring(i+1,j+1,k+1) == 1) {
 
                         // cell-centered position based on index type
