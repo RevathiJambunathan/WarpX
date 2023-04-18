@@ -2310,7 +2310,7 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
 
         BoxArray crba = ba;
 
-        const IntVect& crse_ratio{2,2,2};
+        const IntVect crse_ratio = amrex::IntVect(AMREX_D_DECL(2,2,2));
         crba.coarsen(crse_ratio);
 
         std::array<Real,3> cdx = CellSize(lev);

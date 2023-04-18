@@ -2079,7 +2079,7 @@ PhysicalParticleContainer::Evolve (int lev,
 
                 if (np_gather < np)
                 {
-                    const IntVect& ref_ratio{2,2,2};
+                    const IntVect ref_ratio = amrex::IntVect(AMREX_D_DECL(2,2,2));
                     //const IntVect& ref_ratio = WarpX::RefRatio(lev);
                     const Box& cbox = amrex::coarsen(box,ref_ratio);
 
@@ -2648,7 +2648,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         box = pti.tilebox();
     } else {
         if (gather_lev < 0) {
-            const IntVect& ref_ratio{2,2,2};
+            const IntVect ref_ratio = amrex::IntVect(AMREX_D_DECL(2,2,2));
             //const IntVect& ref_ratio = WarpX::RefRatio(gather_lev+1);
             box = amrex::coarsen(pti.tilebox(),ref_ratio);
         } else {

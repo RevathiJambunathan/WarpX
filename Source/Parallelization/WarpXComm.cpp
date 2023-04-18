@@ -278,7 +278,7 @@ WarpX::UpdateAuxilaryDataSameType ()
     for (int lev = 0; lev <= 0; ++lev)
     {
 
-        const IntVect& refinement_ratio{2,2,2};
+        const IntVect refinement_ratio = amrex::IntVect(AMREX_D_DECL(2,2,2));
 
         // B field
         Bfield_cp[lev][0]->setVal(0.0);
