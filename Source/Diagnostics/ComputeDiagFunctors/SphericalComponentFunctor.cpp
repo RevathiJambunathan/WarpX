@@ -59,7 +59,7 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
     using namespace amrex;
 #ifdef PULSAR
     auto & warpx = WarpX::GetInstance();
-    const auto dx = warpx.Geom(m_lev).CellSizeArray();
+    auto dx = warpx.Geom(m_lev).CellSizeArray();
     const auto problo = warpx.Geom(m_lev).ProbLoArray();
     const amrex::IntVect stag_xsrc = m_mfx_src->ixType().toIntVect();
     const amrex::IntVect stag_ysrc = m_mfy_src->ixType().toIntVect();
@@ -79,6 +79,7 @@ SphericalComponentFunctor::ComputeSphericalFieldComponent( amrex::MultiFab& mf_d
         s_dst[i]  = stag_dst[i];
         cr[i] = m_crse_ratio[i];
         center_star_arr[i] = Pulsar::m_center_star[i];
+        dx[i] = cr[i];
     }
     const int sphericalcomp = m_sphericalcomp;
 
