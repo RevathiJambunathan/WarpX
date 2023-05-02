@@ -694,6 +694,15 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
                                               warpx.get_pointer_Bfield_aux(lev,1),
                                               warpx.get_pointer_Bfield_aux(lev,2),
                                               lev, m_crse_ratio);
+        } else if (m_varnames[comp] == "jdotE") {
+            m_all_field_functors[lev][comp] = std::make_unique<EdotBFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_current_fp(lev,0),
+                                              warpx.get_pointer_current_fp(lev,1),
+                                              warpx.get_pointer_current_fp(lev,2),
+                                              lev, m_crse_ratio);
         } else if (m_varnames[comp] == "Sx") {
             int xcomp = 0;
             m_all_field_functors[lev][comp] = std::make_unique<PoyntingVectorFunctor>(
@@ -724,6 +733,46 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
                                               warpx.get_pointer_Bfield_aux(lev,1),
                                               warpx.get_pointer_Bfield_aux(lev,2),
                                               lev, m_crse_ratio, zcomp);
+        } else if (m_varnames[comp] == "Sr") {
+            int rcomp = 3;
+            m_all_field_functors[lev][comp] = std::make_unique<PoyntingVectorFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_Bfield_aux(lev,0),
+                                              warpx.get_pointer_Bfield_aux(lev,1),
+                                              warpx.get_pointer_Bfield_aux(lev,2),
+                                              lev, m_crse_ratio, rcomp);
+        } else if (m_varnames[comp] == "Stheta") {
+            int theta_comp = 4;
+            m_all_field_functors[lev][comp] = std::make_unique<PoyntingVectorFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_Bfield_aux(lev,0),
+                                              warpx.get_pointer_Bfield_aux(lev,1),
+                                              warpx.get_pointer_Bfield_aux(lev,2),
+                                              lev, m_crse_ratio, theta_comp);
+        } else if (m_varnames[comp] == "Sphi") {
+            int phi_comp = 5;
+            m_all_field_functors[lev][comp] = std::make_unique<PoyntingVectorFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_Bfield_aux(lev,0),
+                                              warpx.get_pointer_Bfield_aux(lev,1),
+                                              warpx.get_pointer_Bfield_aux(lev,2),
+                                              lev, m_crse_ratio, phi_comp);
+        } else if (m_varnames[comp] == "vdrift_phi") {
+            int vdrift_phi_comp = 6;
+            m_all_field_functors[lev][comp] = std::make_unique<PoyntingVectorFunctor>(
+                                              warpx.get_pointer_Efield_aux(lev,0),
+                                              warpx.get_pointer_Efield_aux(lev,1),
+                                              warpx.get_pointer_Efield_aux(lev,2),
+                                              warpx.get_pointer_Bfield_aux(lev,0),
+                                              warpx.get_pointer_Bfield_aux(lev,1),
+                                              warpx.get_pointer_Bfield_aux(lev,2),
+                                              lev, m_crse_ratio, vdrift_phi_comp);
         } else if (m_varnames[comp] == "conductor") {
             m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(warpx.getPulsar().m_conductor_fp[lev].get(), lev, m_crse_ratio);
         } else if ( m_varnames[comp].rfind("ndens_", 0) == 0 ){

@@ -63,6 +63,9 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
     const amrex::IntVect stag_Bysrc = m_By_src->ixType().toIntVect();
     const amrex::IntVect stag_Bzsrc = m_Bz_src->ixType().toIntVect();
     const amrex::IntVect stag_dst = mf_dst.ixType().toIntVect();
+    auto & warpx = WarpX::GetInstance();
+    auto dx = warpx.Geom(m_lev).CellSizeArray();
+    const auto problo = warpx.Geom(m_lev).ProbLoArray();
 
     amrex::GpuArray<int,3> sf_Ex; // staggering of source xfield
     amrex::GpuArray<int,3> sf_Ey; // staggering of source yfield
@@ -72,6 +75,7 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
     amrex::GpuArray<int,3> sf_Bz; // staggering of source zfield
     amrex::GpuArray<int,3> s_dst;
     amrex::GpuArray<int,3> cr;
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> center_star_arr;
 
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         sf_Ex[i] = stag_Exsrc[i];
@@ -82,8 +86,12 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
         sf_Bz[i] = stag_Bzsrc[i];
         s_dst[i]  = stag_dst[i];
         cr[i] = m_crse_ratio[i];
+        dx[i] = dx[i] * cr[i];
+        center_star_arr[i] = Pulsar::m_center_star[i];
     }
     const int vectorcomp = m_vectorcomp;
+
+
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -114,12 +122,41 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
                                                     i, j, k, n);
                 amrex::Real Bz_cc = ablastr::coarsen::sample::Interp(Bz_arr, sf_Bz, s_dst, cr,
                                                       i, j, k, n);
+                amrex::Real Sx = Ey_cc * Bz_cc - Ez_cc * By_cc;
+                amrex::Real Sy = Ez_cc * Bx_cc - Ex_cc * Bz_cc;
+                amrex::Real Sz = Ex_cc * By_cc - Ey_cc * Bx_cc;
                 if (vectorcomp == 0) {
-                    arr_dst(i,j,k,n+dcomp) = Ey_cc * Bz_cc - Ez_cc * By_cc;
+                    arr_dst(i,j,k,n+dcomp) = Sx;
                 } else if (vectorcomp == 1) {
-                    arr_dst(i,j,k,n+dcomp) = Ez_cc * Bx_cc - Ex_cc * Bz_cc;
+                    arr_dst(i,j,k,n+dcomp) = Sy;
                 } else if (vectorcomp == 2) {
-                    arr_dst(i,j,k,n+dcomp) = Ex_cc * By_cc - Ey_cc * Bx_cc;
+                    arr_dst(i,j,k,n+dcomp) = Sz;
+                } else if (vectorcomp > 2) {
+                    // Compute spherical components of Poynting flux (ExB)
+                    // compute cell coordinates
+                    amrex::Real x, y, z;
+                    Pulsar::ComputeCellCoordinates(i,j,k, s_dst, problo, dx, x, y, z);
+                    // convert cartesian to spherical coordinates
+                    amrex::Real r, theta, phi;
+                    Pulsar::ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
+                                                             r, theta, phi);
+                    if (vectorcomp == 3) { // rcomponent
+                        Pulsar::ConvertCartesianToSphericalRComponent(
+                        Sx, Sy, Sz, theta, phi, arr_dst(i,j,k,n+dcomp));
+                    } else if (vectorcomp == 4) { // theta component
+                        Pulsar::ConvertCartesianToSphericalThetaComponent(
+                        Sx, Sy, Sz, theta, phi, arr_dst(i,j,k,n+dcomp));
+                    } else if (vectorcomp == 5) { // phi component
+                        Pulsar::ConvertCartesianToSphericalPhiComponent(
+                        Sx, Sy, Sz, theta, phi, arr_dst(i,j,k,n+dcomp));
+                    } else if (vectorcomp == 6) { // vdrift phi
+                        // vdrift_phi = (ExB)_phi_component / (B.B)
+                        amrex::Real S_phi = 0.0;
+                        Pulsar::ConvertCartesianToSphericalPhiComponent(
+                        Sx, Sy, Sz, theta, phi, S_phi);
+                        amrex::Real B2 = Bx_cc*Bx_cc + By_cc*By_cc + Bz_cc*Bz_cc;
+                        arr_dst(i,j,k,n+dcomp) = S_phi/B2;
+                    }
                 }
             });
     }

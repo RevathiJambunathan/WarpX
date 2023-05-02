@@ -11,6 +11,7 @@ target_sources(WarpX
     ParticleReductionFunctor.cpp
     SphericalComponentFunctor.cpp
     EdotBFunctor.cpp
+    jdotEFunctor.cpp
     PoyntingVectorFunctor.cpp
     NumberDensityFunctor.cpp
 )

@@ -9,6 +9,7 @@ CEXE_sources += BackTransformParticleFunctor.cpp
 CEXE_sources += ParticleReductionFunctor.cpp
 CEXE_sources += SphericalComponentFunctor.cpp
 CEXE_sources += EdotBFunctor.cpp
+CEXE_sources += jdotEFunctor.cpp
 CEXE_sources += PoyntingVectorFunctor.cpp
 CEXE_sources += NumberDensityFunctor.cpp
 
