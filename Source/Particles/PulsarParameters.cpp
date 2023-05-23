@@ -652,7 +652,7 @@ Pulsar::FlagCellsInPolarCap(
     amrex::Real PC_theta = m_PC_theta;
     amrex::Real PC_radius = m_PC_radius;
     amrex::Print() << "pc theta : " << PC_theta << "\n";
-
+    amrex::Real Chi = m_Chi;
 
     for (amrex::MFIter mfi(*mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
         // includes guard cells
@@ -681,8 +681,11 @@ Pulsar::FlagCellsInPolarCap(
                 if ( (r > (cell_inject_rmin - eps)) and (r < (cell_inject_rmax + eps)) ){
                     amrex::Real rcyl = std::sqrt( (x-xc[0])*(x-xc[0]) + (y-xc[1])*(y-xc[1]) );
                     //if (rcyl < (cell_inject_rmax * std::sin(PC_theta))) {
-                    if (rcyl < (PC_radius)) {
+//                    if (rcyl < (PC_radius)) {
                        //( (theta < (0.5*3.14 + PC_theta) ) and ( theta > (0.5*3.14_rt - PC_theta)) ) ) {
+                    if( (theta < (Chi + 3.14) ) and ( theta > ( Chi + 3.14_rt - PC_theta)) ) {
+                        PC_fab(i,j,k) = 1.;
+                    } else if ((theta < ( Chi + PC_theta) ) and (theta > (Chi) )) {
                         PC_fab(i,j,k) = 1.;
                     }
                 }
