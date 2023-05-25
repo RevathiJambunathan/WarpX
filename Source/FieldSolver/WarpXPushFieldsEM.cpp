@@ -917,6 +917,8 @@ WarpX::EvolveE (int lev, PatchType patch_type, amrex::Real a_dt)
         // Enforce corotating electric field boundary condition
         m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
         if (lev > 0) m_pulsar->ApplyCorotatingEfield_BC( Efield_fp[lev], lev, a_dt);
+    } else if (Pulsar::m_ApplyEfieldBCusingConductor == 1) {
+        m_pulsar->SetTangentialEforInternalConductor( Efield_fp[lev], lev, a_dt);
     }
 #endif
 

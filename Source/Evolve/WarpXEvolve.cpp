@@ -133,6 +133,7 @@ WarpX::Evolve (int numsteps)
                     if (Pulsar::m_pair_injection_flag == 1) {
                         mypc->PulsarPairInjection();
                     } else {
+                        amrex::Print() << " pulsar pair injection \n";
                         mypc->PulsarParticleInjection();
                     }
                     // call redistribute
@@ -171,7 +172,9 @@ WarpX::Evolve (int numsteps)
         if (cur_time >= Pulsar::m_injection_time &&
             cur_time <= Pulsar::m_injection_endtime) {
             // Tune sigma for injection only after injection time
-            m_pulsar->TuneSigma0Threshold(step);
+            if (Pulsar::m_singleParticleTest == 0) {
+                m_pulsar->TuneSigma0Threshold(step);
+            }
         }
 #endif
 
@@ -332,7 +335,7 @@ WarpX::Evolve (int numsteps)
 
 #ifdef PULSAR
         // call PulsarParticleBoundaryCondition before redistribute
-        mypc->PulsarParticleRemoval();
+//        mypc->PulsarParticleRemoval();
 #endif
 
         // interact the particles with EB walls (if present)
