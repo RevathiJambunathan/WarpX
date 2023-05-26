@@ -335,7 +335,7 @@ WarpX::Evolve (int numsteps)
 
 #ifdef PULSAR
         // call PulsarParticleBoundaryCondition before redistribute
-//        mypc->PulsarParticleRemoval();
+        mypc->PulsarParticleRemoval();
 #endif
 
         // interact the particles with EB walls (if present)
