@@ -65,7 +65,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #ifdef WARPX_QED
                     const amrex::Real t_chi_max,
 #endif
-                    const amrex::Real dt)
+                    const amrex::Real dt, amrex::Real * PulsarDiag = nullptr)
 {
     amrex::ParticleReal qp = a_q;
     if (ion_lev) { qp *= ion_lev; }
@@ -107,7 +107,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
     } else if (pusher_algo == ParticlePusherAlgo::Boris) {
         UpdateMomentumBoris( ux, uy, uz,
                              Ex, Ey, Ez, Bx,
-                             By, Bz, qp, m, dt);
+                             By, Bz, qp, m, dt, PulsarDiag);
         amrex::ParticleReal x, y, z;
         GetPosition(i, x, y, z);
         UpdatePosition(x, y, z, ux, uy, uz, dt );
