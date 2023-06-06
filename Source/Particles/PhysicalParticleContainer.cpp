@@ -2849,6 +2849,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     for (int idim = 0; idim < 3; ++idim) {
         center_star_arr[idim] = Pulsar::m_center_star[idim];
     }
+    amrex::Real width_data = Pulsar::m_BC_width;
+    amrex::Real minR_data = Pulsar::m_BC_minR;
 #endif
 
 #ifdef AMREX_USE_OMP
@@ -2953,14 +2955,58 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                     Bstar_data, Rstar_data, dRstar_data,
                                     Exp, Eyp, Ezp, Bxp, Byp, Bzp);
                 if (use_theoreticalEB == 1) {
-                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p, chi_data,
-                                    theory_max_rstar,
-                                    corotatingE_maxradius_data,
-                                    E_external_monopole_data,
-                                    cur_time, omega_star_data, ramp_omega_time_data,
-                                    Bstar_data, Rstar_data, dRstar_data,
-                                    Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+                amrex::Real Ex_vac, Ey_vac, Ez_vac, Bx_vac, By_vac, Bz_vac;
+//                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p, chi_data,
+//                                    theory_max_rstar,
+//                                    corotatingE_maxradius_data,
+//                                    E_external_monopole_data,
+//                                    cur_time, omega_star_data, ramp_omega_time_data,
+//                                    Bstar_data, Rstar_data, dRstar_data,
+//                                    Ex_vac, Ey_vac, Ez_vac, Bx_vac, By_vac, Bz_vac);
+//		Exp = Exp + Ex_vac;
+//		Eyp = Eyp + Ey_vac;
+//		Ezp = Ezp + Ez_vac;
+//		Bxp = Bxp + Bx_vac;
+//		Byp = Byp + By_vac;
+//		Bzp = Bzp + Bz_vac;
                 }
+		amrex::Real Er_cor, Etheta_cor, Ephi_cor;
+		Pulsar::CorotatingEfieldSpherical(r_p, theta_p, phi_p, chi_data,
+				                   cur_time, omega_star_data, ramp_omega_time_data,
+						   Bstar_data, Rstar_data, dRstar_data,
+						   Er_cor, Etheta_cor, Ephi_cor);
+		Er_cor = 0.;
+		amrex::Real Ex_cor, Ey_cor, Ez_cor;
+		Pulsar::ConvertSphericalToCartesianXComponent(Er_cor, Etheta_cor, Ephi_cor, r_p, theta_p, phi_p, Ex_cor);
+                Pulsar::ConvertSphericalToCartesianYComponent(Er_cor, Etheta_cor, Ephi_cor, r_p, theta_p, phi_p, Ey_cor);
+                Pulsar::ConvertSphericalToCartesianZComponent(Er_cor, Etheta_cor, Ephi_cor, r_p, theta_p, phi_p, Ez_cor);
+		amrex::Real Br_dipole, Btheta_dipole, Bphi_dipole;
+		Pulsar::ExternalBFieldSpherical(r_p, theta_p, phi_p, chi_data,
+                                                   cur_time, omega_star_data, ramp_omega_time_data,
+                                                   Bstar_data, Rstar_data, dRstar_data,
+                                                   Br_dipole, Btheta_dipole, Bphi_dipole);
+		Btheta_dipole = 0.;
+		Bphi_dipole = 0.;
+		amrex::Real Bx_dipole, By_dipole, Bz_dipole;
+		Pulsar::ConvertSphericalToCartesianXComponent(Br_dipole, Btheta_dipole, Bphi_dipole, r_p, theta_p, phi_p, Bx_dipole);
+                Pulsar::ConvertSphericalToCartesianYComponent(Br_dipole, Btheta_dipole, Bphi_dipole, r_p, theta_p, phi_p, By_dipole);
+                Pulsar::ConvertSphericalToCartesianZComponent(Br_dipole, Btheta_dipole, Bphi_dipole, r_p, theta_p, phi_p, Bz_dipole);
+		if (r_p > minR_data and r_p < (minR_data + width_data)) {
+			amrex::Real tanh_fac = std::tanh( (r_p - minR_data)/width_data );
+			Exp = (1.-tanh_fac)*Ex_cor + tanh_fac*Exp;
+			Eyp = (1.-tanh_fac)*Ey_cor + tanh_fac*Eyp;
+			Ezp = (1.-tanh_fac)*Ez_cor + tanh_fac*Ezp;
+			Bxp = (1.-tanh_fac)*Bx_dipole + tanh_fac*Exp;
+			Byp = (1.-tanh_fac)*By_dipole + tanh_fac*Eyp;
+			Bzp = (1.-tanh_fac)*Bz_dipole + tanh_fac*Ezp;
+                } else if (r_p < minR_data){
+		//    Exp = Ex_cor;
+		//    Eyp = Ey_cor;
+		//    Ezp = Ez_cor;
+		//    Bxp = Bx_dipole;
+		//    Byp = By_dipole;
+		//    Bzp = Bz_dipole;
+		}			
 #endif
 
                 if (do_crr) {
@@ -3092,6 +3138,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     for (int idim = 0; idim < 3; ++idim) {
         center_star_arr[idim] = Pulsar::m_center_star[idim];
     }
+    amrex::Real width_data = Pulsar::m_BC_width;
+    amrex::Real minR_data = Pulsar::m_BC_minR;
 #endif
 
 
@@ -3228,24 +3276,68 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                 amrex::ParticleReal r_p, theta_p, phi_p;
                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
                                                           r_p, theta_p, phi_p);
-                Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p, chi_data,
-                                    AddExternalMonopoleOnly,
-                                    AddPulsarVacuumEFields,
-                                    AddBDipoleOutsideRstar,
-                                    AddPulsarVacuumBFields,
-                                    corotatingE_maxradius_data,
-                                    E_external_monopole_data,
-                                    cur_time, omega_star_data, ramp_omega_time_data,
-                                    Bstar_data, Rstar_data, dRstar_data,
-                                    Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+//                Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p, chi_data,
+//                                    AddExternalMonopoleOnly,
+//                                    AddPulsarVacuumEFields,
+//                                    AddBDipoleOutsideRstar,
+//                                    AddPulsarVacuumBFields,
+//                                    corotatingE_maxradius_data,
+//                                    E_external_monopole_data,
+//                                    cur_time, omega_star_data, ramp_omega_time_data,
+//                                    Bstar_data, Rstar_data, dRstar_data,
+//                                    Exp, Eyp, Ezp, Bxp, Byp, Bzp);
                 if (use_theoreticalEB == 1) {
-                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p, chi_data,
-                                    theory_max_rstar,
-                                    corotatingE_maxradius_data,
-                                    E_external_monopole_data,
-                                    cur_time, omega_star_data, ramp_omega_time_data,
-                                    Bstar_data, Rstar_data, dRstar_data,
-                                    Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+//                 amrex::Real Ex_vac, Ey_vac, Ez_vac, Bx_vac, By_vac, Bz_vac;                
+//                    Pulsar::EnforceTheoreticalEBOnParticle(r_p, theta_p, phi_p, chi_data,
+//                                    theory_max_rstar,
+//                                    corotatingE_maxradius_data,
+//                                    E_external_monopole_data,
+//                                    cur_time, omega_star_data, ramp_omega_time_data,
+//                                    Bstar_data, Rstar_data, dRstar_data,
+//                                    Ex_vac, Ey_vac, Ez_vac, Bx_vac, By_vac, Bz_vac);
+//                Exp = Exp + Ex_vac;                
+//                Eyp = Eyp + Ey_vac;                
+//                Ezp = Ezp + Ez_vac;                
+//                Bxp = Bxp + Bx_vac;                
+//                Byp = Byp + By_vac;                
+//                Bzp = Bzp + Bz_vac;                
+                }
+                amrex::Real Er_cor, Etheta_cor, Ephi_cor;
+                Pulsar::CorotatingEfieldSpherical(r_p, theta_p, phi_p, chi_data,
+                                                   cur_time, omega_star_data, ramp_omega_time_data,
+                                                   Bstar_data, Rstar_data, dRstar_data,
+                                                   Er_cor, Etheta_cor, Ephi_cor);
+		Er_cor = 0.;
+                amrex::Real Ex_cor, Ey_cor, Ez_cor;
+                Pulsar::ConvertSphericalToCartesianXComponent(Er_cor, Etheta_cor, Ephi_cor, r_p, theta_p, phi_p, Ex_cor);
+                Pulsar::ConvertSphericalToCartesianYComponent(Er_cor, Etheta_cor, Ephi_cor, r_p, theta_p, phi_p, Ey_cor);
+                Pulsar::ConvertSphericalToCartesianZComponent(Er_cor, Etheta_cor, Ephi_cor, r_p, theta_p, phi_p, Ez_cor);
+                amrex::Real Br_dipole, Btheta_dipole, Bphi_dipole;
+                Pulsar::ExternalBFieldSpherical(r_p, theta_p, phi_p, chi_data,
+                                                   cur_time, omega_star_data, ramp_omega_time_data,
+                                                   Bstar_data, Rstar_data, dRstar_data,
+                                                   Br_dipole, Btheta_dipole, Bphi_dipole);
+		Btheta_dipole = 0.;
+		Bphi_dipole = 0.;
+                amrex::Real Bx_dipole, By_dipole, Bz_dipole;
+                Pulsar::ConvertSphericalToCartesianXComponent(Br_dipole, Btheta_dipole, Bphi_dipole, r_p, theta_p, phi_p, Bx_dipole);
+                Pulsar::ConvertSphericalToCartesianYComponent(Br_dipole, Btheta_dipole, Bphi_dipole, r_p, theta_p, phi_p, By_dipole);
+                Pulsar::ConvertSphericalToCartesianZComponent(Br_dipole, Btheta_dipole, Bphi_dipole, r_p, theta_p, phi_p, Bz_dipole);
+                if (r_p > minR_data and r_p < (minR_data + width_data)) {
+                        amrex::Real tanh_fac = std::tanh( (r_p - minR_data)/width_data );
+                        Exp = (1.-tanh_fac)*Ex_cor + tanh_fac*Exp;
+                        Eyp = (1.-tanh_fac)*Ey_cor + tanh_fac*Eyp;
+                        Ezp = (1.-tanh_fac)*Ez_cor + tanh_fac*Ezp;
+                        Bxp = (1.-tanh_fac)*Bx_dipole + tanh_fac*Exp;
+                        Byp = (1.-tanh_fac)*By_dipole + tanh_fac*Eyp;
+                        Bzp = (1.-tanh_fac)*Bz_dipole + tanh_fac*Ezp;
+                } else if (r_p < minR_data){
+//                    Exp = Ex_cor;
+//                    Eyp = Ey_cor;
+//                    Ezp = Ez_cor;
+//                    Bxp = Bx_dipole;
+//                    Byp = By_dipole;
+//                    Bzp = Bz_dipole;
                 }
 #endif
 

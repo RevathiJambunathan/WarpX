@@ -23,6 +23,8 @@
 #include <AMReX_Math.H>
 
 
+amrex::Real Pulsar::m_BC_width;
+amrex::Real Pulsar::m_BC_minR;
 std::string Pulsar::m_pulsar_type;
 amrex::Real Pulsar::m_omega_star;
 amrex::Real Pulsar::m_R_star;
@@ -342,6 +344,8 @@ Pulsar::ReadParameters () {
     amrex::Print() << " RLC : " << m_RLC << "\n";
     amrex::Print() << " PC radius " << m_PC_radius << "\n";
     amrex::Print() << " PC theta " << m_PC_theta << "\n";
+    pp.get("BC_width",m_BC_width);
+    pp.get("BC_minR",m_BC_minR);
 }
 
 
@@ -652,7 +656,7 @@ Pulsar::FlagCellsInPolarCap(
     amrex::Real PC_theta = m_PC_theta;
     amrex::Real PC_radius = m_PC_radius;
     amrex::Print() << "pc theta : " << PC_theta << "\n";
-
+    amrex::Real Chi = m_Chi;
 
     for (amrex::MFIter mfi(*mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi) {
         // includes guard cells
@@ -679,12 +683,14 @@ Pulsar::FlagCellsInPolarCap(
                 amrex::Real eps = 1.e-12;
                 PC_fab(i,j,k) = 0.;
                 if ( (r > (cell_inject_rmin - eps)) and (r < (cell_inject_rmax + eps)) ){
-                    amrex::Real rcyl = std::sqrt( (x-xc[0])*(x-xc[0]) + (y-xc[1])*(y-xc[1]) );
-                    //if (rcyl < (cell_inject_rmax * std::sin(PC_theta))) {
-                    if (rcyl < (PC_radius)) {
-                       //( (theta < (0.5*3.14 + PC_theta) ) and ( theta > (0.5*3.14_rt - PC_theta)) ) ) {
+        //            amrex::Real rcyl = std::sqrt( (x-xc[0])*(x-xc[0]) + (y-xc[1])*(y-xc[1]) );
+                   // if (rcyl < (cell_inject_rmax * std::sin(PC_theta))) {
+        //            if (rcyl < (PC_radius)) {
+                    if( (theta < (Chi + 3.14) ) and ( theta > ( Chi + 3.14_rt - PC_theta)) ) {
                         PC_fab(i,j,k) = 1.;
-                    }
+                    } else if ( (theta < ( Chi + PC_theta) ) and (theta > (Chi) ) ) {
+                        PC_fab(i,j,k) = 1.;
+		    }
                 }
              }
         );
@@ -1013,16 +1019,26 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 // convert cartesian to spherical coordinates
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
+		//contribution of Ex to r-component
+		amrex::Real Ex_r = Ex_arr(i,j,k) * std::sin(theta) * std::cos(phi);
+		//contribution of Ex to theta component
+		amrex::Real Ex_theta = Ex_arr(i,j,k)*std::cos(theta) * std::cos(phi);
+		//contribution of Ex to phi component
+		amrex::Real Ex_phi = Ex_arr(i,j,k) * -1 * std::sin(phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
+                    CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
+                                              omega_star_data,
+                                              ramp_omega_time_data,
+                                              Bstar_data, Rstar_data, dRstar_data,
+                                              Fr, Ftheta, Fphi);
                     if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1) {
-                        CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
-                                                  omega_star_data,
-                                                  ramp_omega_time_data,
-                                                  Bstar_data, Rstar_data, dRstar_data,
-                                                  Fr, Ftheta, Fphi);
+			Fr = 0.0; // normal components are not enforced
                         ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
-                                                               r, theta, phi, Ex_arr(i,j,k));
-                    }
+                                                               r, theta, phi, Ex_arr(i,j,k));			
+                    } else if (conductor(i,j,k)==2 and conductor(i+1,j,k)==2) {
+                        ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, Ex_arr(i,j,k));			
+		    }
                 } else {
                     int ApplyCorotatingEField = 0;
                     if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1) ApplyCorotatingEField = 1;
@@ -1033,6 +1049,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                             corotatingE_maxradius_data,
                                             E_external_monopole_data, ApplyCorotatingEField,
                                             Fr, Ftheta, Fphi);
+		    Fr = 0.0; // normal components are not enforced
                     ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                            r, theta, phi, Ex_arr(i,j,k));
                 }
@@ -1047,6 +1064,13 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 // convert cartesian to spherical coordinates
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
+		//contribution of Ey to r-component
+		amrex::Real Ey_r = Ey_arr(i,j,k) * std::sin(theta) * std::sin(phi);
+		//contribution of Ex to theta component
+		amrex::Real Ey_theta = Ey_arr(i,j,k)*std::cos(theta) * std::sin(phi);
+		//contribution of Ex to phi component
+		amrex::Real Ey_phi = Ey_arr(i,j,k) * std::cos(phi);
+		
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1) {
                         CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
@@ -1054,9 +1078,19 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                                   ramp_omega_time_data,
                                                   Bstar_data, Rstar_data, dRstar_data,
                                                   Fr, Ftheta, Fphi);
+		        Fr = 0.0; // normal components are not enforced
+//			Fr = Ey_r;
                         ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ey_arr(i,j,k));
-                    }
+                    } else if (conductor(i,j,k)==2 and conductor(i,j+1,k)==2) {
+                        CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
+                                                  omega_star_data,
+                                                  ramp_omega_time_data,
+                                                  Bstar_data, Rstar_data, dRstar_data,
+                                                  Fr, Ftheta, Fphi);
+                        ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, Ey_arr(i,j,k));
+		    }
                 } else {
                     int ApplyCorotatingEField = 0;
                     if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1) ApplyCorotatingEField = 1;
@@ -1068,6 +1102,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                             E_external_monopole_data,
                                             ApplyCorotatingEField,
                                             Fr, Ftheta, Fphi);
+		    Fr = 0.0; // normal components are not enforced
                     ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                            r, theta, phi, Ey_arr(i,j,k));
                 }
@@ -1082,6 +1117,10 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                 // convert cartesian to spherical coordinates
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
+		//contribution of Ey to r-component
+		amrex::Real Ez_r = Ez_arr(i,j,k) * std::cos(theta);
+		//contribution of Ex to theta component
+		amrex::Real Ez_theta = Ez_arr(i,j,k)*std::sin(theta)*-1;
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if (conductor(i,j,k)==1 and conductor(i,j,k+1)==1) {
                         CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
@@ -1089,9 +1128,18 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                                   ramp_omega_time_data,
                                                   Bstar_data, Rstar_data, dRstar_data,
                                                   Fr, Ftheta, Fphi);
+			Fr = 0.;
                         ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                r, theta, phi, Ez_arr(i,j,k));
-                    }
+                    } else if (conductor(i,j,k)==2 and conductor(i,j,k+1)==2) {
+                        CorotatingEfieldSpherical(r, theta, phi, chi, cur_time,
+                                                  omega_star_data,
+                                                  ramp_omega_time_data,
+                                                  Bstar_data, Rstar_data, dRstar_data,
+                                                  Fr, Ftheta, Fphi);
+                        ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                               r, theta, phi, Ez_arr(i,j,k));
+		    }
                 } else {
                     int ApplyCorotatingEField = 0;
                     if (conductor(i,j,k)==1 and conductor(i,j,k+1)==1) ApplyCorotatingEField = 1;
@@ -1103,6 +1151,7 @@ Pulsar::ApplyCorotatingEfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>,
                                             E_external_monopole_data,
                                             ApplyCorotatingEField,
                                             Fr, Ftheta, Fphi);
+		    Fr = 0.;
                     ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                            r, theta, phi, Ez_arr(i,j,k));
                 }
@@ -1169,6 +1218,12 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 // convert cartesian to spherical coordinates
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
+		//contribution of Ex to r-component
+		amrex::Real Bx_r = Bx_arr(i,j,k) * std::sin(theta) * std::cos(phi);
+		//contribution of Ex to theta component
+		amrex::Real Bx_theta = Bx_arr(i,j,k)*std::cos(theta) * std::cos(phi);
+		//contribution of Ex to phi component
+		amrex::Real Bx_phi = Bx_arr(i,j,k) * -1 * std::sin(phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if ( r <= enforceDipoleB_maxradius_data ) {
                         if (conductor(i,j,k)==1 and conductor(i,j+1,k)==1 and conductor(i,j,k+1)==1 and conductor(i,j+1,k+1)==1) {
@@ -1179,9 +1234,19 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                                                     ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
                                                     Fr, Ftheta, Fphi);
+		            Ftheta = 0.0;
+			    Fphi   = 0.;
                             ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Bx_arr(i,j,k));
-                        }
+                        } else if (conductor(i,j,k)==2 and conductor(i,j+1,k)==2 and conductor(i,j,k+1)==2 and conductor(i,j+1,k+1)==2) {
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
+                                                    Bstar_data, Rstar_data, dRstar_data,
+                                                    Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianXComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Bx_arr(i,j,k));
+		        }
                     }
                     else if ( r > enforceDipoleB_maxradius_data && r <= corotatingE_maxradius_data) {
                         // Dipole magnetic field applied for r < corotating radius and then
@@ -1230,6 +1295,12 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 // convert cartesian to spherical coordinates
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
+		//contribution of Ey to r-component
+		amrex::Real By_r = By_arr(i,j,k) * std::sin(theta) * std::sin(phi);
+		//contribution of Ex to theta component
+		amrex::Real By_theta = By_arr(i,j,k)*std::cos(theta) * std::sin(phi);
+		//contribution of Ex to phi component
+		amrex::Real By_phi = By_arr(i,j,k) * std::cos(phi);
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if ( r <= enforceDipoleB_maxradius_data ) {
                         if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 and conductor(i,j,k+1)==1 and conductor(i+1,j,k+1)==1) {
@@ -1240,9 +1311,19 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                                                     ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
                                                     Fr, Ftheta, Fphi);
+		            Ftheta = 0.0;
+			    Fphi   = 0.;
                             ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, By_arr(i,j,k));
-                        }
+                        } else if (conductor(i,j,k)==2 and conductor(i+1,j,k)==2 and conductor(i,j,k+1)==2 and conductor(i+1,j,k+1)==2) {
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
+                                                    Bstar_data, Rstar_data, dRstar_data,
+                                                    Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianYComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, By_arr(i,j,k));
+		        }
                     } else if ( r > enforceDipoleB_maxradius_data && r <= corotatingE_maxradius_data) {
                         // Dipole magnetic field applied for r < corotating radius and then
                         // a smoothening function tanh damping is applied between radius of star
@@ -1285,6 +1366,10 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                 // convert cartesian to spherical coordinates
                 ConvertCartesianToSphericalCoord(x, y, z, center_star_arr,
                                                  r, theta, phi);
+		//contribution of Ey to r-component
+		amrex::Real Bz_r = Bz_arr(i,j,k) * std::cos(theta);
+		//contribution of Ex to theta component
+		amrex::Real Bz_theta = Bz_arr(i,j,k)*std::sin(theta)*-1;
                 if (EnforceTheoreticalEBInGrid_data == 0) {
                     if ( r <= enforceDipoleB_maxradius_data ) {
                         if (conductor(i,j,k)==1 and conductor(i+1,j,k)==1 and conductor(i,j+1,k)==1 and conductor(i+1,j+1,k)==1) {
@@ -1295,9 +1380,19 @@ Pulsar::ApplyDipoleBfield_BC ( std::array< std::unique_ptr<amrex::MultiFab>, 3> 
                                                     ramp_omega_time_data,
                                                     Bstar_data, Rstar_data, dRstar_data,
                                                     Fr, Ftheta, Fphi);
+		            Ftheta = 0.0;
+			    Fphi   = 0.;
                             ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
                                                                    r, theta, phi, Bz_arr(i,j,k));
-                        }
+                        } else if (conductor(i,j,k)==2 and conductor(i+1,j,k)==2 and conductor(i,j+1,k)==2 and conductor(i+1,j+1,k)==2) {
+                            ExternalBFieldSpherical(r, theta, phi, chi, cur_time,
+                                                    omega_star_data,
+                                                    ramp_omega_time_data,
+                                                    Bstar_data, Rstar_data, dRstar_data,
+                                                    Fr, Ftheta, Fphi);
+                            ConvertSphericalToCartesianZComponent( Fr, Ftheta, Fphi,
+                                                                   r, theta, phi, Bz_arr(i,j,k));
+		        }
                     } else if ( r > enforceDipoleB_maxradius_data && r <= corotatingE_maxradius_data) {
                         // Dipole magnetic field applied for r < corotating radius and then
                         // a smoothening function tanh damping is applied between radius of star

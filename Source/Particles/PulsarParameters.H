@@ -685,6 +685,8 @@ public:
     static int m_usePCflagcount_minInjCell;
     static amrex::Real m_PCInjectionCellFraction;
     static amrex::Real m_totalpolarcap_cells;
+    static amrex::Real m_BC_width;
+    static amrex::Real m_BC_minR;
 private:
 };
 
