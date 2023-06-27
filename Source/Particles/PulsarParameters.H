@@ -47,6 +47,7 @@ public:
     int TotalParticlesToBeInjected (amrex::Real scale_factor);
     void TotalParticlesInjected ();
     amrex::Real SumInjectedCells ();
+    amrex::Real PcountSum ();
     void FlagCellsForInjectionWithPcounts ();
     amrex::Real MaxMagnetization ();
     amrex::Real MaxThresholdSigma();
@@ -685,6 +686,8 @@ public:
     static int m_usePCflagcount_minInjCell;
     static amrex::Real m_PCInjectionCellFraction;
     static amrex::Real m_totalpolarcap_cells;
+    static int m_use_injection_rate;
+    static int m_GJdensity_limitinjection;
 private:
 };
 

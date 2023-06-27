@@ -129,6 +129,8 @@ int Pulsar::m_usePCflagcount_minInjCell = 1; // count cells with sigma > sigma0,
                                      // fraction of minInjCell which is obtained from fraction * totalPCcells
 amrex::Real Pulsar::m_PCInjectionCellFraction = 1.; // between  0 and 1 , 1 will choose all cells in Polar cap
 amrex::Real Pulsar::m_totalpolarcap_cells;
+int Pulsar::m_use_injection_rate = 1;
+int Pulsar::m_GJdensity_limitinjection;
 
 Pulsar::Pulsar ()
 {
@@ -342,6 +344,8 @@ Pulsar::ReadParameters () {
     amrex::Print() << " RLC : " << m_RLC << "\n";
     amrex::Print() << " PC radius " << m_PC_radius << "\n";
     amrex::Print() << " PC theta " << m_PC_theta << "\n";
+    pp.query("use_injection_rate",m_use_injection_rate);
+    pp.get("GJdensity_limitedinjection",m_GJdensity_limitinjection);
 }
 
 
@@ -503,7 +507,7 @@ Pulsar::InitData ()
         FlagCellsInInjectionRing(m_injection_ring[lev].get(), lev, m_cell_inject_rmin, m_cell_inject_rmax);
     }
 
-    if (m_flag_polarcap == 1) {
+//    if (m_flag_polarcap == 1) {
         m_PC_flag.resize(nlevs_max);
         for (int lev = 0; lev < nlevs_max; ++lev) {
             amrex::BoxArray ba = warpx.boxArray(lev);
@@ -513,7 +517,7 @@ Pulsar::InitData ()
             m_PC_flag[lev] = std::make_unique<amrex::MultiFab>(
                                     amrex::convert(ba,PC_nodal_flag), dm, 1, ng_EB_alloc);
             FlagCellsInPolarCap(m_PC_flag[lev].get(),lev,m_cell_inject_rmin,m_cell_inject_rmax);
-        }
+//        }
         m_totalpolarcap_cells = SumPolarCapFlag();
         amrex::Print() << " total cells in PC " << m_totalpolarcap_cells << "\n"; 
     }
@@ -1852,6 +1856,12 @@ Pulsar::MaxThresholdSigma()
     return m_sigma_threshold[0]->max(0);
 }
 
+amrex::Real
+Pulsar::PcountSum ()
+{
+    return m_pcount[0]->sum();
+}
+
 void
 Pulsar::PrintInjectedCellValues ()
 {
@@ -2098,101 +2108,115 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Print() << " total pc cells " << m_totalpolarcap_cells << " " << m_PCInjectionCellFraction << "\n";
     }
     amrex::Print() << " min injection cell : " << minInjectionCells << "\n";
-    if (TotalInjectionCells < minInjectionCells) {
-        if (m_use_maxsigma_for_Sigma0 == 1) {
-            amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
-            amrex::Real max_sigma = MaxMagnetization();
-            amrex::Real new_sigma0_threshold = m_maxsigma_fraction * max_sigma * r_rstar_fac * r_rstar_fac * r_rstar_fac;
-            amrex::Print() << " injec cell is 0 at pcount! " << TotalInjectionCells << " <= " << m_min_TCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
-            m_Sigma0_threshold = new_sigma0_threshold;
-            amrex::Real Sigma0_threshold = m_Sigma0_threshold;
-            m_injection_flag[lev]->setVal(0);
-            m_injected_cell[lev]->setVal(0);
-            m_sigma_inj_ring[lev]->setVal(0);
-            m_pcount[lev]->setVal(0);
-            for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
-            {
-                //InitializeGhost Cells also
-                const amrex::Box& tb = mfi.tilebox(iv);
-                amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
-                amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
-                amrex::Array4<amrex::Real> const& sigma = m_magnetization[lev]->array(mfi);
-                amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
-                amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
-                amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
-                amrex::ParallelFor(tb,
-                    [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                        sigma_threshold_loc(i,j,k) = 0.;
-                        if ( inj_ring(i,j,k) == 1 || inj_ring(i+1,j,k) == 1 || inj_ring(i,j+1,k)
-                           || inj_ring(i,j,k+1) == 1 || inj_ring(i+1,j+1,k) == 1 || inj_ring(i,j+1,k+1) == 1
-                           || inj_ring(i,j+1,k+1) == 1 || inj_ring(i+1,j+1,k+1) == 1) {
-                            // cell-centered position based on index type
-                            amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
-                            amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
-#if (AMREX_SPACEDIM==2)
-                            amrex::Real y = 0._rt;
-                            amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
-                            amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
-#else
-                            amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
-                            amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
-                            amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
-                            amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
-#endif
-                            amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
-                                                       + (y-xc[1]) * (y-xc[1])
-                                                       + (z-xc[2]) * (z-xc[2]));
-
-                            sigma_inj_ring(i, j, k) = sigma(i, j, k);
-                            amrex::Real Sigma_threshold = Sigma0_threshold;
-                            if (modify_Sigma0_threshold == 1) {
-                                Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
-                            }
-                            sigma_threshold_loc(i,j,k) = Sigma_threshold;
-                            // flag cells with sigma > sigma0_threshold
-                            if (sigma(i,j,k) > Sigma_threshold ) {
-                                injection_flag(i,j,k) = 1;
-                            }
-                        }
-                    }
-                );
-            }
-        TotalInjectionCells = SumInjectionFlag();
-        amrex::Print() << " redefined sigma to get total inj cells : " << TotalInjectionCells << "\n";
-        } else if (m_use_FixedSigmaInput == 1 and m_usePCflagcount_minInjCell==1) {
-            m_injection_flag[lev]->setVal(0);
-            m_injected_cell[lev]->setVal(0);
-            m_pcount[lev]->setVal(0);
-            for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
-            {
-                //InitializeGhost Cells also
-                const amrex::Box& tb = mfi.tilebox(iv);
-                amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
-                amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
-                amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
-                amrex::ParallelFor(tb,
-                    [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-                        if ( PCflag(i,j,k) == 1 || PCflag(i+1,j,k) == 1 || PCflag(i,j+1,k)==1
-                        || PCflag(i,j,k+1) == 1 || PCflag(i+1,j+1,k) == 1 || PCflag(i+1,j,k+1) == 1
-                        || PCflag(i,j+1,k+1) == 1 || PCflag(i+1,j+1,k+1) == 1) {
-                            injection_flag(i,j,k) = 1;
-                        }
-                    }
-                );
-            }
-            TotalInjectionCells = SumInjectionFlag();
-            amrex::Print() << " total inj cells is equal to totalPCCells: " << TotalInjectionCells << " total PC cells " << m_totalpolarcap_cells << "\n";
-        }
-    }
+//    if (TotalInjectionCells < minInjectionCells) {
+//        if (m_use_maxsigma_for_Sigma0 == 1) {
+//            amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
+//            amrex::Real max_sigma = MaxMagnetization();
+//            amrex::Real new_sigma0_threshold = m_maxsigma_fraction * max_sigma * r_rstar_fac * r_rstar_fac * r_rstar_fac;
+//            amrex::Print() << " injec cell is 0 at pcount! " << TotalInjectionCells << " <= " << m_min_TCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+//            m_Sigma0_threshold = new_sigma0_threshold;
+//            amrex::Real Sigma0_threshold = m_Sigma0_threshold;
+//            m_injection_flag[lev]->setVal(0);
+//            m_injected_cell[lev]->setVal(0);
+//            m_sigma_inj_ring[lev]->setVal(0);
+//            m_pcount[lev]->setVal(0);
+//            for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+//            {
+//                //InitializeGhost Cells also
+//                const amrex::Box& tb = mfi.tilebox(iv);
+//                amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
+//                amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
+//                amrex::Array4<amrex::Real> const& sigma = m_magnetization[lev]->array(mfi);
+//                amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
+//                amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
+//                amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
+//                amrex::ParallelFor(tb,
+//                    [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+//                        sigma_threshold_loc(i,j,k) = 0.;
+//                        if ( inj_ring(i,j,k) == 1 || inj_ring(i+1,j,k) == 1 || inj_ring(i,j+1,k)
+//                           || inj_ring(i,j,k+1) == 1 || inj_ring(i+1,j+1,k) == 1 || inj_ring(i,j+1,k+1) == 1
+//                           || inj_ring(i,j+1,k+1) == 1 || inj_ring(i+1,j+1,k+1) == 1) {
+//                            // cell-centered position based on index type
+//                            amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+//                            amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+//#if (AMREX_SPACEDIM==2)
+//                            amrex::Real y = 0._rt;
+//                            amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+//                            amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+//#else
+//                            amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+//                            amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+//                            amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+//                            amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+//#endif
+//                            amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
+//                                                       + (y-xc[1]) * (y-xc[1])
+//                                                       + (z-xc[2]) * (z-xc[2]));
+//
+//                            sigma_inj_ring(i, j, k) = sigma(i, j, k);
+//                            amrex::Real Sigma_threshold = Sigma0_threshold;
+//                            if (modify_Sigma0_threshold == 1) {
+//                                Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+//                            }
+//                            sigma_threshold_loc(i,j,k) = Sigma_threshold;
+//                            // flag cells with sigma > sigma0_threshold
+//                            if (sigma(i,j,k) > Sigma_threshold ) {
+//                                injection_flag(i,j,k) = 1;
+//                            }
+//                        }
+//                    }
+//                );
+//            }
+//        TotalInjectionCells = SumInjectionFlag();
+//        amrex::Print() << " redefined sigma to get total inj cells : " << TotalInjectionCells << "\n";
+//        } else if (m_use_FixedSigmaInput == 1 and m_usePCflagcount_minInjCell==1) {
+//            m_injection_flag[lev]->setVal(0);
+//            m_injected_cell[lev]->setVal(0);
+//            m_pcount[lev]->setVal(0);
+//            for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+//            {
+//                //InitializeGhost Cells also
+//                const amrex::Box& tb = mfi.tilebox(iv);
+//                amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
+//                amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
+//                amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
+//                amrex::ParallelFor(tb,
+//                    [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+//                        if ( PCflag(i,j,k) == 1 || PCflag(i+1,j,k) == 1 || PCflag(i,j+1,k)==1
+//                        || PCflag(i,j,k+1) == 1 || PCflag(i+1,j+1,k) == 1 || PCflag(i+1,j,k+1) == 1
+//                        || PCflag(i,j+1,k+1) == 1 || PCflag(i+1,j+1,k+1) == 1) {
+//                            injection_flag(i,j,k) = 1;
+//                        }
+//                    }
+//                );
+//            }
+//            TotalInjectionCells = SumInjectionFlag();
+//            amrex::Print() << " total inj cells is equal to totalPCCells: " << TotalInjectionCells << " total PC cells " << m_totalpolarcap_cells << "\n";
+//        }
+//    }
     num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);
     amrex::Print() << " particle to be inj " << ParticlesToBeInjected << "\n";
     amrex::Real num_ppc_modified_real = 0.;
+    amrex::Real num_ppc_PC_real = 0.;
+    amrex::Real num_ppc_eq_real = 0.;
     if (TotalInjectionCells > 0) {
         num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
+        num_ppc_PC_real = 0.67*ParticlesToBeInjected/m_totalpolarcap_cells;
+        num_ppc_eq_real = 0.33*ParticlesToBeInjected/(TotalInjectionCells - m_totalpolarcap_cells);
     }
+    int num_ppc_PC = static_cast<int>(num_ppc_PC_real);
+    int num_ppc_eq = static_cast<int>(num_ppc_eq_real);
     amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
+    amrex::Print() << " num pcc PC " << num_ppc_PC_real << "\n";
+    amrex::Print() << " num pcc eq " << num_ppc_eq_real << "\n";
     amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
 
+    amrex::Real rho_GJ_fac = 2. * m_omega_star * m_B_star * 8.85e-12;
+    amrex::Real particle_wt = m_particle_wt;
+    amrex::Print() << " particle wt " << particle_wt << "\n";
+    amrex::Real injection_fac = m_injection_rate;
+    amrex::Real dt = warpx.getdt(0);
+    int use_injection_rate = m_use_injection_rate;
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -2200,33 +2224,160 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Array4<amrex::Real> const& injection_flag = m_injection_flag[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& pcount = m_pcount[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
         amrex::ParallelForRNG(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
             {
                 injected_cell(i,j,k) = 0;
                 pcount(i,j,k) = 0;
+                //if (injection_flag(i,j,k) == 1) {
+                //    pcount(i,j,k) = num_ppc_modified;
+                //    if ( PCflag(i,j,k) == 1 || PCflag(i+1,j,k) == 1 || PCflag(i,j+1,k)==1
+                //    || PCflag(i,j,k+1) == 1 || PCflag(i+1,j+1,k) == 1 || PCflag(i+1,j,k+1) == 1
+                //    || PCflag(i,j+1,k+1) == 1 || PCflag(i+1,j+1,k+1) == 1) {
+		//        if (num_ppc_PC == 0) {
+		//            amrex::Real r1 = amrex::Random(engine);
+                //            if (r1 <= num_ppc_PC_real) {
+                //                injected_cell(i,j,k) = 1;
+                //                pcount(i,j,k) = 1;
+		//            }
+		//        } else if (num_ppc_PC > 0) {
+                //            amrex::Real frac = num_ppc_PC_real - num_ppc_PC;
+		//            amrex::Real r1 = amrex::Random(engine);
+                //            if (r1 <= frac) {
+                //                injected_cell(i,j,k) = 1;
+                //                pcount(i,j,k) = num_ppc_PC + 1;
+                //            }
+		//        }
+		//    } else {
+		//        if (num_ppc_eq == 0) {
+                //            amrex::Real r1 = amrex::Random(engine);
+                //            if (r1 <= num_ppc_eq_real) {
+                //                injected_cell(i,j,k) = 1;
+                //                pcount(i,j,k) = 1;
+                //            }
+                //        } else if (num_ppc_eq > 0) {
+                //            amrex::Real frac = num_ppc_eq_real - num_ppc_eq;
+                //            amrex::Real r1 = amrex::Random(engine);
+                //            if (r1 <= frac) {
+                //                injected_cell(i,j,k) = 1;
+                //                pcount(i,j,k) = num_ppc_eq + 1;
+                //            }
+                //        }
+		//    }
+                //    //if (num_ppc_modified == 0) {
+                //    //    // particle injection done probabilistically
+                //    //    amrex::Real r1 = amrex::Random(engine);
+                //    //    if (r1 <= num_ppc_modified_real) {
+                //    //        injected_cell(i,j,k) = 1;
+                //    //        pcount(i,j,k) = 1;
+                //    //    }
+                //    //} else if (num_ppc_modified > 0) {
+                //    //    amrex::Real particle_fraction = num_ppc_modified_real - num_ppc_modified;
+                //    //    amrex::Real r1 = amrex::Random(engine);
+                //    //    if (r1 <= particle_fraction) {
+                //    //        // additional particle included if probability is satisfied
+                //    //        pcount(i,j,k) = num_ppc_modified + 1;
+                //    //    }
+                //    //    injected_cell(i,j,k) = 1;
+                //    //}
+                //}
                 if (injection_flag(i,j,k) == 1) {
-                    pcount(i,j,k) = num_ppc_modified;
-                    if (num_ppc_modified == 0) {
-                        // particle injection done probabilistically
-                        amrex::Real r1 = amrex::Random(engine);
-                        if (r1 <= num_ppc_modified_real) {
-                            injected_cell(i,j,k) = 1;
-                            pcount(i,j,k) = 1;
-                        }
-                    } else if (num_ppc_modified > 0) {
-                        amrex::Real particle_fraction = num_ppc_modified_real - num_ppc_modified;
-                        amrex::Real r1 = amrex::Random(engine);
-                        if (r1 <= particle_fraction) {
-                            // additional particle included if probability is satisfied
-                            pcount(i,j,k) = num_ppc_modified + 1;
-                        }
-                        injected_cell(i,j,k) = 1;
-                    }
-                }
+                    // Shift x, y, z position based on index type
+                    amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                    amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+#if (AMREX_SPACEDIM==2)
+                    amrex::Real y = 0._rt;
+                    amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                    amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+#else
+                    amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                    amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                    amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                    amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+#endif
+                    amrex::Real r, theta, phi;
+                    ConvertCartesianToSphericalCoord(x, y, z, xc,
+                                                     r, theta, phi);
+                    amrex::Real q = 1.609e-19;
+                    amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
+                    amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
+		    amrex::Real num_part_real = 0.;
+		    if (use_injection_rate == 1) {
+		        amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[0] * 3.e8;
+		        num_part_real = GJ_inj_rate * injection_fac * dt / particle_wt;
+		    } else {
+		        amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[1] * dx_lev[2];
+		        num_part_real = GJ_inj_rate * injection_fac / particle_wt;
+		    }
+		    int num_part = static_cast<int>(num_part_real);
+		    if (num_part_real >0 and num_part == 0) {
+		        amrex::Real r1 = amrex::Random(engine);
+			if (r1 <= num_part_real) {
+			    pcount(i,j,k) = 1;
+			    injected_cell(i,j,k) = 1;
+			}
+		    } else if (num_part_real >0 and num_part > 0) {
+			pcount(i,j,k) = num_part;
+			injected_cell(i,j,k) = 1;
+		        amrex::Real particle_fraction = num_part_real - num_part;
+			amrex::Real r1 = amrex::Random(engine);
+			if (r1 <= particle_fraction) {
+			    pcount(i,j,k) = num_part + 1;
+			}
+		    }
+		    if ( amrex::Math::abs(rho_GJ) < 0.2 * rho_GJ_fac) {
+			pcount(i,j,k) = 0;
+			injected_cell(i,j,k) = 0;
+		    }
+		}
             }
+        );
+    }
+    amrex::Print() << "pcount sum " << PcountSum() << "\n";
+
+    const amrex::MultiFab& rho_mf = warpx.getrho_fp(lev);
+    for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box& bx = mfi.tilebox();
+	amrex::Array4<const amrex::Real> const& rho = rho_mf[mfi].array();
+        amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& pcount = m_pcount[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& ndens = m_plasma_number_density[lev]->array(mfi);
+        amrex::ParallelFor(bx,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                // Shift x, y, z position based on index type
+                amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
+                amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
+#if (AMREX_SPACEDIM==2)
+                amrex::Real y = 0._rt;
+                amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
+#else
+                amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
+                amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
+                amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
+                amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
+#endif
+                amrex::Real r, theta, phi;
+                ConvertCartesianToSphericalCoord(x, y, z, xc,
+                                                 r, theta, phi);
+		amrex::Real q = 1.609e-19;
+		amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
+		amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
+		//amrex::Real n = amrex::Math::abs(rho(i,j,k))/q;
+		amrex::Real n = ndens(i,j,k,0)+ndens(i,j,k,1);
+		if ( n > (n_GJ) ) {
+		    injected_cell(i,j,k) = 0;
+		    pcount(i,j,k) = 0;
+		}
+
+	    }
         );
     }
     amrex::Real TotalInjectedCells = SumInjectedCells();
     amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n";
+
+
+
 }

@@ -28,11 +28,11 @@ void UpdateMomentumBoris(
     uy += econst*Ey;
     uz += econst*Ez;
 
-#ifdef PULSAR
-    PulsarDiag[25] = 2.*econst*Ex;
-    PulsarDiag[26] = 2.*econst*Ey;
-    PulsarDiag[27] = 2.*econst*Ez;
-#endif
+//#ifdef PULSAR
+//    PulsarDiag[25] = 2.*econst*Ex;
+//    PulsarDiag[26] = 2.*econst*Ey;
+//    PulsarDiag[27] = 2.*econst*Ez;
+//#endif
     // Compute temporary gamma factor
     constexpr amrex::ParticleReal inv_c2 = 1._prt/(PhysConst::c*PhysConst::c);
     const amrex::ParticleReal inv_gamma = 1._prt/std::sqrt(1._prt + (ux*ux + uy*uy + uz*uz)*inv_c2);
@@ -52,11 +52,11 @@ void UpdateMomentumBoris(
     ux += uy_p*sz - uz_p*sy;
     uy += uz_p*sx - ux_p*sz;
     uz += ux_p*sy - uy_p*sx;
-#ifdef PULSAR
-    PulsarDiag[28] = uy_p*sz - uz_p*sy;
-    PulsarDiag[29] = uz_p*sx - ux_p*sz;
-    PulsarDiag[30] = ux_p*sy - uy_p*sx;
-#endif
+//#ifdef PULSAR
+//    PulsarDiag[28] = uy_p*sz - uz_p*sy;
+//    PulsarDiag[29] = uz_p*sx - ux_p*sz;
+//    PulsarDiag[30] = ux_p*sy - uy_p*sx;
+//#endif
     // Second half-push for E
     ux += econst*Ex;
     uy += econst*Ey;

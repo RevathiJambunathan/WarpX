@@ -2040,6 +2040,9 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
 
     bool deposit_charge = do_dive_cleaning || (electrostatic_solver_id == ElectrostaticSolverAlgo::LabFrame  ||
                                                electrostatic_solver_id == ElectrostaticSolverAlgo::LabFrameElectroMagnetostatic);
+#ifdef PULSAR
+    deposit_charge = 1;
+#endif
     if (WarpX::electromagnetic_solver_id == ElectromagneticSolverAlgo::PSATD) {
         deposit_charge = do_dive_cleaning || update_with_rho || current_correction;
     }

@@ -128,12 +128,11 @@ WarpX::Evolve (int numsteps)
             if (Pulsar::m_continuous_injection == 0) {
                 // particles injected only at user-defined injection time
                 if ( cur_time >= Pulsar::m_injection_time &&
-                     cur_time <= Pulsar::m_injection_time + 0.5_rt*dt[0]) {
+                     cur_time <= Pulsar::m_injection_time + 0.9_rt*dt[0]) {
                     // inject single particle-pair
                     if (Pulsar::m_pair_injection_flag == 1) {
                         mypc->PulsarPairInjection();
                     } else {
-                        amrex::Print() << " pulsar pair injection \n";
                         mypc->PulsarParticleInjection();
                     }
                     // call redistribute
