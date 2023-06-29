@@ -131,6 +131,7 @@ amrex::Real Pulsar::m_PCInjectionCellFraction = 1.; // between  0 and 1 , 1 will
 amrex::Real Pulsar::m_totalpolarcap_cells;
 int Pulsar::m_use_injection_rate = 1;
 int Pulsar::m_GJdensity_limitinjection;
+amrex::Real Pulsar::m_GJdensity_thresholdfactor = 0.;
 
 Pulsar::Pulsar ()
 {
@@ -346,6 +347,7 @@ Pulsar::ReadParameters () {
     amrex::Print() << " PC theta " << m_PC_theta << "\n";
     pp.query("use_injection_rate",m_use_injection_rate);
     pp.get("GJdensity_limitedinjection",m_GJdensity_limitinjection);
+    pp.query("GJdensity_thresholdfactor",m_GJdensity_thresholdfactor);
 }
 
 
@@ -2217,6 +2219,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Real injection_fac = m_injection_rate;
     amrex::Real dt = warpx.getdt(0);
     int use_injection_rate = m_use_injection_rate;
+    amrex::Real density_thresholdfactor = m_GJdensity_thresholdfactor;
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -2326,7 +2329,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 			    pcount(i,j,k) = num_part + 1;
 			}
 		    }
-		    if ( amrex::Math::abs(rho_GJ) < 0.2 * rho_GJ_fac) {
+		    if ( amrex::Math::abs(rho_GJ) < density_thresholdfactor * rho_GJ_fac) {
 			pcount(i,j,k) = 0;
 			injected_cell(i,j,k) = 0;
 		    }

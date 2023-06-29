@@ -688,6 +688,7 @@ public:
     static amrex::Real m_totalpolarcap_cells;
     static int m_use_injection_rate;
     static int m_GJdensity_limitinjection;
+    static amrex::Real m_GJdensity_thresholdfactor;
 private:
 };
 
