@@ -2335,7 +2335,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         );
     }
     amrex::Print() << "pcount sum " << PcountSum() << "\n";
-
+    int limit_injection = m_GJdensity_limitinjection;
     const amrex::MultiFab& rho_mf = warpx.getrho_fp(lev);
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -2367,7 +2367,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 		amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
 		//amrex::Real n = amrex::Math::abs(rho(i,j,k))/q;
 		amrex::Real n = ndens(i,j,k,0)+ndens(i,j,k,1);
-		if ( n > (n_GJ) ) {
+		if ( (n > n_GJ) and limit_injection == 1 ) {
 		    injected_cell(i,j,k) = 0;
 		    pcount(i,j,k) = 0;
 		}
