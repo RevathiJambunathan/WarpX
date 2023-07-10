@@ -261,6 +261,10 @@ BTDiagnostics::ReadParameters ()
     }
     WARPX_ALWAYS_ASSERT_WITH_MESSAGE(snapshot_interval_is_specified,
         "For back-transformed diagnostics, user should specify either dz_snapshots_lab or dt_snapshots_lab");
+    std::string btd_type_str;
+    pp_diag_name.get("BTD_type", btd_type_str);
+    if (btd_type_str == "zstation") m_BTD_type = BTDType::zstation;
+    if (btd_type_str == "tstation") m_BTD_type = BTDType::tstation;
 
     if (utils::parser::queryWithParser(pp_diag_name, "buffer_size", m_buffer_size)) {
         if(m_max_box_size < m_buffer_size) m_max_box_size = m_buffer_size;

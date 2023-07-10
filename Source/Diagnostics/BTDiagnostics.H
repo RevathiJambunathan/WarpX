@@ -125,6 +125,15 @@ private:
      */
     bool GetZSliceInDomainFlag (const int i_buffer, const int lev);
 
+    /** Struct to select the BTD type : zstation or tstation
+     *  If zstation, the domain-size and slices will be time-based and BTD will be flushed out for slices in space
+     *  If tstation, the domain-size and slices will be z-based and BTD will be flushed out snapshots in time
+     */
+    enum struct BTDType { zstation, tstation};
+
+    /** Whether the BTDtype is zstation (time-based) or tstation (z-based)*/
+    BTDType m_BTD_type;
+
     /** whether the k-index corresponding to the z-slice for the ith buffer, i_buffer,
      *  is within the bounds of the box in index-space
      * \param[in] i_buffer index of the buffer for which the k-index is checked.
