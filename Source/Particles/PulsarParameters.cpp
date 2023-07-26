@@ -2092,6 +2092,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         if (sigma(i,j,k) > Sigma_threshold ) {
                             injection_flag(i,j,k) = 1;
                         }
+                        injection_flag(i,j,k) = 1;
                     }
                 }
             }
@@ -2329,9 +2330,11 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 			    pcount(i,j,k) = num_part + 1;
 			}
 		    }
-		    if ( amrex::Math::abs(rho_GJ) < density_thresholdfactor * rho_GJ_fac) {
-			pcount(i,j,k) = 0;
-			injected_cell(i,j,k) = 0;
+		    if (density_thresholdfactor >= 0 ) {
+		        if ( amrex::Math::abs(rho_GJ) < (density_thresholdfactor * rho_GJ_fac) ) {
+		            pcount(i,j,k) = 0;
+		            injected_cell(i,j,k) = 0;
+		        }
 		    }
 		}
             }
