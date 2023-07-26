@@ -152,9 +152,19 @@ PoyntingVectorFunctor::ComputePoyntingVector(amrex::MultiFab& mf_dst, int dcomp)
                     } else if (vectorcomp == 6) { // vdrift phi
                         // vdrift_phi = (ExB)_phi_component / (B.B)
                         amrex::Real S_phi = 0.0;
-                        Pulsar::ConvertCartesianToSphericalPhiComponent(
-                        Sx, Sy, Sz, theta, phi, S_phi);
-                        amrex::Real B2 = Bx_cc*Bx_cc + By_cc*By_cc + Bz_cc*Bz_cc;
+                        //Pulsar::ConvertCartesianToSphericalPhiComponent(
+                        //Sx, Sy, Sz, theta, phi, S_phi);
+                        amrex::Real Er, Etheta, Br, Btheta;
+			Pulsar::ConvertCartesianToSphericalRComponent(
+					Ex_cc, Ey_cc, Ez_cc, theta, phi, Er);
+			Pulsar::ConvertCartesianToSphericalThetaComponent(
+					Ex_cc, Ey_cc, Ez_cc, theta, phi, Etheta);
+			Pulsar::ConvertCartesianToSphericalRComponent(
+					Bx_cc, By_cc, Bz_cc, theta, phi, Br);
+			Pulsar::ConvertCartesianToSphericalThetaComponent(
+					Bx_cc, By_cc, Bz_cc, theta, phi, Btheta);
+		        S_phi = Er*Btheta - Br * Etheta;
+                        amrex::Real B2 = Br*Br + Btheta*Btheta;
                         arr_dst(i,j,k,n+dcomp) = S_phi/B2;
                     }
                 }
