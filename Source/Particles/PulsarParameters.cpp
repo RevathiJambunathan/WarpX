@@ -2336,17 +2336,52 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 		            injected_cell(i,j,k) = 0;
 		        }
 		    }
-		}
+		    if (density_thresholdfactor < 0 ) {
+		        if ( amrex::Math::abs(rho_GJ) < ( amrex::Math::abs(density_thresholdfactor) * rho_GJ_fac) ) {
+                            rho_GJ = rho_GJ_fac * amrex::Math::abs(density_thresholdfactor);
+                            n_GJ = amrex::Math::abs(rho_GJ)/q;
+		            num_part_real = 0.;
+                            if (use_injection_rate == 1) {
+                                amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[0] * 3.e8;
+                                num_part_real = GJ_inj_rate * injection_fac * dt / particle_wt;
+                            } else {
+                                amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[1] * dx_lev[2];
+                                num_part_real = GJ_inj_rate * injection_fac / particle_wt;
+                            }
+                            num_part = static_cast<int>(num_part_real);
+                            if (num_part_real >0 and num_part == 0) {
+                                amrex::Real r1 = amrex::Random(engine);
+                                if (r1 <= num_part_real) {
+                                    pcount(i,j,k) = 1;
+                                    injected_cell(i,j,k) = 1;
+                                }
+                            } else if (num_part_real >0 and num_part > 0) {
+                                pcount(i,j,k) = num_part;
+                                injected_cell(i,j,k) = 1;
+                                amrex::Real particle_fraction = num_part_real - num_part;
+                                amrex::Real r1 = amrex::Random(engine);
+                                if (r1 <= particle_fraction) {
+                                    pcount(i,j,k) = num_part + 1;
+                                }
+                            } // num part real
+		        } // if rho GJ is small
+		    } // density threshold factor neg
+		} // injection flag is 1
             }
         );
     }
     amrex::Print() << "pcount sum " << PcountSum() << "\n";
     int limit_injection = m_GJdensity_limitinjection;
-    const amrex::MultiFab& rho_mf = warpx.getrho_fp(lev);
+    //const amrex::MultiFab& rho_mf = warpx.getrho_fp(lev);
+    std::unique_ptr<amrex::MultiFab> rho;
+    auto& mypc = warpx.GetPartContainer();
+    rho = mypc.GetChargeDensity(lev, true);
+    amrex::MultiFab & rho_mf = *rho;
+    if (limit_injection == 1) {
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& bx = mfi.tilebox();
-	amrex::Array4<const amrex::Real> const& rho = rho_mf[mfi].array();
+	amrex::Array4<const amrex::Real> const& rho_arr = rho_mf[mfi].array();
         amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& pcount = m_pcount[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& ndens = m_plasma_number_density[lev]->array(mfi);
@@ -2380,6 +2415,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 
 	    }
         );
+    }
     }
     amrex::Real TotalInjectedCells = SumInjectedCells();
     amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n";
