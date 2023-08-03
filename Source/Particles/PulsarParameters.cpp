@@ -2324,7 +2324,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 		    //amrex::Real num_part_real = 0.;
                     //amrex::Real factor = amrex::Math::abs( 1. - 3. * std::cos(theta)*std::cos(theta));
                     amrex::Real factor = sigma_inj_ring(i,j,k)/sum_magnetization;
-                    amrex::Real num_part_cell = num_ppc_modified_real * factor;
+                    amrex::Real num_part_cell = ParticlesToBeInjected * factor;
+                    //amrex::Real num_part_cell = num_ppc_modified_real * factor;
                     int numpart_int = static_cast<int>(num_part_cell);
                     if (numpart_int == 0) {
                         amrex::Real r1 = amrex::Random(engine);
