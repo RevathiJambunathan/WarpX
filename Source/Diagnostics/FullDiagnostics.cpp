@@ -801,7 +801,8 @@ FullDiagnostics::InitializeFieldFunctors (int lev)
                                               lev, m_crse_ratio);
         } else if (m_varnames[comp] == "polarcapflag") {
             m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(warpx.getPulsar().get_pointer_PC_flag(lev), lev, m_crse_ratio);
-
+        } else if (m_varnames[comp] == "pcount") {
+            m_all_field_functors[lev][comp] = std::make_unique<CellCenterFunctor>(warpx.getPulsar().get_pointer_pcount(lev), lev, m_crse_ratio);
 #endif
         }
         else {
