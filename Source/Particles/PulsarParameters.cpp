@@ -1868,6 +1868,12 @@ Pulsar::PcountSum ()
     return m_pcount[0]->sum();
 }
 
+amrex::Real
+Pulsar::SumMagnetizationinInjectionRing ()
+{
+    return m_sigma_inj_ring[0]->sum();
+}
+
 void
 Pulsar::PrintInjectedCellValues ()
 {
@@ -2059,6 +2065,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::ParallelFor(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                 sigma_threshold_loc(i,j,k) = 0.;
+                sigma_inj_ring(i,j,k) = 0.;
                 if (onlyPCinjection == 1) {
                     if ( PCflag(i,j,k) == 1 || PCflag(i+1,j,k) == 1 || PCflag(i,j+1,k)==1
                        || PCflag(i,j,k+1) == 1 || PCflag(i+1,j+1,k) == 1 || PCflag(i+1,j,k+1) == 1
@@ -2086,17 +2093,17 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
                                                    + (y-xc[1]) * (y-xc[1])
                                                    + (z-xc[2]) * (z-xc[2]));
-                        sigma_inj_ring(i, j, k) = sigma(i, j, k);
-                        amrex::Real Sigma_threshold = Sigma0_threshold;
-                        if (modify_Sigma0_threshold == 1) {
-                            Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
-                        }
-                        sigma_threshold_loc(i,j,k) = Sigma_threshold;
-                        // flag cells with sigma > sigma0_threshold
-                        if (sigma(i,j,k) > Sigma_threshold ) {
-                            injection_flag(i,j,k) = 1;
-                        }
+                        //amrex::Real Sigma_threshold = Sigma0_threshold;
+                        //if (modify_Sigma0_threshold == 1) {
+                        //    Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
+                        //}
+                        //sigma_threshold_loc(i,j,k) = Sigma_threshold;
+                        //// flag cells with sigma > sigma0_threshold
+                        //if (sigma(i,j,k) > Sigma_threshold ) {
+                        //    injection_flag(i,j,k) = 1;
+                        //}
                         injection_flag(i,j,k) = 1;
+                        sigma_inj_ring(i, j, k) = sigma(i, j, k) * injection_flag(i,j,k);
                     }
                 }
             }
@@ -2106,6 +2113,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     // Total injection cells
     amrex::Real TotalInjectionCells = SumInjectionFlag();
     amrex::Print() << " total inj cells : " << TotalInjectionCells << "\n";
+    m_sum_inj_magnetization = SumMagnetizationinInjectionRing();
+    amrex::Print() << " sum inj magnetization " << m_sum_inj_magnetization << "\n";
 
     int num_ppc_modified = 0;
     int minInjectionCells = 1;
@@ -2225,6 +2234,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Real dt = warpx.getdt(0);
     int use_injection_rate = m_use_injection_rate;
     amrex::Real density_thresholdfactor = m_GJdensity_thresholdfactor;
+    amrex::Real sum_magnetization = m_sum_inj_magnetization;
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -2233,6 +2243,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& pcount = m_pcount[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
         amrex::ParallelForRNG(tb,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
             {
@@ -2308,10 +2319,11 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     ConvertCartesianToSphericalCoord(x, y, z, xc,
                                                      r, theta, phi);
                     amrex::Real q = 1.609e-19;
-                    amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
-                    amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
-		    amrex::Real num_part_real = 0.;
-                    amrex::Real factor = amrex::Math::abs( 1. - 3. * std::cos(theta)*std::cos(theta));
+                    //amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
+                    //amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
+		    //amrex::Real num_part_real = 0.;
+                    //amrex::Real factor = amrex::Math::abs( 1. - 3. * std::cos(theta)*std::cos(theta));
+                    amrex::Real factor = sigma_inj_ring(i,j,k)/sum_magnetization;
                     amrex::Real num_part_cell = num_ppc_modified_real * factor;
                     int numpart_int = static_cast<int>(num_part_cell);
                     if (numpart_int == 0) {
