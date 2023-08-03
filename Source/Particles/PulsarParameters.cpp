@@ -172,9 +172,13 @@ Pulsar::ReadParameters () {
     pp.get("plasma_injection_rate", m_injection_rate);
     // Bstar is the magnetic field strength at the equator
     // injection rate is set for the entire simulation
-    m_GJ_injection_rate = ( 8._rt * MathConst::pi * PhysConst::ep0 * m_B_star
-                            * m_omega_star * m_omega_star * m_R_star * m_R_star * m_R_star
+    //m_GJ_injection_rate = ( 8._rt * MathConst::pi * PhysConst::ep0 * m_B_star
+    //                        * m_omega_star * m_omega_star * m_R_star * m_R_star * m_R_star
+    //                      ) / PhysConst::q_e;
+    m_GJ_injection_rate = ( 12.32_rt * MathConst::pi * PhysConst::ep0 * m_B_star
+                            * m_omega_star * m_R_star * m_R_star * PhysConst::c
                           ) / PhysConst::q_e;
+    amrex::Print() << " m GJ injection rate : " << m_GJ_injection_rate << "\n";
 //                            * std::cos(m_Chi)
     // the factor of 2 is because B at pole = 2*B at equator
     m_Sigma0_threshold = (2. * m_B_star * 2 * m_B_star)  / (m_injection_rate * m_max_ndens * PhysConst::mu0 * PhysConst::m_e
@@ -2307,65 +2311,83 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
                     amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
 		    amrex::Real num_part_real = 0.;
-		    if (use_injection_rate == 1) {
-		        amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[0] * 3.e8;
-		        num_part_real = GJ_inj_rate * injection_fac * dt / particle_wt;
-		    } else {
-		        amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[1] * dx_lev[2];
-		        num_part_real = GJ_inj_rate * injection_fac / particle_wt;
-		    }
-		    int num_part = static_cast<int>(num_part_real);
-		    if (num_part_real >0 and num_part == 0) {
-		        amrex::Real r1 = amrex::Random(engine);
-			if (r1 <= num_part_real) {
-			    pcount(i,j,k) = 1;
-			    injected_cell(i,j,k) = 1;
-			}
-		    } else if (num_part_real >0 and num_part > 0) {
-			pcount(i,j,k) = num_part;
-			injected_cell(i,j,k) = 1;
-		        amrex::Real particle_fraction = num_part_real - num_part;
-			amrex::Real r1 = amrex::Random(engine);
-			if (r1 <= particle_fraction) {
-			    pcount(i,j,k) = num_part + 1;
-			}
-		    }
-		    if (density_thresholdfactor >= 0 ) {
-		        if ( amrex::Math::abs(rho_GJ) < (density_thresholdfactor * rho_GJ_fac) ) {
-		            pcount(i,j,k) = 0;
-		            injected_cell(i,j,k) = 0;
-		        }
-		    }
-		    if (density_thresholdfactor < 0 ) {
-		        if ( amrex::Math::abs(rho_GJ) < ( amrex::Math::abs(density_thresholdfactor) * rho_GJ_fac) ) {
-                            rho_GJ = rho_GJ_fac * amrex::Math::abs(density_thresholdfactor);
-                            n_GJ = amrex::Math::abs(rho_GJ)/q;
-		            num_part_real = 0.;
-                            if (use_injection_rate == 1) {
-                                amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[0] * 3.e8;
-                                num_part_real = GJ_inj_rate * injection_fac * dt / particle_wt;
-                            } else {
-                                amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[1] * dx_lev[2];
-                                num_part_real = GJ_inj_rate * injection_fac / particle_wt;
-                            }
-                            num_part = static_cast<int>(num_part_real);
-                            if (num_part_real >0 and num_part == 0) {
-                                amrex::Real r1 = amrex::Random(engine);
-                                if (r1 <= num_part_real) {
-                                    pcount(i,j,k) = 1;
-                                    injected_cell(i,j,k) = 1;
-                                }
-                            } else if (num_part_real >0 and num_part > 0) {
-                                pcount(i,j,k) = num_part;
-                                injected_cell(i,j,k) = 1;
-                                amrex::Real particle_fraction = num_part_real - num_part;
-                                amrex::Real r1 = amrex::Random(engine);
-                                if (r1 <= particle_fraction) {
-                                    pcount(i,j,k) = num_part + 1;
-                                }
-                            } // num part real
-		        } // if rho GJ is small
-		    } // density threshold factor neg
+                    amrex::Real factor = amrex::Math::abs( 1. - 3. * std::cos(theta)*std::cos(theta));
+                    amrex::Real num_part_cell = num_ppc_modified_real * factor;
+                    int numpart_int = static_cast<int>(num_part_cell);
+                    if (numpart_int == 0) {
+                        amrex::Real r1 = amrex::Random(engine);
+                        if (r1 <= num_part_cell) {
+                            injected_cell(i,j,k) = 1;
+                            pcount(i,j,k) = 1;
+                        }
+                    } else if (numpart_int > 0){
+                        injected_cell(i,j,k) = 1;
+                        pcount(i,j,k) = num_part_cell;
+                        amrex::Real particle_fraction = num_part_cell - numpart_int;
+                        amrex::Real r1 = amrex::Random(engine);
+                        if (r1 <= num_part_cell) {
+                            pcount(i,j,k) = num_part_cell + 1;
+                        }
+                    }
+		    //if (use_injection_rate == 1) {
+		    //    amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[0] * 3.e8;
+		    //    num_part_real = GJ_inj_rate * injection_fac * dt / particle_wt;
+		    //} else {
+		    //    amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[1] * dx_lev[2];
+		    //    num_part_real = GJ_inj_rate * injection_fac / particle_wt;
+		    //}
+		    //int num_part = static_cast<int>(num_part_real);
+		    //if (num_part_real >0 and num_part == 0) {
+		    //    amrex::Real r1 = amrex::Random(engine);
+		    //    if (r1 <= num_part_real) {
+		    //        pcount(i,j,k) = 1;
+		    //        injected_cell(i,j,k) = 1;
+		    //    }
+		    //} else if (num_part_real >0 and num_part > 0) {
+		    //    pcount(i,j,k) = num_part;
+		    //    injected_cell(i,j,k) = 1;
+		    //    amrex::Real particle_fraction = num_part_real - num_part;
+		    //    amrex::Real r1 = amrex::Random(engine);
+		    //    if (r1 <= particle_fraction) {
+		    //        pcount(i,j,k) = num_part + 1;
+		    //    }
+		    //}
+		    //if (density_thresholdfactor >= 0 ) {
+		    //    if ( amrex::Math::abs(rho_GJ) < (density_thresholdfactor * rho_GJ_fac) ) {
+		    //        pcount(i,j,k) = 0;
+		    //        injected_cell(i,j,k) = 0;
+		    //    }
+		    //}
+		    //if (density_thresholdfactor < 0 ) {
+		    //    if ( amrex::Math::abs(rho_GJ) < ( amrex::Math::abs(density_thresholdfactor) * rho_GJ_fac) ) {
+                    //        rho_GJ = rho_GJ_fac * amrex::Math::abs(density_thresholdfactor);
+                    //        n_GJ = amrex::Math::abs(rho_GJ)/q;
+		    //        num_part_real = 0.;
+                    //        if (use_injection_rate == 1) {
+                    //            amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[0] * 3.e8;
+                    //            num_part_real = GJ_inj_rate * injection_fac * dt / particle_wt;
+                    //        } else {
+                    //            amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[1] * dx_lev[2];
+                    //            num_part_real = GJ_inj_rate * injection_fac / particle_wt;
+                    //        }
+                    //        num_part = static_cast<int>(num_part_real);
+                    //        if (num_part_real >0 and num_part == 0) {
+                    //            amrex::Real r1 = amrex::Random(engine);
+                    //            if (r1 <= num_part_real) {
+                    //                pcount(i,j,k) = 1;
+                    //                injected_cell(i,j,k) = 1;
+                    //            }
+                    //        } else if (num_part_real >0 and num_part > 0) {
+                    //            pcount(i,j,k) = num_part;
+                    //            injected_cell(i,j,k) = 1;
+                    //            amrex::Real particle_fraction = num_part_real - num_part;
+                    //            amrex::Real r1 = amrex::Random(engine);
+                    //            if (r1 <= particle_fraction) {
+                    //                pcount(i,j,k) = num_part + 1;
+                    //            }
+                    //        } // num part real
+		    //    } // if rho GJ is small
+		    //} // density threshold factor neg
 		} // injection flag is 1
             }
         );
