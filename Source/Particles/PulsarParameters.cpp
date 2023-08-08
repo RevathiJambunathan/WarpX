@@ -2215,10 +2215,14 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Real num_ppc_modified_real = 0.;
     amrex::Real num_ppc_PC_real = 0.;
     amrex::Real num_ppc_eq_real = 0.;
+    int GJParticles = ParticlesToBeInjected/m_injection_rate;
+    int PairPlasmaParticles = ParticlesToBeInjected - GJParticles;
+    amrex::Real num_GJParticles = 0.;
     if (TotalInjectionCells > 0) {
         num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
         num_ppc_PC_real = 0.67*ParticlesToBeInjected/m_totalpolarcap_cells;
         num_ppc_eq_real = 0.33*ParticlesToBeInjected/(TotalInjectionCells - m_totalpolarcap_cells);
+        num_GJParticles = GJParticles/TotalInjectionCells;
     }
     int num_ppc_PC = static_cast<int>(num_ppc_PC_real);
     int num_ppc_eq = static_cast<int>(num_ppc_eq_real);
@@ -2226,6 +2230,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Print() << " num pcc PC " << num_ppc_PC_real << "\n";
     amrex::Print() << " num pcc eq " << num_ppc_eq_real << "\n";
     amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
+    amrex::Print() << " GJ particles : " << GJParticles << " Plasmapair particles  " << PairPlasmaParticles << "\n";
 
     amrex::Real rho_GJ_fac = 2. * m_omega_star * m_B_star * 8.85e-12;
     amrex::Real particle_wt = m_particle_wt;
@@ -2322,9 +2327,9 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     //amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
                     //amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
 		    //amrex::Real num_part_real = 0.;
-                    //amrex::Real factor = amrex::Math::abs( 1. - 3. * std::cos(theta)*std::cos(theta));
-                    amrex::Real factor = sigma_inj_ring(i,j,k)/sum_magnetization;
-                    amrex::Real num_part_cell = ParticlesToBeInjected * factor;
+                    amrex::Real GJ_factor = amrex::Math::abs( 1. - 3. * std::cos(theta)*std::cos(theta));
+                    amrex::Real sigma_factor = sigma_inj_ring(i,j,k)/sum_magnetization;
+                    amrex::Real num_part_cell = (num_GJParticles * GJ_factor) + (PairPlasmaParticles * sigma_factor);
                     //amrex::Real num_part_cell = num_ppc_modified_real * factor;
                     int numpart_int = static_cast<int>(num_part_cell);
                     if (numpart_int == 0) {
