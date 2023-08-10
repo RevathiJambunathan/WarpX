@@ -691,6 +691,7 @@ public:
     static int m_GJdensity_limitinjection;
     static amrex::Real m_GJdensity_thresholdfactor;
     amrex::Real m_sum_inj_magnetization;
+    static int injectiontype;
 private:
 };
 

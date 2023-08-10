@@ -132,6 +132,7 @@ amrex::Real Pulsar::m_totalpolarcap_cells;
 int Pulsar::m_use_injection_rate = 1;
 int Pulsar::m_GJdensity_limitinjection;
 amrex::Real Pulsar::m_GJdensity_thresholdfactor = 0.;
+int Pulsar::injectiontype = 0;   // 0 for GJ, 1 for sigma, 2 for hybrid
 
 Pulsar::Pulsar ()
 {
@@ -2216,6 +2217,11 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     amrex::Real num_ppc_PC_real = 0.;
     amrex::Real num_ppc_eq_real = 0.;
     int GJParticles = ParticlesToBeInjected/m_injection_rate;
+    if (injectiontype == 0) {
+        GJParticles = ParticlesToBeInjected;
+    } else if (injectiontype == 2) {
+        GJParticles = 0;
+    }
     int PairPlasmaParticles = ParticlesToBeInjected - GJParticles;
     amrex::Real num_GJParticles = 0.;
     if (TotalInjectionCells > 0) {
