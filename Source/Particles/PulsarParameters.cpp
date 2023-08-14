@@ -353,6 +353,7 @@ Pulsar::ReadParameters () {
     pp.query("use_injection_rate",m_use_injection_rate);
     pp.get("GJdensity_limitedinjection",m_GJdensity_limitinjection);
     pp.query("GJdensity_thresholdfactor",m_GJdensity_thresholdfactor);
+    pp.query("injectiontype", injectiontype);   // 0 for GJ, 1 for sigma, 2 for hybrid
 }
 
 
