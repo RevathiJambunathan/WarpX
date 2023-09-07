@@ -134,6 +134,7 @@ int Pulsar::m_GJdensity_limitinjection;
 amrex::Real Pulsar::m_GJdensity_thresholdfactor = 0.;
 int Pulsar::injectiontype = 0;   // 0 for GJ, 1 for sigma, 2 for hybrid
 amrex::Real Pulsar::m_injection_GJdensitythreshold = 0.;
+amrex::Real Pulsar::m_limit_GJfactor = 1.;
 
 Pulsar::Pulsar ()
 {
@@ -353,6 +354,7 @@ Pulsar::ReadParameters () {
     amrex::Print() << " PC theta " << m_PC_theta << "\n";
     pp.query("use_injection_rate",m_use_injection_rate);
     pp.get("GJdensity_limitedinjection",m_GJdensity_limitinjection);
+    pp.get("limitGJfactor",m_limit_GJfactor);
     pp.query("GJdensity_thresholdfactor",m_GJdensity_thresholdfactor);
     pp.query("injectiontype", injectiontype);   // 0 for GJ, 1 for sigma, 2 for hybrid
     pp.query("GJdensity_injectionthreshold",m_injection_GJdensitythreshold);
@@ -2423,6 +2425,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     }
     amrex::Print() << "pcount sum " << PcountSum() << "\n";
     int limit_injection = m_GJdensity_limitinjection;
+    amrex::Real limit_GJ_factor = m_limit_GJfactor;
     //const amrex::MultiFab& rho_mf = warpx.getrho_fp(lev);
     std::unique_ptr<amrex::MultiFab> rho;
     auto& mypc = warpx.GetPartContainer();
@@ -2459,7 +2462,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 		amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
 		//amrex::Real n = amrex::Math::abs(rho(i,j,k))/q;
 		amrex::Real n = ndens(i,j,k,0)+ndens(i,j,k,1);
-		if ( (n > n_GJ) and limit_injection == 1 ) {
+		if ( (n > limit_GJ_factor * n_GJ) and limit_injection == 1 ) {
 		    injected_cell(i,j,k) = 0;
 		    pcount(i,j,k) = 0;
 		}
