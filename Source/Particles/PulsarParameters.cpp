@@ -133,7 +133,7 @@ int Pulsar::m_use_injection_rate = 1;
 int Pulsar::m_GJdensity_limitinjection;
 amrex::Real Pulsar::m_GJdensity_thresholdfactor = 0.;
 int Pulsar::injectiontype = 0;   // 0 for GJ, 1 for sigma, 2 for hybrid
-amrex::Real Pulsar::m_injection_GJdensitythreshold = 0.
+amrex::Real Pulsar::m_injection_GJdensitythreshold = 0.;
 
 Pulsar::Pulsar ()
 {
@@ -2249,7 +2249,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     int use_injection_rate = m_use_injection_rate;
     amrex::Real density_thresholdfactor = m_GJdensity_thresholdfactor;
     amrex::Real sum_magnetization = m_sum_inj_magnetization;
-    GJdensitythreshold = m_injection_GJdensitythreshold;
+    amrex::Real GJdensitythreshold = m_injection_GJdensitythreshold;
     // fill pcounts and injected cell flag
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
@@ -2351,11 +2351,11 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         }
                     } else if (numpart_int > 0){
                         injected_cell(i,j,k) = 1;
-                        pcount(i,j,k) = num_part_cell;
+                        pcount(i,j,k) = numpart_int;
                         amrex::Real particle_fraction = num_part_cell - numpart_int;
                         amrex::Real r1 = amrex::Random(engine);
-                        if (r1 <= num_part_cell) {
-                            pcount(i,j,k) = num_part_cell + 1;
+                        if (r1 <= particle_fraction) {
+                            pcount(i,j,k) = numpart_int + 1;
                         }
                     }
 		    //if (use_injection_rate == 1) {
