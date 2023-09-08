@@ -135,6 +135,9 @@ amrex::Real Pulsar::m_GJdensity_thresholdfactor = 0.;
 int Pulsar::injectiontype = 0;   // 0 for GJ, 1 for sigma, 2 for hybrid
 amrex::Real Pulsar::m_injection_GJdensitythreshold = 0.;
 amrex::Real Pulsar::m_limit_GJfactor = 1.;
+int Pulsar::m_use_BC_smoothening;
+amrex::Real Pulsar::m_min_BC_radius;
+amrex::Real Pulsar::m_BC_width;
 
 Pulsar::Pulsar ()
 {
@@ -358,6 +361,9 @@ Pulsar::ReadParameters () {
     pp.query("GJdensity_thresholdfactor",m_GJdensity_thresholdfactor);
     pp.query("injectiontype", injectiontype);   // 0 for GJ, 1 for sigma, 2 for hybrid
     pp.query("GJdensity_injectionthreshold",m_injection_GJdensitythreshold);
+    pp.get("use_BC_smoothening",m_use_BC_smoothening);
+    pp.get("min_BC_radius", m_min_BC_radius);
+    pp.get("BC_width", m_BC_width);
 }
 
 

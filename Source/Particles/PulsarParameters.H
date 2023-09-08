@@ -694,6 +694,9 @@ public:
     static amrex::Real m_limit_GJfactor;
     static int injectiontype;
     static amrex::Real m_injection_GJdensitythreshold;
+    static int m_use_BC_smoothening;
+    static amrex::Real m_min_BC_radius;
+    static amrex::Real m_BC_width;
 private:
 };
 

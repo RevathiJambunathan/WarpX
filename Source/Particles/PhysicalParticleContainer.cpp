@@ -2849,6 +2849,9 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     for (int idim = 0; idim < 3; ++idim) {
         center_star_arr[idim] = Pulsar::m_center_star[idim];
     }
+    int use_BC_smoothening = Pulsar::m_use_BC_smoothening;
+    amrex::Real min_BC_radius = Pulsar::m_min_BC_radius;
+    amrex::Real BC_width = Pulsar::m_BC_width;
 #endif
 
 #ifdef AMREX_USE_OMP
@@ -2960,6 +2963,37 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                     cur_time, omega_star_data, ramp_omega_time_data,
                                     Bstar_data, Rstar_data, dRstar_data,
                                     Exp, Eyp, Ezp, Bxp, Byp, Bzp);
+                }
+
+                if (use_BC_smoothening)
+                {
+                    if (r_p >= min_BC_radius && r_p <= (min_BC_radius + BC_width)) {
+
+                        // Calculate corotating Efield
+                        amrex::Real Er_cor, Etheta_cor, Ephi_cor;
+                        Pulsar::CorotatingEfieldSpherical(r_p, theta_p, phi_p, chi_data,
+                                                          cur_time, omega_star_data, ramp_omega_time_data,
+                                                          Bstar_data, Rstar_data, dRstar_data,
+                                                          Er_cor, Etheta_cor, Ephi_cor);
+                        amrex::Real Ex_cor, Ey_cor, Ez_cor;
+                        Pulsar::ConvertSphericalToCartesianXComponent(Er_cor, Etheta_cor, Ephi_cor,
+                                                                      r_p, theta_p, phi_p, Ex_cor);
+                        Pulsar::ConvertSphericalToCartesianYComponent(Er_cor, Etheta_cor, Ephi_cor,
+                                                                      r_p, theta_p, phi_p, Ey_cor);
+                        Pulsar::ConvertSphericalToCartesianZComponent(Er_cor, Etheta_cor, Ephi_cor,
+                                                                      r_p, theta_p, phi_p, Ez_cor);
+
+                        amrex::Real rmid = (min_BC_radius + BC_width/2.);
+                        // such that at rp = min_BC_radius, the value is 99% of the BC
+                        amrex::Real div_factor = std::abs(min_BC_radius - rmid)/3.0;
+                        amrex::Real tanh_arg = (r_p - rmid)/div_factor;
+                        amrex::Real tanh_val = std::tanh(tanh_arg);
+                        // final field is tanh profile varying smoothly from
+                        // Ex_cor at min_BC_radius to Exp at min_BC_radius + BC_width
+                        Exp = (tanh_val + 1.) * (Exp - Ex_cor)/2. + Ex_cor;
+                        Eyp = (tanh_val + 1.) * (Eyp - Ey_cor)/2. + Ey_cor;
+                        Ezp = (tanh_val + 1.) * (Ezp - Ez_cor)/2. + Ez_cor;
+                    }
                 }
 #endif
 
@@ -3105,6 +3139,9 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
         amrex::Gpu::DeviceVector<amrex::Real> PulsarPartDiag(37,0.0);
         amrex::Real* PulsarPartDiagData = PulsarPartDiag.data();
     }
+    int use_BC_smoothening = Pulsar::m_use_BC_smoothening;
+    amrex::Real min_BC_radius = Pulsar::m_min_BC_radius;
+    amrex::Real BC_width = Pulsar::m_BC_width;
 #endif
 
 
@@ -3260,18 +3297,48 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                     Bstar_data, Rstar_data, dRstar_data,
                                     Exp, Eyp, Ezp, Bxp, Byp, Bzp);
                 }
-        amrex::Real ur_p, utheta_p, uphi_p;
-        Pulsar::ConvertCartesianToSphericalRComponent(ux[ip], uy[ip], uz[ip], theta_p, phi_p, ur_p);
-        Pulsar::ConvertCartesianToSphericalThetaComponent(ux[ip], uy[ip], uz[ip], theta_p, phi_p, utheta_p);
-        Pulsar::ConvertCartesianToSphericalPhiComponent(ux[ip], uy[ip], uz[ip], theta_p, phi_p, uphi_p);
-        amrex::Real Erp, Ethetap, Ephip;
-        Pulsar::ConvertCartesianToSphericalRComponent(Exp, Eyp, Ezp, theta_p, phi_p, Erp);
-        Pulsar::ConvertCartesianToSphericalThetaComponent(Exp, Eyp, Ezp, theta_p, phi_p, Ethetap);
-        Pulsar::ConvertCartesianToSphericalPhiComponent(Exp, Eyp, Ezp, theta_p, phi_p, Ephip);
-        amrex::Real Brp, Bthetap, Bphip;
-        Pulsar::ConvertCartesianToSphericalRComponent(Bxp, Byp, Bzp, theta_p, phi_p, Brp);
-        Pulsar::ConvertCartesianToSphericalThetaComponent(Bxp, Byp, Bzp, theta_p, phi_p, Bthetap);
-        Pulsar::ConvertCartesianToSphericalPhiComponent(Bxp, Byp, Bzp, theta_p, phi_p, Bphip);
+        if (use_BC_smoothening)
+        {
+            if (r_p >= min_BC_radius && r_p <= (min_BC_radius + BC_width)) {
+
+                // Calculate corotating Efield
+                amrex::Real Er_cor, Etheta_cor, Ephi_cor;
+                Pulsar::CorotatingEfieldSpherical(r_p, theta_p, phi_p, chi_data,
+                                                  cur_time, omega_star_data, ramp_omega_time_data,
+                                                  Bstar_data, Rstar_data, dRstar_data,
+                                                  Er_cor, Etheta_cor, Ephi_cor);
+                amrex::Real Ex_cor, Ey_cor, Ez_cor;
+                Pulsar::ConvertSphericalToCartesianXComponent(Er_cor, Etheta_cor, Ephi_cor,
+                                                              r_p, theta_p, phi_p, Ex_cor);
+                Pulsar::ConvertSphericalToCartesianYComponent(Er_cor, Etheta_cor, Ephi_cor,
+                                                              r_p, theta_p, phi_p, Ey_cor);
+                Pulsar::ConvertSphericalToCartesianZComponent(Er_cor, Etheta_cor, Ephi_cor,
+                                                              r_p, theta_p, phi_p, Ez_cor);
+
+                amrex::Real rmid = (min_BC_radius + BC_width/2.);
+                // such that at rp = min_BC_radius, the value is 99% of the BC
+                amrex::Real div_factor = std::abs(min_BC_radius - rmid)/3.0;
+                amrex::Real tanh_arg = (r_p - rmid)/div_factor;
+                amrex::Real tanh_val = std::tanh(tanh_arg);
+                // final field is tanh profile varying smoothly from
+                // Ex_cor at min_BC_radius to Exp at min_BC_radius + BC_width
+                Exp = (tanh_val + 1.) * (Exp - Ex_cor)/2. + Ex_cor;
+                Eyp = (tanh_val + 1.) * (Eyp - Ey_cor)/2. + Ey_cor;
+                Ezp = (tanh_val + 1.) * (Ezp - Ez_cor)/2. + Ez_cor;
+            }
+        }
+//        amrex::Real ur_p, utheta_p, uphi_p;
+//        Pulsar::ConvertCartesianToSphericalRComponent(ux[ip], uy[ip], uz[ip], theta_p, phi_p, ur_p);
+//        Pulsar::ConvertCartesianToSphericalThetaComponent(ux[ip], uy[ip], uz[ip], theta_p, phi_p, utheta_p);
+//        Pulsar::ConvertCartesianToSphericalPhiComponent(ux[ip], uy[ip], uz[ip], theta_p, phi_p, uphi_p);
+//        amrex::Real Erp, Ethetap, Ephip;
+//        Pulsar::ConvertCartesianToSphericalRComponent(Exp, Eyp, Ezp, theta_p, phi_p, Erp);
+//        Pulsar::ConvertCartesianToSphericalThetaComponent(Exp, Eyp, Ezp, theta_p, phi_p, Ethetap);
+//        Pulsar::ConvertCartesianToSphericalPhiComponent(Exp, Eyp, Ezp, theta_p, phi_p, Ephip);
+//        amrex::Real Brp, Bthetap, Bphip;
+//        Pulsar::ConvertCartesianToSphericalRComponent(Bxp, Byp, Bzp, theta_p, phi_p, Brp);
+//        Pulsar::ConvertCartesianToSphericalThetaComponent(Bxp, Byp, Bzp, theta_p, phi_p, Bthetap);
+//        Pulsar::ConvertCartesianToSphericalPhiComponent(Bxp, Byp, Bzp, theta_p, phi_p, Bphip);
 //        if (ip == 0 and singleParticleTest == 1) {
 //            PulsarPartDiagData[0] = cur_time;
 //            PulsarPartDiagData[1] = xp; 
