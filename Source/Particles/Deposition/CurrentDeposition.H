@@ -11,6 +11,7 @@
 #include "Parallelization/KernelTimer.H"
 #include "Particles/Pusher/GetAndSetPosition.H"
 #include "Particles/ShapeFactors.H"
+#include "Particles/PulsarParameters.H"
 #include "Utils/WarpXAlgorithmSelection.H"
 #include "Utils/WarpXConst.H"
 #ifdef WARPX_DIM_RZ
@@ -113,6 +114,11 @@ void doDepositionShapeN(const GetParticlePosition& GetPosition,
     constexpr int NODE = amrex::IndexType::NODE;
     constexpr int CELL = amrex::IndexType::CELL;
 
+#ifdef PULSAR
+    amrex::Real deposit_buffer_boxmin = Pulsar::m_depositbuffer_min;
+    amrex::Real deposit_buffer_boxmax = Pulsar::m_depositbuffer_max;
+#endif
+
     // Loop over particles and deposit into jx_fab, jy_fab and jz_fab
 #if defined(WARPX_USE_GPUCLOCK)
     amrex::Real* cost_real = nullptr;
@@ -140,6 +146,18 @@ void doDepositionShapeN(const GetParticlePosition& GetPosition,
 
             amrex::ParticleReal xp, yp, zp;
             GetPosition(ip, xp, yp, zp);
+
+#ifdef PULSAR
+            if (   ((xp > deposit_buffer_boxmin) && (xp < deposit_buffer_boxmax))
+                || ((yp > deposit_buffer_boxmin) && (yp < deposit_buffer_boxmax))
+                || ((zp > deposit_buffer_boxmin) && (zp < deposit_buffer_boxmax))
+                || ((xp < -deposit_buffer_boxmin) && (xp > -deposit_buffer_boxmax))
+                || ((yp < -deposit_buffer_boxmin) && (yp > -deposit_buffer_boxmax))
+                || ((zp < -deposit_buffer_boxmin) && (zp > -deposit_buffer_boxmax)))
+            {
+                wq = 0.;
+            }
+#endif
 
             const amrex::Real vx  = uxp[ip]*gaminv;
             const amrex::Real vy  = uyp[ip]*gaminv;
@@ -429,6 +447,12 @@ void doEsirkepovDepositionShapeN (const GetParticlePosition& GetPosition,
     Real constexpr one_sixth = 1.0_rt / 6.0_rt;
 #endif
 
+
+#ifdef PULSAR
+    amrex::Real deposit_buffer_boxmin = Pulsar::m_depositbuffer_min;
+    amrex::Real deposit_buffer_boxmax = Pulsar::m_depositbuffer_max;
+#endif
+
     // Loop over particles and deposit into Jx_arr, Jy_arr and Jz_arr
 #if defined(WARPX_USE_GPUCLOCK)
     amrex::Real* cost_real = nullptr;
@@ -458,6 +482,18 @@ void doEsirkepovDepositionShapeN (const GetParticlePosition& GetPosition,
 
             ParticleReal xp, yp, zp;
             GetPosition(ip, xp, yp, zp);
+
+#ifdef PULSAR
+            if (   ((xp >  deposit_buffer_boxmin) && (xp <  deposit_buffer_boxmax))
+                || ((yp >  deposit_buffer_boxmin) && (yp <  deposit_buffer_boxmax))
+                || ((zp >  deposit_buffer_boxmin) && (zp <  deposit_buffer_boxmax))
+                || ((xp < -deposit_buffer_boxmin) && (xp > -deposit_buffer_boxmax))
+                || ((yp < -deposit_buffer_boxmin) && (yp > -deposit_buffer_boxmax))
+                || ((zp < -deposit_buffer_boxmin) && (zp > -deposit_buffer_boxmax)))
+            {
+                wq = 0.;
+            }
+#endif
 
 #if !defined(WARPX_DIM_1D_Z)
             Real const wqx = wq*invdtdx;
@@ -825,6 +861,11 @@ void doVayDepositionShapeN (const GetParticlePosition& GetPosition,
     amrex::Array4<amrex::Real> const& Dy_arr = Dy_fab.array();
     amrex::Array4<amrex::Real> const& Dz_arr = Dz_fab.array();
 
+#ifdef PULSAR
+    amrex::Real deposit_buffer_boxmin = Pulsar::m_depositbuffer_min;
+    amrex::Real deposit_buffer_boxmax = Pulsar::m_depositbuffer_max;
+#endif
+
     // Loop over particles and deposit (Dx,Dy,Dz) into Dx_fab, Dy_fab and Dz_fab
 #if defined(WARPX_USE_GPUCLOCK)
     amrex::Real* cost_real = nullptr;
@@ -851,6 +892,18 @@ void doVayDepositionShapeN (const GetParticlePosition& GetPosition,
         // Current particle positions (in physical units)
         amrex::ParticleReal xp, yp, zp;
         GetPosition(ip, xp, yp, zp);
+
+#ifdef PULSAR
+            if (   ((xp >  deposit_buffer_boxmin) && (xp <  deposit_buffer_boxmax))
+                || ((yp >  deposit_buffer_boxmin) && (yp <  deposit_buffer_boxmax))
+                || ((zp >  deposit_buffer_boxmin) && (zp <  deposit_buffer_boxmax))
+                || ((xp < -deposit_buffer_boxmin) && (xp > -deposit_buffer_boxmax))
+                || ((yp < -deposit_buffer_boxmin) && (yp > -deposit_buffer_boxmax))
+                || ((zp < -deposit_buffer_boxmin) && (zp > -deposit_buffer_boxmax)))
+            {
+                wq = 0.;
+            }
+#endif
 
         // Particle velocities
         const amrex::Real vx = uxp[ip] * invgam;

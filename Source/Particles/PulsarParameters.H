@@ -697,6 +697,10 @@ public:
     static int m_use_BC_smoothening;
     static amrex::Real m_min_BC_radius;
     static amrex::Real m_BC_width;
+    static amrex::Real m_gatherbuffer_min;
+    static amrex::Real m_gatherbuffer_max;
+    static amrex::Real m_depositbuffer_min;
+    static amrex::Real m_depositbuffer_max;
 private:
 };
 

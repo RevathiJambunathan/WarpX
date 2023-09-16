@@ -2852,6 +2852,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     int use_BC_smoothening = Pulsar::m_use_BC_smoothening;
     amrex::Real min_BC_radius = Pulsar::m_min_BC_radius;
     amrex::Real BC_width = Pulsar::m_BC_width;
+    amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
+    amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
 #endif
 
 #ifdef AMREX_USE_OMP
@@ -2919,7 +2921,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
             const auto pusher_algo = WarpX::particle_pusher_algo;
             const auto do_crr = do_classical_radiation_reaction;
 
-            const auto t_do_not_gather = do_not_gather;
+            auto t_do_not_gather = do_not_gather;
 
             amrex::ParallelFor( np, [=] AMREX_GPU_DEVICE (long ip)
             {
@@ -2928,8 +2930,20 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
 
                 amrex::ParticleReal Exp = 0._rt, Eyp = 0._rt, Ezp = 0._rt;
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+#ifdef PULSAR
+                bool in_gather_buffer_box = false;
+                if (   ((xp > gather_buffer_boxmin) && (xp < gather_buffer_boxmax))
+                    || ((yp > gather_buffer_boxmin) && (yp < gather_buffer_boxmax))
+                    || ((zp > gather_buffer_boxmin) && (zp < gather_buffer_boxmax))
+                    || ((xp < -gather_buffer_boxmin) && (xp > -gather_buffer_boxmax))
+                    || ((yp < -gather_buffer_boxmin) && (yp > -gather_buffer_boxmax))
+                    || ((zp < -gather_buffer_boxmin) && (zp > -gather_buffer_boxmax)))
+                {
+                    in_gather_buffer_box = true;
+                }
+#endif
 
-                if (!t_do_not_gather){
+                if (!t_do_not_gather || !in_gather_buffer_box){
                     // first gather E and B to the particle positions
                     doGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                                    ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
@@ -3142,6 +3156,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     int use_BC_smoothening = Pulsar::m_use_BC_smoothening;
     amrex::Real min_BC_radius = Pulsar::m_min_BC_radius;
     amrex::Real BC_width = Pulsar::m_BC_width;
+    amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
+    amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
 #endif
 
 
@@ -3220,7 +3236,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     }
 #endif
 
-    const auto t_do_not_gather = do_not_gather;
+    auto t_do_not_gather = do_not_gather;
 
     enum exteb_flags : int { no_exteb, has_exteb };
     enum qed_flags : int { no_qed, has_qed };
@@ -3256,8 +3272,20 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 
         amrex::ParticleReal Exp = 0._rt, Eyp = 0._rt, Ezp = 0._rt;
         amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+#ifdef PULSAR
+        bool in_gather_buffer_box = false;
+        if (   ((xp > gather_buffer_boxmin) && (xp < gather_buffer_boxmax))
+            || ((yp > gather_buffer_boxmin) && (yp < gather_buffer_boxmax))
+            || ((zp > gather_buffer_boxmin) && (zp < gather_buffer_boxmax))
+            || ((xp < -gather_buffer_boxmin) && (xp > -gather_buffer_boxmax))
+            || ((yp < -gather_buffer_boxmin) && (yp > -gather_buffer_boxmax))
+            || ((zp < -gather_buffer_boxmin) && (zp > -gather_buffer_boxmax)))
+        {
+            in_gather_buffer_box = true;
+        }
+#endif
 
-        if(!t_do_not_gather){
+        if(!t_do_not_gather || !in_gather_buffer_box){
             // first gather E and B to the particle positions
             doGatherShapeN(xp, yp, zp, Exp, Eyp, Ezp, Bxp, Byp, Bzp,
                            ex_arr, ey_arr, ez_arr, bx_arr, by_arr, bz_arr,
