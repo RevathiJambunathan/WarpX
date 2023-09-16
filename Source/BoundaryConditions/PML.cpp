@@ -19,6 +19,7 @@
 #include "Utils/WarpXProfilerWrapper.H"
 #include "Utils/Parser/ParserUtils.H"
 #include "WarpX.H"
+#include "Particles/PulsarParameters.H"
 
 #include <ablastr/utils/Communication.H>
 
@@ -71,6 +72,9 @@ namespace
         Real* p_sigma_cumsum = sigma_cumsum.data();
         Real* p_sigma_star = sigma_star.data();
         Real* p_sigma_star_cumsum = sigma_star_cumsum.data();
+#ifdef PULSAR
+        int pml_cubic_sigma = Pulsar::m_pml_cubic_sigma;
+#endif
         amrex::ParallelFor(N, [=] AMREX_GPU_DEVICE (int i) noexcept
         {
             i += olo;
@@ -78,11 +82,24 @@ namespace
             p_sigma[i-slo] = fac*(offset*offset);
             // sigma_cumsum is the analytical integral of sigma function at same points than sigma
             p_sigma_cumsum[i-slo] = (fac*(offset*offset*offset)/3._rt)/v_sigma;
+#ifdef PULSAR
+            if (pml_cubic_sigma == 1) {
+                p_sigma[i-slo] = fac*(offset*offset*offset);
+                // sigma_cumsum is the analytical integral of sigma function at same points than sigma
+                p_sigma_cumsum[i-slo] = (fac*(offset*offset*offset*offset)/4._rt)/v_sigma;
+            }
+#endif
             if (i <= ohi+1) {
                 offset = static_cast<Real>(glo-i) - 0.5_rt;
                 p_sigma_star[i-sslo] = fac*(offset*offset);
                 // sigma_star_cumsum is the analytical integral of sigma function at same points than sigma_star
                 p_sigma_star_cumsum[i-sslo] = (fac*(offset*offset*offset)/3._rt)/v_sigma;
+#ifdef PULSAR
+                if (pml_cubic_sigma == 1) {
+                    p_sigma_star[i-sslo] = fac*(offset*offset*offset);
+                    p_sigma_star_cumsum[i-sslo] = (fac*(offset*offset*offset*offset)/4._rt)/v_sigma;
+                }
+#endif
             }
         });
     }
@@ -100,16 +117,31 @@ namespace
         Real* p_sigma_cumsum = sigma_cumsum.data();
         Real* p_sigma_star = sigma_star.data();
         Real* p_sigma_star_cumsum = sigma_star_cumsum.data();
+#ifdef PULSAR
+        int pml_cubic_sigma = Pulsar::m_pml_cubic_sigma;
+#endif
         amrex::ParallelFor(N, [=] AMREX_GPU_DEVICE (int i) noexcept
         {
             i += olo;
             Real offset = static_cast<Real>(i-ghi-1);
             p_sigma[i-slo] = fac*(offset*offset);
             p_sigma_cumsum[i-slo] = (fac*(offset*offset*offset)/3._rt)/v_sigma;
+#ifdef PULSAR
+            if (pml_cubic_sigma == 1) {
+                p_sigma[i-slo] = fac*(offset*offset*offset);
+                p_sigma_cumsum[i-slo] = (fac*(offset*offset*offset*offset)/4._rt)/v_sigma;
+            }
+#endif
             if (i <= ohi+1) {
                 offset = static_cast<Real>(i-ghi) - 0.5_rt;
                 p_sigma_star[i-sslo] = fac*(offset*offset);
                 p_sigma_star_cumsum[i-sslo] = (fac*(offset*offset*offset)/3._rt)/v_sigma;
+#ifdef PULSAR
+            if (pml_cubic_sigma == 1) {
+                p_sigma_star[i-sslo] = fac*(offset*offset*offset);
+                p_sigma_star_cumsum[i-sslo] = (fac*(offset*offset*offset*offset)/4._rt)/v_sigma;
+            }
+#endif
             }
         });
     }

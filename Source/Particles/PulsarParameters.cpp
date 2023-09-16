@@ -138,10 +138,11 @@ amrex::Real Pulsar::m_limit_GJfactor = 1.;
 int Pulsar::m_use_BC_smoothening;
 amrex::Real Pulsar::m_min_BC_radius;
 amrex::Real Pulsar::m_BC_width;
-amrex::Real Pulsar::m_gatherbuffer_min;
-amrex::Real Pulsar::m_gatherbuffer_max;
-amrex::Real Pulsar::m_depositbuffer_min;
-amrex::Real Pulsar::m_depositbuffer_max;
+amrex::Real Pulsar::m_gatherbuffer_min = 0.;
+amrex::Real Pulsar::m_gatherbuffer_max = 0.;
+amrex::Real Pulsar::m_depositbuffer_min = 0.;
+amrex::Real Pulsar::m_depositbuffer_max = 0.;
+int Pulsar::m_pml_cubic_sigma;
 
 Pulsar::Pulsar ()
 {
@@ -372,6 +373,7 @@ Pulsar::ReadParameters () {
     pp.query("gatherbuffer_max",m_gatherbuffer_max);
     pp.query("depositbuffer_min",m_depositbuffer_min);
     pp.query("depositbuffer_max",m_depositbuffer_max);
+    pp.get("pml_cubic_sigma", m_pml_cubic_sigma);
 }
 
 
