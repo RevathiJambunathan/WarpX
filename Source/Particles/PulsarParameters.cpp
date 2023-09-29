@@ -1559,13 +1559,13 @@ Pulsar::TuneSigma0Threshold (const int step)
     amrex::Real total_weight_allspecies = 0._rt;
     amrex::Real dt = warpx.getdt(0);
     // Total number of cells that have injected particles
-    amrex::Real total_injected_cells = SumInjectionFlag();
-    // for debugging print injected cell data
-    if (m_print_injected_celldata == 1) {
-        if (warpx.getistep(0) >= m_print_celldata_starttime) {
-            PrintInjectedCellValues();
-        }
-    }
+//    amrex::Real total_injected_cells = SumInjectionFlag();
+//    // for debugging print injected cell data
+//    if (m_print_injected_celldata == 1) {
+//        if (warpx.getistep(0) >= m_print_celldata_starttime) {
+//            PrintInjectedCellValues();
+//        }
+//    }
 
     using PTDType = typename WarpXParticleContainer::ParticleTileType::ConstParticleTileDataType;
     for (int isp = 0; isp < nspecies; ++isp) {
@@ -1599,46 +1599,46 @@ Pulsar::TuneSigma0Threshold (const int step)
     if (TotalParticlesIsSumOfSpecies == 0) {
         current_injection_rate = total_weight_allspecies / 2._rt / dt;
     }
-    if (list_size < ROI_avg_window_size) {
-        ROI_list.push_back(current_injection_rate);
-        m_sum_injection_rate += current_injection_rate;
-        list_size++;
-    } else {
-        m_sum_injection_rate -= ROI_list.front();
-        ROI_list.pop_front();
-        ROI_list.push_back(current_injection_rate);
-        m_sum_injection_rate += ROI_list.back();
-    }
-
-    if (sigma_list_size < sigma_ref_avg_window_size) {
-        sigma_list.push_back(m_Sigma0_threshold);
-        m_sigma_threshold_sum += sigma_list.back();
-        sigma_list_size++;
-    } else {
-        m_sigma_threshold_sum -= sigma_list.front();
-        sigma_list.pop_front();
-        sigma_list.push_back(m_Sigma0_threshold);
-        m_sigma_threshold_sum += sigma_list.back();
-    }
-
-    amrex::Real total_injection_cells = SumInjectionFlag();
-    if (InjCell_list_size < m_InjCell_avg_window_size) {
-        InjCell_list.push_back(total_injection_cells);
-        m_InjCell_sum += total_injection_cells;
-        InjCell_list_size++;
-    } else {
-        m_InjCell_sum -= InjCell_list.front();
-        InjCell_list.pop_front();
-        InjCell_list.push_back(total_injection_cells);
-        m_InjCell_sum += total_injection_cells;
-    }
-    amrex::Real avg_InjCells = 0;
-    if (m_use_LstSqFit_TC == 1) {
-        avg_InjCells = LeastSquareFitforTC();
-    } else {
-        avg_InjCells = m_InjCell_sum/(InjCell_list_size * 1._rt);
-    }
-    amrex::Print() << " curent TC= " << total_injection_cells << " list size : " << InjCell_list_size << " sum : " << m_InjCell_sum << " avg_inj cells : " << avg_InjCells << "\n";
+//    if (list_size < ROI_avg_window_size) {
+//        ROI_list.push_back(current_injection_rate);
+//        m_sum_injection_rate += current_injection_rate;
+//        list_size++;
+//    } else {
+//        m_sum_injection_rate -= ROI_list.front();
+//        ROI_list.pop_front();
+//        ROI_list.push_back(current_injection_rate);
+//        m_sum_injection_rate += ROI_list.back();
+//    }
+//
+//    if (sigma_list_size < sigma_ref_avg_window_size) {
+//        sigma_list.push_back(m_Sigma0_threshold);
+//        m_sigma_threshold_sum += sigma_list.back();
+//        sigma_list_size++;
+//    } else {
+//        m_sigma_threshold_sum -= sigma_list.front();
+//        sigma_list.pop_front();
+//        sigma_list.push_back(m_Sigma0_threshold);
+//        m_sigma_threshold_sum += sigma_list.back();
+//    }
+//
+//    amrex::Real total_injection_cells = SumInjectionFlag();
+//    if (InjCell_list_size < m_InjCell_avg_window_size) {
+//        InjCell_list.push_back(total_injection_cells);
+//        m_InjCell_sum += total_injection_cells;
+//        InjCell_list_size++;
+//    } else {
+//        m_InjCell_sum -= InjCell_list.front();
+//        InjCell_list.pop_front();
+//        InjCell_list.push_back(total_injection_cells);
+//        m_InjCell_sum += total_injection_cells;
+//    }
+//    amrex::Real avg_InjCells = 0;
+//    if (m_use_LstSqFit_TC == 1) {
+//        avg_InjCells = LeastSquareFitforTC();
+//    } else {
+//        avg_InjCells = m_InjCell_sum/(InjCell_list_size * 1._rt);
+//    }
+//    amrex::Print() << " curent TC= " << total_injection_cells << " list size : " << InjCell_list_size << " sum : " << m_InjCell_sum << " avg_inj cells : " << avg_InjCells << "\n";
     //particles to be injected
     auto& pc = warpx.GetPartContainer().GetParticleContainer(0);
     auto& phys_pc = dynamic_cast<PhysicalParticleContainer&>(pc);
@@ -1648,139 +1648,140 @@ Pulsar::TuneSigma0Threshold (const int step)
     const auto dx_lev = warpx.Geom(lev).CellSizeArray();
     amrex::Real scale_factor = dx_lev[0] * dx_lev[1] * dx_lev[2] / num_ppc * m_particle_weight_scaling;
     int ParticlesToBeInjected = TotalParticlesToBeInjected(scale_factor);
-    amrex::Print() << " TP " << ParticlesToBeInjected << " current TC : " << total_injection_cells<< "\n";
+    amrex::Print() << " TP " << ParticlesToBeInjected << "\n";
+//    amrex::Print() << " TP " << ParticlesToBeInjected << " current TC : " << total_injection_cells<< "\n";
 
-    amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
-    amrex::Real avg_sigma_threshold = m_sigma_threshold_sum/(sigma_list_size * 1._rt);
-    if (use_single_sigma_ref == 1) {
-        avg_sigma_threshold = sigma_ref;
-    }
-    amrex::Print() << " sigma list size : " << sigma_list_size << " sigma sum " << m_sigma_threshold_sum << " current sigma " << m_Sigma0_threshold << " avg : " << avg_sigma_threshold << "\n";
+//    amrex::Print() << " current_injection rate " << current_injection_rate << " sum : " << m_sum_injection_rate << "\n";
+//    amrex::Real avg_sigma_threshold = m_sigma_threshold_sum/(sigma_list_size * 1._rt);
+//    if (use_single_sigma_ref == 1) {
+//        avg_sigma_threshold = sigma_ref;
+//    }
+//    amrex::Print() << " sigma list size : " << sigma_list_size << " sigma sum " << m_sigma_threshold_sum << " current sigma " << m_Sigma0_threshold << " avg : " << avg_sigma_threshold << "\n";
     amrex::Real specified_injection_rate = m_GJ_injection_rate * m_injection_rate;
-    amrex::Real max_sigma = MaxMagnetization();
-    if (m_injection_tuning_interval.contains(step+1) and m_use_FixedSigmaInput==0 ) {
-        // Sigma0 before modification
-        amrex::Real m_Sigma0_pre = m_Sigma0_threshold;
-        // running average of injection rate over average window
-        amrex::Real avg_injection_rate = m_sum_injection_rate/(list_size * 1._rt);
-        amrex::Real new_sigma0_threshold = m_Sigma0_threshold;
-        if (sigma_tune_method_TCTP == 0) {
-        // sigma is tuned by comparing the difference between desired and computed ROI
-            if (avg_injection_rate < specified_injection_rate) {
-                // reduce sigma0 so more particles can be injected
-                if (m_sigma_tune_method == "10percent") {
-                    // Modify threshold magnetization threshold by 10%
-                    new_sigma0_threshold = m_Sigma0_threshold - 0.1 * avg_sigma_threshold;
-                }
-                if (m_sigma_tune_method == "relative_difference") {
-                    if (avg_injection_rate == 0.) {
-                        // If no particles are injected only change the threshold sigma by 10%
-                        new_sigma0_threshold = m_Sigma0_threshold - 0.1 * avg_sigma_threshold;
-                    } else {
-                        amrex::Real rel_diff = (specified_injection_rate - avg_injection_rate)/specified_injection_rate;
-                        if (rel_diff < m_ubound_reldiff_sigma0) {
-                            // If relative difference is less than user-defined upper bound, reduce magnetization by rel_diff
-                            new_sigma0_threshold = m_Sigma0_threshold - rel_diff * avg_sigma_threshold;
-                        } else {
-                            // Maximum relative difference is set by user-defined upper bound
-                            new_sigma0_threshold = m_Sigma0_threshold - m_ubound_reldiff_sigma0 * avg_sigma_threshold;
-                        }
-                    }
-                }
-            } else if (avg_injection_rate > specified_injection_rate ) {
-                // Increase sigma0 so fewer particles are injected
-                if (m_sigma_tune_method == "10percent") {
-                    // Modify threshold magnetization threshold by 10%
-                    new_sigma0_threshold = m_Sigma0_threshold + 0.1 * avg_sigma_threshold;
-                }
-                if (m_sigma_tune_method == "relative_difference") {
-                    amrex::Real rel_diff = (avg_injection_rate - specified_injection_rate)/specified_injection_rate;
-                    if (rel_diff < m_ubound_reldiff_sigma0) {
-                        // If relative difference is less than user-defined upper bound, increase magnetization by rel_diff
-                        new_sigma0_threshold = m_Sigma0_threshold + rel_diff * avg_sigma_threshold;
-                    } else {
-                        // If rel_diff > upper bound, then increase sigma0 by m_ubound_reldiff_sigma0
-                        new_sigma0_threshold = m_Sigma0_threshold + m_ubound_reldiff_sigma0 * avg_sigma_threshold;
-                    }
-                }
-            }
-        } else {
-            amrex::Print() << " sigma tuning using TCTP \n";
-        // sigma is tuned by comparing TC = TP
-            if (avg_InjCells < ParticlesToBeInjected) {
-            // decrease sigma by relative difference
-                if (m_sigma_tune_method == "relative_difference") {
-                    amrex::Real rel_diff =  (ParticlesToBeInjected - avg_InjCells)
-                                          / (ParticlesToBeInjected * 1._rt);
-                    if (rel_diff < m_ubound_reldiff_sigma0) {
-                    // If relative difference is less than user-defined upper bound, reduce magnetization by rel diff
-                        new_sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
-                    } else {
-                    // If relative difference is >= ubound, reduce magnetization by ubound
-                        new_sigma0_threshold = m_Sigma0_threshold - m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
-                    } // decrease by rel_diff or ubound
-                } // ref diff method
-            } else if (avg_InjCells > ParticlesToBeInjected) {
-            // increase sigma by relative difference
-                if (m_sigma_tune_method == "relative_difference") {
-                    amrex::Real rel_diff = (avg_InjCells - ParticlesToBeInjected)
-                                         / (ParticlesToBeInjected * 1._rt);
-                    if (rel_diff < m_ubound_reldiff_sigma0) {
-                    // if relative difference is less than user-defined upper bound, increase magnetization by rel diff
-                        new_sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
-                    } else {
-                    // if rel diff is >= ubound, increase magnetization by ubound
-                        new_sigma0_threshold = m_Sigma0_threshold + m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
-                    } // increase by rel diff or ubound
-                } // ref diff method
-            }
-        }
-        if (new_sigma0_threshold < m_min_Sigma0) new_sigma0_threshold = m_min_Sigma0;
-        if (new_sigma0_threshold > m_max_Sigma0) new_sigma0_threshold = m_max_Sigma0;
-        // Store modified new sigma0 in member variable, m_Sigma0_threshold
-        amrex::Print() << " old sigma " << m_Sigma0_threshold << " new : " << new_sigma0_threshold << "\n";
-//        if (total_injection_cells <= 0.1 * ParticlesToBeInjected) {i
-//            new_sigma0_threshold = 0.99*max_sigma*(14000/12000)*(14000/12000)*(14000/12000);
-//            amrex::Print() << " injec cell is " << total_injection_cells << " <= 0.1*TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+//    amrex::Real max_sigma = MaxMagnetization();
+//    if (m_injection_tuning_interval.contains(step+1) and m_use_FixedSigmaInput==0 ) {
+//        // Sigma0 before modification
+//        amrex::Real m_Sigma0_pre = m_Sigma0_threshold;
+//        // running average of injection rate over average window
+//        amrex::Real avg_injection_rate = m_sum_injection_rate/(list_size * 1._rt);
+//        amrex::Real new_sigma0_threshold = m_Sigma0_threshold;
+//        if (sigma_tune_method_TCTP == 0) {
+//        // sigma is tuned by comparing the difference between desired and computed ROI
+//            if (avg_injection_rate < specified_injection_rate) {
+//                // reduce sigma0 so more particles can be injected
+//                if (m_sigma_tune_method == "10percent") {
+//                    // Modify threshold magnetization threshold by 10%
+//                    new_sigma0_threshold = m_Sigma0_threshold - 0.1 * avg_sigma_threshold;
+//                }
+//                if (m_sigma_tune_method == "relative_difference") {
+//                    if (avg_injection_rate == 0.) {
+//                        // If no particles are injected only change the threshold sigma by 10%
+//                        new_sigma0_threshold = m_Sigma0_threshold - 0.1 * avg_sigma_threshold;
+//                    } else {
+//                        amrex::Real rel_diff = (specified_injection_rate - avg_injection_rate)/specified_injection_rate;
+//                        if (rel_diff < m_ubound_reldiff_sigma0) {
+//                            // If relative difference is less than user-defined upper bound, reduce magnetization by rel_diff
+//                            new_sigma0_threshold = m_Sigma0_threshold - rel_diff * avg_sigma_threshold;
+//                        } else {
+//                            // Maximum relative difference is set by user-defined upper bound
+//                            new_sigma0_threshold = m_Sigma0_threshold - m_ubound_reldiff_sigma0 * avg_sigma_threshold;
+//                        }
+//                    }
+//                }
+//            } else if (avg_injection_rate > specified_injection_rate ) {
+//                // Increase sigma0 so fewer particles are injected
+//                if (m_sigma_tune_method == "10percent") {
+//                    // Modify threshold magnetization threshold by 10%
+//                    new_sigma0_threshold = m_Sigma0_threshold + 0.1 * avg_sigma_threshold;
+//                }
+//                if (m_sigma_tune_method == "relative_difference") {
+//                    amrex::Real rel_diff = (avg_injection_rate - specified_injection_rate)/specified_injection_rate;
+//                    if (rel_diff < m_ubound_reldiff_sigma0) {
+//                        // If relative difference is less than user-defined upper bound, increase magnetization by rel_diff
+//                        new_sigma0_threshold = m_Sigma0_threshold + rel_diff * avg_sigma_threshold;
+//                    } else {
+//                        // If rel_diff > upper bound, then increase sigma0 by m_ubound_reldiff_sigma0
+//                        new_sigma0_threshold = m_Sigma0_threshold + m_ubound_reldiff_sigma0 * avg_sigma_threshold;
+//                    }
+//                }
+//            }
+//        } else {
+//            amrex::Print() << " sigma tuning using TCTP \n";
+//        // sigma is tuned by comparing TC = TP
+//            if (avg_InjCells < ParticlesToBeInjected) {
+//            // decrease sigma by relative difference
+//                if (m_sigma_tune_method == "relative_difference") {
+//                    amrex::Real rel_diff =  (ParticlesToBeInjected - avg_InjCells)
+//                                          / (ParticlesToBeInjected * 1._rt);
+//                    if (rel_diff < m_ubound_reldiff_sigma0) {
+//                    // If relative difference is less than user-defined upper bound, reduce magnetization by rel diff
+//                        new_sigma0_threshold = m_Sigma0_threshold - rel_diff * m_Sigma0_threshold;
+//                    } else {
+//                    // If relative difference is >= ubound, reduce magnetization by ubound
+//                        new_sigma0_threshold = m_Sigma0_threshold - m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
+//                    } // decrease by rel_diff or ubound
+//                } // ref diff method
+//            } else if (avg_InjCells > ParticlesToBeInjected) {
+//            // increase sigma by relative difference
+//                if (m_sigma_tune_method == "relative_difference") {
+//                    amrex::Real rel_diff = (avg_InjCells - ParticlesToBeInjected)
+//                                         / (ParticlesToBeInjected * 1._rt);
+//                    if (rel_diff < m_ubound_reldiff_sigma0) {
+//                    // if relative difference is less than user-defined upper bound, increase magnetization by rel diff
+//                        new_sigma0_threshold = m_Sigma0_threshold + rel_diff * m_Sigma0_threshold;
+//                    } else {
+//                    // if rel diff is >= ubound, increase magnetization by ubound
+//                        new_sigma0_threshold = m_Sigma0_threshold + m_ubound_reldiff_sigma0 * m_Sigma0_threshold;
+//                    } // increase by rel diff or ubound
+//                } // ref diff method
+//            }
 //        }
-        if (m_use_Sigma0_avg == 1) {
-            amrex::Real sigma_avg = (new_sigma0_threshold + m_Sigma0_threshold)/2._rt;
-            m_Sigma0_threshold = sigma_avg;
-        } else {
-            m_Sigma0_threshold = new_sigma0_threshold;
-        }
-        amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
-    }
-    if (total_injection_cells <= m_min_TCTP_ratio * ParticlesToBeInjected) {
-        if (m_use_maxsigma_for_Sigma0 == 1 and m_use_FixedSigmaInput == 0) {
-            amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
-            amrex::Real new_sigma0_threshold = m_maxsigma_fraction * max_sigma * r_rstar_fac * r_rstar_fac * r_rstar_fac;
-            amrex::Print() << " injec cell is " << total_injection_cells << " <= " << m_min_TCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
-            m_Sigma0_threshold = new_sigma0_threshold;
-        }
-    }
-    amrex::Real max_sigma_threshold = MaxThresholdSigma();
-    amrex::Real theta = 0.0;
-    amrex::Real c_theta = std::cos(theta);
-    amrex::Real s_theta = std::sin(theta);
-    amrex::Real c_chi = std::cos(m_Chi);
-    amrex::Real s_chi = std::sin(m_Chi);
-    amrex::Real omega = Omega(m_omega_star, warpx.gett_new(0), m_omega_ramp_time);
-    amrex::Real phi = 0.;
-    amrex::Real omega_t_integral;
-    if (warpx.gett_new(0) < m_omega_ramp_time) {
-        // omega returned from function above is Omega_star * t / tramp
-        omega_t_integral = omega * warpx.gett_new(0) / 2.;
-    } else {
-        omega_t_integral = omega*(warpx.gett_new(0) - m_omega_ramp_time) + omega*m_omega_ramp_time/2.0;
-    }
-    amrex::Real psi = phi - omega_t_integral;
-    amrex::Real c_psi = std::cos(psi);
-    amrex::Real s_psi = std::sin(psi);
-    amrex::Real Brp = 2. * m_B_star * (c_chi * c_theta + s_chi * s_theta * c_psi);
-    amrex::Real Btp = m_B_star * (c_chi * s_theta - s_chi * c_theta * c_psi);
-    amrex::Real Bphip = m_B_star * s_chi * s_psi;
-    amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  << " "<< m_Sigma0_threshold << " " << total_injected_cells << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< " "<< psi << " " << Brp << " " << Btp << " " << Bphip << " " << max_sigma << " "<< max_sigma_threshold <<"\n";
+//        if (new_sigma0_threshold < m_min_Sigma0) new_sigma0_threshold = m_min_Sigma0;
+//        if (new_sigma0_threshold > m_max_Sigma0) new_sigma0_threshold = m_max_Sigma0;
+//        // Store modified new sigma0 in member variable, m_Sigma0_threshold
+//        amrex::Print() << " old sigma " << m_Sigma0_threshold << " new : " << new_sigma0_threshold << "\n";
+////        if (total_injection_cells <= 0.1 * ParticlesToBeInjected) {i
+////            new_sigma0_threshold = 0.99*max_sigma*(14000/12000)*(14000/12000)*(14000/12000);
+////            amrex::Print() << " injec cell is " << total_injection_cells << " <= 0.1*TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+////        }
+//        if (m_use_Sigma0_avg == 1) {
+//            amrex::Real sigma_avg = (new_sigma0_threshold + m_Sigma0_threshold)/2._rt;
+//            m_Sigma0_threshold = sigma_avg;
+//        } else {
+//            m_Sigma0_threshold = new_sigma0_threshold;
+//        }
+//        amrex::AllPrintToFile("RateOfInjection") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << avg_injection_rate << " " << m_Sigma0_pre << " "<< m_Sigma0_threshold << " " << m_min_Sigma0 << " " << m_max_Sigma0 << " " << m_Sigma0_baseline << " " << total_injection_cells << " " << avg_InjCells << " " << ParticlesToBeInjected<< "\n";
+//    }
+    //if (total_injection_cells <= m_min_TCTP_ratio * ParticlesToBeInjected) {
+    //    if (m_use_maxsigma_for_Sigma0 == 1 and m_use_FixedSigmaInput == 0) {
+    //        amrex::Real r_rstar_fac = m_injRing_radius/m_R_star;
+    //        amrex::Real new_sigma0_threshold = m_maxsigma_fraction * max_sigma * r_rstar_fac * r_rstar_fac * r_rstar_fac;
+    //        amrex::Print() << " injec cell is " << total_injection_cells << " <= " << m_min_TCTP_ratio <<" *TP " << ParticlesToBeInjected << " sigma0_new modified to " << new_sigma0_threshold << " using max sigma : " << max_sigma<< "\n";
+    //        m_Sigma0_threshold = new_sigma0_threshold;
+    //    }
+    //}
+//    amrex::Real max_sigma_threshold = MaxThresholdSigma();
+//    amrex::Real theta = 0.0;
+//    amrex::Real c_theta = std::cos(theta);
+//    amrex::Real s_theta = std::sin(theta);
+//    amrex::Real c_chi = std::cos(m_Chi);
+//    amrex::Real s_chi = std::sin(m_Chi);
+//    amrex::Real omega = Omega(m_omega_star, warpx.gett_new(0), m_omega_ramp_time);
+//    amrex::Real phi = 0.;
+//    amrex::Real omega_t_integral;
+//    if (warpx.gett_new(0) < m_omega_ramp_time) {
+//        // omega returned from function above is Omega_star * t / tramp
+//        omega_t_integral = omega * warpx.gett_new(0) / 2.;
+//    } else {
+//        omega_t_integral = omega*(warpx.gett_new(0) - m_omega_ramp_time) + omega*m_omega_ramp_time/2.0;
+//    }
+//    amrex::Real psi = phi - omega_t_integral;
+//    amrex::Real c_psi = std::cos(psi);
+//    amrex::Real s_psi = std::sin(psi);
+//    amrex::Real Brp = 2. * m_B_star * (c_chi * c_theta + s_chi * s_theta * c_psi);
+//    amrex::Real Btp = m_B_star * (c_chi * s_theta - s_chi * c_theta * c_psi);
+//    amrex::Real Bphip = m_B_star * s_chi * s_psi;
+    amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  <<"\n";
 }
 
 amrex::Real
@@ -2000,7 +2001,7 @@ Pulsar::TotalParticlesInjected ()
     amrex::Real total_weight_allspecies = 0._rt;
     amrex::Real dt = warpx.getdt(0);
     // Total number of cells that have injected particles
-    amrex::Real total_injected_cells = SumInjectionFlag();
+//    amrex::Real total_injected_cells = SumInjectionFlag();
     // for debugging print injected cell data
     if (m_print_injected_celldata == 1) {
         if (warpx.getistep(0) >= m_print_celldata_starttime) {
@@ -2135,7 +2136,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     // Total injection cells
     amrex::Real TotalInjectionCells = SumInjectionFlag();
     amrex::Print() << " total inj cells : " << TotalInjectionCells << "\n";
-    m_sum_inj_magnetization = SumMagnetizationinInjectionRing();
+    m_sum_inj_magnetization = 1;
+    if (injectiontype > 0) m_sum_inj_magnetization = SumMagnetizationinInjectionRing();
     amrex::Print() << " sum inj magnetization " << m_sum_inj_magnetization << "\n";
 
     int num_ppc_modified = 0;
@@ -2232,11 +2234,11 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 //            amrex::Print() << " total inj cells is equal to totalPCCells: " << TotalInjectionCells << " total PC cells " << m_totalpolarcap_cells << "\n";
 //        }
 //    }
-    num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);
+//    num_ppc_modified = static_cast<int>( ParticlesToBeInjected/TotalInjectionCells);
     amrex::Print() << " particle to be inj " << ParticlesToBeInjected << "\n";
-    amrex::Real num_ppc_modified_real = 0.;
-    amrex::Real num_ppc_PC_real = 0.;
-    amrex::Real num_ppc_eq_real = 0.;
+//    amrex::Real num_ppc_modified_real = 0.;
+//    amrex::Real num_ppc_PC_real = 0.;
+//    amrex::Real num_ppc_eq_real = 0.;
     int GJParticles = ParticlesToBeInjected/m_injection_rate;
     if (injectiontype == 0) {
         GJParticles = ParticlesToBeInjected;
@@ -2246,17 +2248,17 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     int PairPlasmaParticles = ParticlesToBeInjected - GJParticles;
     amrex::Real num_GJParticles = 0.;
     if (TotalInjectionCells > 0) {
-        num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
-        num_ppc_PC_real = 0.67*ParticlesToBeInjected/m_totalpolarcap_cells;
-        num_ppc_eq_real = 0.33*ParticlesToBeInjected/(TotalInjectionCells - m_totalpolarcap_cells);
+//        num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
+//        num_ppc_PC_real = 0.67*ParticlesToBeInjected/m_totalpolarcap_cells;
+//        num_ppc_eq_real = 0.33*ParticlesToBeInjected/(TotalInjectionCells - m_totalpolarcap_cells);
         num_GJParticles = GJParticles/TotalInjectionCells;
     }
-    int num_ppc_PC = static_cast<int>(num_ppc_PC_real);
-    int num_ppc_eq = static_cast<int>(num_ppc_eq_real);
-    amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
-    amrex::Print() << " num pcc PC " << num_ppc_PC_real << "\n";
-    amrex::Print() << " num pcc eq " << num_ppc_eq_real << "\n";
-    amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
+//    int num_ppc_PC = static_cast<int>(num_ppc_PC_real);
+//    int num_ppc_eq = static_cast<int>(num_ppc_eq_real);
+//    amrex::Print() << " num pcc real " << num_ppc_modified_real << "\n";
+//    amrex::Print() << " num pcc PC " << num_ppc_PC_real << "\n";
+//    amrex::Print() << " num pcc eq " << num_ppc_eq_real << "\n";
+//    amrex::Print() << " ppc int : " << num_ppc_modified << "\n";
     amrex::Print() << " GJ particles : " << GJParticles << " Plasmapair particles  " << PairPlasmaParticles << "\n";
 
     amrex::Real rho_GJ_fac = 2. * m_omega_star * m_B_star * 8.85e-12;
@@ -2487,8 +2489,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         );
     }
     }
-    amrex::Real TotalInjectedCells = SumInjectedCells();
-    amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n";
+//    amrex::Real TotalInjectedCells = SumInjectedCells();
+//    amrex::Print() << " total injected cells : " << TotalInjectedCells << "\n";
 
 
 
