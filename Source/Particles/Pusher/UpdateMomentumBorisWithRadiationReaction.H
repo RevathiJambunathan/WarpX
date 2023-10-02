@@ -25,7 +25,11 @@ void UpdateMomentumBorisWithRadiationReaction(
     amrex::ParticleReal& ux, amrex::ParticleReal& uy, amrex::ParticleReal& uz,
     const amrex::ParticleReal Ex, const amrex::ParticleReal Ey, const amrex::ParticleReal Ez,
     const amrex::ParticleReal Bx, const amrex::ParticleReal By, const amrex::ParticleReal Bz,
-    const amrex::ParticleReal q, const amrex::ParticleReal m, const amrex::Real dt )
+    const amrex::ParticleReal q, const amrex::ParticleReal m,
+#ifdef PULSAR
+    const amrex::Real gammarad_real, const amrex::Real gammarad_scaled,
+#endif
+    const amrex::Real dt )
 {
     using namespace amrex::literals;
 
@@ -74,7 +78,7 @@ void UpdateMomentumBorisWithRadiationReaction(
 #ifdef PULSAR
     // To account for radiation reaction in the scaled pulsar simulation
     // we scale the ultra-relativistic term, gamma_n with gamma_real/gamma_scaled
-    const amrex::ParticleReal gamma_scale_fac = Pulsar::m_gammarad_real/Pulsar::m_gammarad_scaled;
+    const amrex::ParticleReal gamma_scale_fac = gammarad_real/gammarad_scaled;
     const amrex::ParticleReal coeff = gamma_scale_fac*gamma_scale_fac*gamma_n*gamma_n*(fl_q2-bdotE2);
 #else
     const amrex::ParticleReal coeff = gamma_n*gamma_n*(fl_q2-bdotE2);

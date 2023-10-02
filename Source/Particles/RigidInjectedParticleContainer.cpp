@@ -12,6 +12,7 @@
 #include "Particles/Gather/GetExternalFields.H"
 #include "Particles/PhysicalParticleContainer.H"
 #include "Particles/WarpXParticleContainer.H"
+#include "Particles/PulsarParameters.H"
 #include "Pusher/GetAndSetPosition.H"
 #include "Pusher/UpdateMomentumBoris.H"
 #include "Pusher/UpdateMomentumBorisWithRadiationReaction.H"
@@ -407,6 +408,11 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
             const auto pusher_algo = WarpX::particle_pusher_algo;
             const auto do_crr = do_classical_radiation_reaction;
 
+#ifdef PULSAR
+            amrex::Real gammarad_real = Pulsar::m_gammarad_real;
+            amrex::Real gammarad_scaled = Pulsar::m_gammarad_scaled;
+#endif
+
             amrex::ParallelFor( np, [=] AMREX_GPU_DEVICE (long ip)
             {
                 ux_save[ip] = uxpp[ip];
@@ -433,7 +439,11 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                 if (do_crr) {
                     UpdateMomentumBorisWithRadiationReaction(uxpp[ip], uypp[ip], uzpp[ip],
                                                              Exp, Eyp, Ezp, Bxp,
-                                                             Byp, Bzp, qp, m, dt);
+                                                             Byp, Bzp, qp, m,
+#ifdef PULSAR
+                                                             gammarad_real, gammarad_scaled,
+#endif
+                                                             dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
                     UpdateMomentumBoris( uxpp[ip], uypp[ip], uzpp[ip],
                                          Exp, Eyp, Ezp, Bxp,

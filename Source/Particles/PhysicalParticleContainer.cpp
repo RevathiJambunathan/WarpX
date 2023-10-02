@@ -2854,6 +2854,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     amrex::Real BC_width = Pulsar::m_BC_width;
     amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
+    amrex::Real gammarad_real = Pulsar::m_gammarad_real;
+    amrex::Real gammarad_scaled = Pulsar::m_gammarad_scaled;
 #endif
 
 #ifdef AMREX_USE_OMP
@@ -3016,7 +3018,11 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                     if (ion_lev) { qp *= ion_lev[ip]; }
                     UpdateMomentumBorisWithRadiationReaction(ux[ip], uy[ip], uz[ip],
                                                              Exp, Eyp, Ezp, Bxp,
-                                                             Byp, Bzp, qp, m, dt);
+                                                             Byp, Bzp, qp, m,
+#ifdef PULSAR
+                                                             gammarad_real, gammarad_scaled,
+#endif
+                                                             dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
                     amrex::Real qp = q;
                     if (ion_lev) { qp *= ion_lev[ip]; }
@@ -3158,6 +3164,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Real BC_width = Pulsar::m_BC_width;
     amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
+    amrex::Real gammarad_real = Pulsar::m_gammarad_real;
+    amrex::Real gammarad_scaled = Pulsar::m_gammarad_scaled;
 #endif
 
 
@@ -3408,6 +3416,9 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
 #ifdef WARPX_QED
                               t_chi_max,
 #endif
+#ifdef PULSAR
+                              gammarad_real, gammarad_scaled,
+#endif
                               dt);
 	   // PulsarPartDiagData);
 #ifdef PULSAR
@@ -3445,6 +3456,9 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                   ion_lev ? ion_lev[ip] : 0,
                                   m, q, pusher_algo, do_crr, do_copy,
                                   t_chi_max,
+#ifdef PULSAR
+                                  gammarad_real, gammarad_scaled,
+#endif
                                   dt);
             }
         }
