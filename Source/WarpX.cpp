@@ -30,6 +30,8 @@
 #include "FieldSolver/WarpX_FDTD.H"
 #include "Filter/NCIGodfreyFilter.H"
 #include "Particles/MultiParticleContainer.H"
+#include "Fluids/MultiFluidContainer.H"
+#include "Fluids/WarpXFluidContainer.H"
 #include "Particles/ParticleBoundaryBuffer.H"
 #include "AcceleratorLattice/AcceleratorLattice.H"
 #include "Utils/TextMsg.H"
@@ -317,6 +319,11 @@ WarpX::WarpX ()
 
     // Particle Boundary Buffer (i.e., scraped particles on boundary)
     m_particle_boundary_buffer = std::make_unique<ParticleBoundaryBuffer>();
+
+    // Fluid Container
+    if (do_fluid_species) {
+        myfl = std::make_unique<MultiFluidContainer>(nlevs_max);
+    }
 
     Efield_aux.resize(nlevs_max);
     Bfield_aux.resize(nlevs_max);
@@ -873,26 +880,30 @@ WarpX::ReadParameters ()
             quantum_xi_c2 = static_cast<amrex::Real>(quantum_xi * PhysConst::c * PhysConst::c);
         }
 
-        for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-            WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
-                !(
-                    ( WarpX::field_boundary_lo[idim] == FieldBoundaryType::PML &&
-                    WarpX::field_boundary_lo[idim] == FieldBoundaryType::Absorbing_SilverMueller ) ||
-                    ( WarpX::field_boundary_hi[idim] == FieldBoundaryType::PML &&
-                     WarpX::field_boundary_hi[idim] == FieldBoundaryType::Absorbing_SilverMueller )
-                ),
-                "PML and Silver-Mueller boundary conditions cannot be activated at the same time.");
+        const auto at_least_one_boundary_is_pml =
+            (std::any_of(WarpX::field_boundary_lo.begin(), WarpX::field_boundary_lo.end(),
+                [](const auto& cc){return cc == FieldBoundaryType::PML;})
+            ||
+            std::any_of(WarpX::field_boundary_hi.begin(), WarpX::field_boundary_hi.end(),
+                [](const auto& cc){return cc == FieldBoundaryType::PML;})
+            );
 
+        const auto at_least_one_boundary_is_silver_mueller =
+            (std::any_of(WarpX::field_boundary_lo.begin(), WarpX::field_boundary_lo.end(),
+                [](const auto& cc){return cc == FieldBoundaryType::Absorbing_SilverMueller;})
+            ||
+            std::any_of(WarpX::field_boundary_hi.begin(), WarpX::field_boundary_hi.end(),
+                [](const auto& cc){return cc == FieldBoundaryType::Absorbing_SilverMueller;})
+            );
 
-            if (WarpX::field_boundary_lo[idim] == FieldBoundaryType::Absorbing_SilverMueller ||
-                WarpX::field_boundary_hi[idim] == FieldBoundaryType::Absorbing_SilverMueller)
-            {
-                // SilverMueller is implemented for Yee
-                WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
-                    electromagnetic_solver_id == ElectromagneticSolverAlgo::Yee,
-                    "The Silver-Mueller boundary condition can only be used with the Yee solver.");
-            }
-        }
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            !(at_least_one_boundary_is_pml && at_least_one_boundary_is_silver_mueller),
+            "PML and Silver-Mueller boundary conditions cannot be activated at the same time.");
+
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+            (!at_least_one_boundary_is_silver_mueller) ||
+            (electromagnetic_solver_id == ElectromagneticSolverAlgo::Yee),
+            "The Silver-Mueller boundary condition can only be used with the Yee solver.");
 
         utils::parser::queryWithParser(pp_warpx, "pml_ncell", pml_ncell);
         utils::parser::queryWithParser(pp_warpx, "pml_delta", pml_delta);
@@ -1016,6 +1027,25 @@ WarpX::ReadParameters ()
         WARPX_ALWAYS_ASSERT_WITH_MESSAGE( n_rz_azimuthal_modes > 0,
             "The number of azimuthal modes (n_rz_azimuthal_modes) must be at least 1");
 #endif
+
+        // Check whether fluid species will be used
+        {
+            const ParmParse pp_fluids("fluids");
+            std::vector<std::string> fluid_species_names = {};
+            pp_fluids.queryarr("species_names", fluid_species_names);
+            if (!fluid_species_names.empty()) do_fluid_species = 1;
+            if (do_fluid_species) {
+                WARPX_ALWAYS_ASSERT_WITH_MESSAGE(max_level <= 1,
+                    "Fluid species cannot currently be used with mesh refinement.");
+                WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    electrostatic_solver_id != ElectrostaticSolverAlgo::Relativistic,
+                    "Fluid species cannot currently be used with the relativistic electrostatic solver.");
+#ifdef WARPX_DIM_RZ
+                WARPX_ALWAYS_ASSERT_WITH_MESSAGE( n_rz_azimuthal_modes <= 1,
+                    "Fluid species cannot be used with more than 1 azimuthal mode.");
+#endif
+            }
+        }
 
         // Set default parameters with hybrid grid (parsed later below)
         if (grid_type == GridType::Hybrid)
@@ -2230,6 +2260,14 @@ WarpX::AllocLevelMFs (int lev, const BoxArray& ba, const DistributionMapping& dm
             lev, ba, dm, ncomps, ngJ, ngRho, jx_nodal_flag, jy_nodal_flag,
             jz_nodal_flag, rho_nodal_flag
         );
+    }
+
+    // Allocate extra multifabs needed for fluids
+    if (do_fluid_species) {
+        myfl->AllocateLevelMFs(lev, ba, dm);
+        auto & warpx = GetInstance();
+        const amrex::Real cur_time = warpx.gett_new(lev);
+        myfl->InitData(lev, geom[lev].Domain(),cur_time);
     }
 
     if (fft_do_time_averaging)

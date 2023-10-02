@@ -1136,6 +1136,18 @@ Particle initialization
     Resampling is performed everytime the number of macroparticles per cell of the species
     averaged over the whole simulation domain exceeds this parameter.
 
+
+.. _running-cpp-parameters-fluids:
+
+Cold Relativistic Fluid initialization
+--------------------------------------
+
+* ``fluids.species_names`` (`strings`, separated by spaces)
+    Defines the names of each fluid species. It is a required input to create and evolve fluid species using the cold relativistic fluid equations.
+    Most of the parameters described in the section "Particle initialization" can also be used to initialize fluid properties (e.g. initial density distribution).
+    For fluid-specific inputs we use `<fluid_pecies_name>` as a placeholder. Also see external fields
+    for how to specify these for fluids as the function names differ.
+
 .. _running-cpp-parameters-laser:
 
 Laser initialization
@@ -1498,6 +1510,37 @@ Applied to Particles
       The fields are of the form :math:`E_x = \mathrm{strength} \cdot x`, :math:`E_y = \mathrm{strength} \cdot y`,
       and :math:`E_z = 0`, and
       :math:`B_x = \mathrm{strength} \cdot y`, :math:`B_y = -\mathrm{strength} \cdot x`, and :math:`B_z = 0`.
+
+
+Applied to Cold Relativistic Fluids
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``<fluid_species_name>.E_ext_init_style`` & ``<fluid_species_name>.B_ext_init_style`` (string) optional (default "none")
+    These parameters determine the type of the external electric and
+    magnetic fields respectively that are applied directly to the cold relativistic fluids at every timestep.
+    The field values are specified in the lab frame.
+    With the default ``none`` style, no field is applied.
+    Possible values are ``parse_E_ext_function`` or ``parse_B_ext_function``.
+
+    * ``parse_E_ext_function`` or ``parse_B_ext_function``: the field is specified as an analytic
+      expression that is a function of space (x,y,z) and time (t), relative to the lab frame.
+      The E-field is specified by the input parameters:
+
+        * ``<fluid_species_name>.Ex_external_function(x,y,z,t)``
+
+        * ``<fluid_species_name>.Ey_external_function(x,y,z,t)``
+
+        * ``<fluid_species_name>.Ez_external_function(x,y,z,t)``
+
+      The B-field is specified by the input parameters:
+
+        * ``<fluid_species_name>.Bx_external_function(x,y,z,t)``
+
+        * ``<fluid_species_name>.By_external_function(x,y,z,t)``
+
+        * ``<fluid_species_name>.Bz_external_function(x,y,z,t)``
+
+      Note that the position is defined in Cartesian coordinates, as a function of (x,y,z), even for RZ.
 
 Accelerator Lattice
 ^^^^^^^^^^^^^^^^^^^
@@ -2987,6 +3030,57 @@ Reduced Diagnostics
         In particular, by choosing a weighting function which returns either
         1 or 0, it is possible to compute the charge on only some part of the
         embedded boundary.
+
+    * ``ColliderRelevant``
+        This diagnostics computes properties of two colliding beams that are relevant for particle colliders.
+        Two species must be specified. Photon species are not supported yet.
+        It is assumed that the two species propagate and collide along the ``z`` direction.
+        The output columns (for 3D-XYZ) are the following, where the minimum, average and maximum
+        are done over the whole species:
+
+        [0]: simulation step (iteration).
+
+        [1]: time (s).
+
+        [2]: time derivative of the luminosity (:math:`m^{-2}s^{-1}`) defined as:
+
+        .. math::
+
+            \frac{dL}{dt} = 2 c \iiint  n_1(x,y,z) n_2(x,y,z) dx dy dz
+
+        where :math:`n_1`, :math:`n_2` are the number densities of the two colliding species.
+
+        [3], [4], [5]: If, QED is enabled, the minimum, average and maximum values of the quantum parameter :math:`\chi` of species 1:
+        :math:`\chi_{min}`,
+        :math:`\langle \chi \rangle`,
+        :math:`\chi_{max}`.
+        If QED is not enabled, these numbers are not computed.
+
+        [6], [7]: The average and standard deviation of the values of the transverse coordinate :math:`x` (m) of species 1:
+        :math:`\langle x \rangle`,
+        :math:`\sqrt{\langle x- \langle x \rangle \rangle^2}`.
+
+        [8], [9]: The average and standard deviation of the values of the transverse coordinate :math:`y` (m) of species 1:
+        :math:`\langle y \rangle`,
+        :math:`\sqrt{\langle y- \langle y \rangle \rangle^2}`.
+
+        [10], [11], [12], [13]: The minimum, average, maximum and standard deviation of the angle :math:`\theta_x = \angle (u_x, u_z)` (rad) of species 1:
+        :math:`{\theta_x}_{min}`,
+        :math:`\langle \theta_x \rangle`,
+        :math:`{\theta_x}_{max}`,
+        :math:`\sqrt{\langle \theta_x- \langle \theta_x \rangle \rangle^2}`.
+
+        [14], [15], [16], [17]:  The minimum, average, maximum and standard deviation of the angle :math:`\theta_y = \angle (u_y, u_z)` (rad) of species 1:
+        :math:`{\theta_y}_{min}`,
+        :math:`\langle \theta_y \rangle`,
+        :math:`{\theta_y}_{max}`,
+        :math:`\sqrt{\langle \theta_y- \langle \theta_y \rangle \rangle^2}`.
+
+        [18], ..., [32]: Analogous quantities for species 2.
+
+        For 2D-XZ, :math:`y`-related quantities are not outputted.
+        For 1D-Z, :math:`x`-related and :math:`y`-related quantities are not outputted.
+        RZ geometry is not supported yet.
 
 * ``<reduced_diags_name>.intervals`` (`string`)
     Using the `Intervals Parser`_ syntax, this string defines the timesteps at which reduced

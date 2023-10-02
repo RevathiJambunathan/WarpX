@@ -24,6 +24,8 @@
 #endif
 #include "Parallelization/GuardCellManager.H"
 #include "Particles/MultiParticleContainer.H"
+#include "Fluids/MultiFluidContainer.H"
+#include "Fluids/WarpXFluidContainer.H"
 #include "Particles/ParticleBoundaryBuffer.H"
 #include "Python/WarpX_py.H"
 #include "Utils/TextMsg.H"
@@ -1036,6 +1038,12 @@ WarpX::PushParticlesandDepose (int lev, amrex::Real cur_time, DtType a_dt_type, 
                 ApplySubcyclingScalingToCurrentDensity(current_fp_vay[lev][0].get(), current_fp_vay[lev][1].get(), current_fp_vay[lev][2].get(), n_subcycle_current, lev);
             else
                 ApplySubcyclingScalingToCurrentDensity(current_fp[lev][0].get(), current_fp[lev][1].get(), current_fp[lev][2].get(), n_subcycle_current, lev);
+        }
+        if (do_fluid_species) {
+            myfl->Evolve(lev,
+                *Efield_aux[lev][0],*Efield_aux[lev][1],*Efield_aux[lev][2],
+                *Bfield_aux[lev][0],*Bfield_aux[lev][1],*Bfield_aux[lev][2],
+                rho_fp[lev].get(),*current_x, *current_y, *current_z, cur_time, skip_deposition);
         }
     }
 }
