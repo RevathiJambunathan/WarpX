@@ -8,6 +8,9 @@
 #define WARPX_PARTICLES_PUSHER_UPDATEMOMENTUM_BORIS_WITHRR_H_
 
 #include "UpdateMomentumBoris.H"
+#ifdef PULSAR
+#include "Particles/PulsarParameters.H"
+#endif
 
 #include <AMReX_REAL.H>
 
@@ -68,7 +71,14 @@ void UpdateMomentumBorisWithRadiationReaction(
     //Calculation of auxiliary quantities
     const amrex::ParticleReal bdotE = (bx_n*Ex + by_n*Ey + bz_n*Ez);
     const amrex::ParticleReal bdotE2 = bdotE*bdotE;
+#ifdef PULSAR
+    // To account for radiation reaction in the scaled pulsar simulation
+    // we scale the ultra-relativistic term, gamma_n with gamma_real/gamma_scaled
+    const amrex::ParticleReal gamma_scale_fac = Pulsar::m_gammarad_real/Pulsar::m_gammarad_scaled;
+    const amrex::ParticleReal coeff = gamma_scale_fac*gamma_scale_fac*gamma_n*gamma_n*(fl_q2-bdotE2);
+#else
     const amrex::ParticleReal coeff = gamma_n*gamma_n*(fl_q2-bdotE2);
+#endif
 
     //Radiation reaction constant
     const amrex::ParticleReal q_over_mc = q/(m*PhysConst::c);

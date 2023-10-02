@@ -702,6 +702,8 @@ public:
     static amrex::Real m_depositbuffer_min;
     static amrex::Real m_depositbuffer_max;
     static int m_pml_cubic_sigma;
+    static amrex::Real m_gammarad_real;
+    static amrex::Real m_gammarad_scaled;
 private:
 };
 

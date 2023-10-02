@@ -143,6 +143,8 @@ amrex::Real Pulsar::m_gatherbuffer_max = 0.;
 amrex::Real Pulsar::m_depositbuffer_min = 0.;
 amrex::Real Pulsar::m_depositbuffer_max = 0.;
 int Pulsar::m_pml_cubic_sigma;
+amrex::Real Pulsar::m_gammarad_real = 1.;
+amrex::Real Pulsar::m_gammarad_scaled = 1.;
 
 Pulsar::Pulsar ()
 {
@@ -374,6 +376,8 @@ Pulsar::ReadParameters () {
     pp.query("depositbuffer_min",m_depositbuffer_min);
     pp.query("depositbuffer_max",m_depositbuffer_max);
     pp.get("pml_cubic_sigma", m_pml_cubic_sigma);
+    pp.query("gammarad_real", m_gammarad_real);
+    pp.query("gammarad_scaled", m_gammarad_scaled);
 }
 
 
