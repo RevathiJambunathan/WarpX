@@ -212,9 +212,23 @@ SigmaBox::SigmaBox (const Box& box, const BoxArray& grids, const Real* dx, const
         sigma_star_cumsum_fac[idim].m_hi = hi[idim]+1;
     }
 
+#ifdef PULSAR
+    int pml_cubic_sigma = Pulsar::m_pml_cubic_sigma;
+    amrex::Real damping_strength = Pulsar::m_damping_strength;
+#endif
     Array<Real,AMREX_SPACEDIM> fac;
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+#ifdef PULSAR
+        if (pml_cubic_sigma == 1) {
+            fac[idim] = damping_strength * PhysConst::c
+                        / ( dx[idim]*static_cast<Real>(delta[idim]*delta[idim]*delta[idim]) );
+        } else {
+            fac[idim] = damping_strength * PhysConst::c
+                        / ( dx[idim]*static_cast<Real>(delta[idim]*delta[idim]) );
+        }
+#else
         fac[idim] = 4.0_rt*PhysConst::c/(dx[idim]*static_cast<Real>(delta[idim]*delta[idim]));
+#endif
     }
 
     if (regdomain.ok()) { // The union of the regular grids is a single box

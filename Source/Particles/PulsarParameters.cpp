@@ -145,6 +145,7 @@ amrex::Real Pulsar::m_depositbuffer_max = 0.;
 int Pulsar::m_pml_cubic_sigma;
 amrex::Real Pulsar::m_gammarad_real = 1.;
 amrex::Real Pulsar::m_gammarad_scaled = 1.;
+amrex::Real Pulsar::m_damping_strength = 4.;
 
 Pulsar::Pulsar ()
 {
@@ -378,6 +379,9 @@ Pulsar::ReadParameters () {
     pp.get("pml_cubic_sigma", m_pml_cubic_sigma);
     pp.query("gammarad_real", m_gammarad_real);
     pp.query("gammarad_scaled", m_gammarad_scaled);
+    pp.get("damping_strength", m_damping_strength);
+    amrex::Print() << " damping strength in PML " << m_damping_strength << "\n";
+    amrex::Print() << " cubic pml flag : " << m_pml_cubic_sigma  << "\n";
 }
 
 

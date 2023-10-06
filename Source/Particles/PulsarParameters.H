@@ -704,6 +704,7 @@ public:
     static int m_pml_cubic_sigma;
     static amrex::Real m_gammarad_real;
     static amrex::Real m_gammarad_scaled;
+    static amrex::Real m_damping_strength;
 private:
 };
 
