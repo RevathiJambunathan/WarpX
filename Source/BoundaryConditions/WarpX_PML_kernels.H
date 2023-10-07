@@ -54,8 +54,10 @@ void warpx_damp_pml_ex (int i, int j, int k, Array4<Real> const& Ex,
     // Exz
     if (sz == 0) {
         Ex(i,j,k,PMLComp::xz) *= sigma_star_fac_z[j-zlo];
+        Ex(i,j,k,PMLComp::xy) *= sigma_star_fac_z[j-zlo];
     } else {
         Ex(i,j,k,PMLComp::xz) *= sigma_fac_z[j-zlo];
+        Ex(i,j,k,PMLComp::xy) *= sigma_fac_z[j-zlo];
     }
 
 #elif defined(WARPX_DIM_3D)
@@ -78,15 +80,19 @@ void warpx_damp_pml_ex (int i, int j, int k, Array4<Real> const& Ex,
     // Exy
     if (sy == 0) {
         Ex(i,j,k,PMLComp::xy) *= sigma_star_fac_y[j-ylo];
+        Ex(i,j,k,PMLComp::xz) *= sigma_star_fac_y[j-ylo];
     } else {
         Ex(i,j,k,PMLComp::xy) *= sigma_fac_y[j-ylo];
+        Ex(i,j,k,PMLComp::xz) *= sigma_fac_y[j-ylo];
     }
 
     // Exz
     if (sz == 0) {
         Ex(i,j,k,PMLComp::xz) *= sigma_star_fac_z[k-zlo];
+        Ex(i,j,k,PMLComp::xy) *= sigma_star_fac_z[k-zlo];
     } else {
         Ex(i,j,k,PMLComp::xz) *= sigma_fac_z[k-zlo];
+        Ex(i,j,k,PMLComp::xy) *= sigma_fac_z[k-zlo];
     }
 
 #endif
@@ -121,15 +127,19 @@ void warpx_damp_pml_ey (int i, int j, int k, Array4<Real> const& Ey,
     // Eyx
     if (sx == 0) {
         Ey(i,j,k,PMLComp::yx) *= sigma_star_fac_x[i-xlo];
+        Ey(i,j,k,PMLComp::yz) *= sigma_star_fac_x[i-xlo];
     } else {
         Ey(i,j,k,PMLComp::yx) *= sigma_fac_x[i-xlo];
+        Ey(i,j,k,PMLComp::yz) *= sigma_fac_x[i-xlo];
     }
 
     // Eyz
     if (sz == 0) {
         Ey(i,j,k,PMLComp::yz) *= sigma_star_fac_z[j-zlo];
+        Ey(i,j,k,PMLComp::yx) *= sigma_star_fac_z[j-zlo];
     } else {
         Ey(i,j,k,PMLComp::yz) *= sigma_fac_z[j-zlo];
+        Ey(i,j,k,PMLComp::yx) *= sigma_fac_z[j-zlo];
     }
 
 #elif defined(WARPX_DIM_3D)
@@ -142,8 +152,10 @@ void warpx_damp_pml_ey (int i, int j, int k, Array4<Real> const& Ey,
     // Eyx
     if (sx == 0) {
         Ey(i,j,k,PMLComp::yx) *= sigma_star_fac_x[i-xlo];
+        Ey(i,j,k,PMLComp::yz) *= sigma_star_fac_x[i-xlo];
     } else {
         Ey(i,j,k,PMLComp::yx) *= sigma_fac_x[i-xlo];
+        Ey(i,j,k,PMLComp::yz) *= sigma_fac_x[i-xlo];
     }
 
     if (dive_cleaning)
@@ -159,8 +171,10 @@ void warpx_damp_pml_ey (int i, int j, int k, Array4<Real> const& Ey,
     // Eyz
     if (sz == 0) {
         Ey(i,j,k,PMLComp::yz) *= sigma_star_fac_z[k-zlo];
+        Ey(i,j,k,PMLComp::yx) *= sigma_star_fac_z[k-zlo];
     } else {
         Ey(i,j,k,PMLComp::yz) *= sigma_fac_z[k-zlo];
+        Ey(i,j,k,PMLComp::yx) *= sigma_fac_z[k-zlo];
     }
 
 #endif
@@ -195,8 +209,10 @@ void warpx_damp_pml_ez (int i, int j, int k, Array4<Real> const& Ez,
     // Ezx
     if (sx == 0) {
         Ez(i,j,k,PMLComp::zx) *= sigma_star_fac_x[i-xlo];
+        Ez(i,j,k,PMLComp::zy) *= sigma_star_fac_x[i-xlo];
     } else {
         Ez(i,j,k,PMLComp::zx) *= sigma_fac_x[i-xlo];
+        Ez(i,j,k,PMLComp::zy) *= sigma_fac_x[i-xlo];
     }
 
     if (dive_cleaning)
@@ -219,15 +235,19 @@ void warpx_damp_pml_ez (int i, int j, int k, Array4<Real> const& Ez,
     // Ezx
     if (sx == 0) {
         Ez(i,j,k,PMLComp::zx) *= sigma_star_fac_x[i-xlo];
+        Ez(i,j,k,PMLComp::zy) *= sigma_star_fac_x[i-xlo];
     } else {
         Ez(i,j,k,PMLComp::zx) *= sigma_fac_x[i-xlo];
+        Ez(i,j,k,PMLComp::zy) *= sigma_fac_x[i-xlo];
     }
 
     // Ezy
     if (sy == 0) {
         Ez(i,j,k,PMLComp::zy) *= sigma_star_fac_y[j-ylo];
+        Ez(i,j,k,PMLComp::zx) *= sigma_star_fac_y[j-ylo];
     } else {
         Ez(i,j,k,PMLComp::zy) *= sigma_fac_y[j-ylo];
+        Ez(i,j,k,PMLComp::zx) *= sigma_fac_y[j-ylo];
     }
 
     if (dive_cleaning)
@@ -282,8 +302,10 @@ void warpx_damp_pml_bx (int i, int j, int k, Array4<Real> const& Bx,
    // Bxz
    if (sz == 0) {
        Bx(i,j,k,PMLComp::xz) *= sigma_star_fac_z[j-zlo];
+       Bx(i,j,k,PMLComp::xy) *= sigma_star_fac_z[j-zlo];
    } else {
        Bx(i,j,k,PMLComp::xz) *= sigma_fac_z[j-zlo];
+       Bx(i,j,k,PMLComp::xy) *= sigma_fac_z[j-zlo];
    }
 
 #elif defined(WARPX_DIM_3D)
@@ -306,15 +328,19 @@ void warpx_damp_pml_bx (int i, int j, int k, Array4<Real> const& Bx,
    // Bxy
    if (sy == 0) {
        Bx(i,j,k,PMLComp::xy) *= sigma_star_fac_y[j-ylo];
+       Bx(i,j,k,PMLComp::xz) *= sigma_star_fac_y[j-ylo];
    } else {
        Bx(i,j,k,PMLComp::xy) *= sigma_fac_y[j-ylo];
+       Bx(i,j,k,PMLComp::xz) *= sigma_fac_y[j-ylo];
    }
 
    // Bxz
    if (sz == 0) {
        Bx(i,j,k,PMLComp::xz) *= sigma_star_fac_z[k-zlo];
+       Bx(i,j,k,PMLComp::xy) *= sigma_star_fac_z[k-zlo];
    } else {
        Bx(i,j,k,PMLComp::xz) *= sigma_fac_z[k-zlo];
+       Bx(i,j,k,PMLComp::xy) *= sigma_fac_z[k-zlo];
    }
 
 #endif
@@ -349,15 +375,19 @@ void warpx_damp_pml_by (int i, int j, int k, Array4<Real> const& By,
    // Byx
    if (sx == 0) {
        By(i,j,k,PMLComp::yx) *= sigma_star_fac_x[i-xlo];
+       By(i,j,k,PMLComp::yz) *= sigma_star_fac_x[i-xlo];
    } else {
        By(i,j,k,PMLComp::yx) *= sigma_fac_x[i-xlo];
+       By(i,j,k,PMLComp::yz) *= sigma_fac_x[i-xlo];
    }
 
    // Byz
    if (sz == 0) {
        By(i,j,k,PMLComp::yz) *= sigma_star_fac_z[j-zlo];
+       By(i,j,k,PMLComp::yx) *= sigma_star_fac_z[j-zlo];
    } else {
        By(i,j,k,PMLComp::yz) *= sigma_fac_z[j-zlo];
+       By(i,j,k,PMLComp::yx) *= sigma_fac_z[j-zlo];
    }
 
 #elif defined(WARPX_DIM_3D)
@@ -370,8 +400,10 @@ void warpx_damp_pml_by (int i, int j, int k, Array4<Real> const& By,
    // Byx
    if (sx == 0) {
        By(i,j,k,PMLComp::yx) *= sigma_star_fac_x[i-xlo];
+       By(i,j,k,PMLComp::yz) *= sigma_star_fac_x[i-xlo];
    } else {
        By(i,j,k,PMLComp::yx) *= sigma_fac_x[i-xlo];
+       By(i,j,k,PMLComp::yz) *= sigma_fac_x[i-xlo];
    }
 
     if (divb_cleaning)
@@ -387,8 +419,10 @@ void warpx_damp_pml_by (int i, int j, int k, Array4<Real> const& By,
    // Byz
    if (sz == 0) {
        By(i,j,k,PMLComp::yz) *= sigma_star_fac_z[k-zlo];
+       By(i,j,k,PMLComp::yx) *= sigma_star_fac_z[k-zlo];
    } else {
        By(i,j,k,PMLComp::yz) *= sigma_fac_z[k-zlo];
+       By(i,j,k,PMLComp::yx) *= sigma_fac_z[k-zlo];
    }
 
 #endif
@@ -423,8 +457,10 @@ void warpx_damp_pml_bz (int i, int j, int k, Array4<Real> const& Bz,
    // Bzx
    if (sx == 0) {
        Bz(i,j,k,PMLComp::zx) *= sigma_star_fac_x[i-xlo];
+       Bz(i,j,k,PMLComp::zy) *= sigma_star_fac_x[i-xlo];
    } else {
        Bz(i,j,k,PMLComp::zx) *= sigma_fac_x[i-xlo];
+       Bz(i,j,k,PMLComp::zy) *= sigma_fac_x[i-xlo];
    }
 
     if (divb_cleaning)
@@ -447,15 +483,19 @@ void warpx_damp_pml_bz (int i, int j, int k, Array4<Real> const& Bz,
    // Bzx
    if (sx == 0) {
        Bz(i,j,k,PMLComp::zx) *= sigma_star_fac_x[i-xlo];
+       Bz(i,j,k,PMLComp::zy) *= sigma_star_fac_x[i-xlo];
    } else {
        Bz(i,j,k,PMLComp::zx) *= sigma_fac_x[i-xlo];
+       Bz(i,j,k,PMLComp::zy) *= sigma_fac_x[i-xlo];
    }
 
    // Bzy
    if (sy == 0) {
        Bz(i,j,k,PMLComp::zy) *= sigma_star_fac_y[j-ylo];
+       Bz(i,j,k,PMLComp::zx) *= sigma_star_fac_y[j-ylo];
    } else {
        Bz(i,j,k,PMLComp::zy) *= sigma_fac_y[j-ylo];
+       Bz(i,j,k,PMLComp::zx) *= sigma_fac_y[j-ylo];
    }
 
     if (divb_cleaning)
