@@ -78,7 +78,7 @@ void UpdateMomentumBorisWithRadiationReaction(
 #ifdef PULSAR
     // To account for radiation reaction in the scaled pulsar simulation
     // we scale the ultra-relativistic term, gamma_n with gamma_real/gamma_scaled
-    const amrex::ParticleReal gamma_scale_fac = gammarad_real/gammarad_scaled;
+    const amrex::ParticleReal gamma_scale_fac = gammarad_scaled/gammarad_real;
     const amrex::ParticleReal coeff = gamma_scale_fac*gamma_scale_fac*gamma_n*gamma_n*(fl_q2-bdotE2);
 #else
     const amrex::ParticleReal coeff = gamma_n*gamma_n*(fl_q2-bdotE2);
