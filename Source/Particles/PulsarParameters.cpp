@@ -2082,6 +2082,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     m_injected_cell[lev]->setVal(0);
     m_sigma_inj_ring[lev]->setVal(0);
     m_pcount[lev]->setVal(0);
+    int use_FixedSigmaInput = m_use_FixedSigmaInput;
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         //InitializeGhost Cells also
@@ -2124,7 +2125,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
                                                    + (y-xc[1]) * (y-xc[1])
                                                    + (z-xc[2]) * (z-xc[2]));
-                        //amrex::Real Sigma_threshold = Sigma0_threshold;
+                        if (use_FixedSigmaInput == 1 && sigma(i,j,k) > Sigma0_threshold) {
                         //if (modify_Sigma0_threshold == 1) {
                         //    Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
                         //}
@@ -2133,8 +2134,13 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         //if (sigma(i,j,k) > Sigma_threshold ) {
                         //    injection_flag(i,j,k) = 1;
                         //}
-                        injection_flag(i,j,k) = 1;
-                        sigma_inj_ring(i, j, k) = sigma(i, j, k) * injection_flag(i,j,k);
+                            injection_flag(i,j,k) = 1;
+                            sigma_inj_ring(i, j, k) = sigma(i, j, k) * injection_flag(i,j,k);
+                        } else {
+                            injection_flag(i,j,k) = 1;
+                            sigma_inj_ring(i, j, k) = sigma(i, j, k) * injection_flag(i,j,k);
+
+                        }
                     }
                 }
             }
@@ -2150,7 +2156,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 
     int num_ppc_modified = 0;
     int minInjectionCells = 1;
-    if (m_use_FixedSigmaInput == 1 and m_usePCflagcount_minInjCell == 1)
+    if (m_use_FixedSigmaInput == 1 && m_usePCflagcount_minInjCell == 1)
     {
         minInjectionCells = m_totalpolarcap_cells * m_PCInjectionCellFraction;
         amrex::Print() << " total pc cells " << m_totalpolarcap_cells << " " << m_PCInjectionCellFraction << "\n";
@@ -2490,7 +2496,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 		amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
 		//amrex::Real n = amrex::Math::abs(rho(i,j,k))/q;
 		amrex::Real n = ndens(i,j,k,0)+ndens(i,j,k,1);
-		if ( (n > limit_GJ_factor * n_GJ) and limit_injection == 1 ) {
+		if ( (n > (limit_GJ_factor * n_GJ) ) && limit_injection == 1 ) {
 		    injected_cell(i,j,k) = 0;
 		    pcount(i,j,k) = 0;
 		}
