@@ -2125,7 +2125,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
                                                    + (y-xc[1]) * (y-xc[1])
                                                    + (z-xc[2]) * (z-xc[2]));
-                        if (use_FixedSigmaInput == 1 && sigma(i,j,k) > Sigma0_threshold) {
+                        if (use_FixedSigmaInput == 1) {
+                            if (sigma(i,j,k) > Sigma0_threshold) {
                         //if (modify_Sigma0_threshold == 1) {
                         //    Sigma_threshold = Sigma0_threshold * (Rstar/rad) * (Rstar/rad) * (Rstar/rad);
                         //}
@@ -2134,8 +2135,9 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         //if (sigma(i,j,k) > Sigma_threshold ) {
                         //    injection_flag(i,j,k) = 1;
                         //}
-                            injection_flag(i,j,k) = 1;
-                            sigma_inj_ring(i, j, k) = sigma(i, j, k) * injection_flag(i,j,k);
+                                injection_flag(i,j,k) = 1;
+                                sigma_inj_ring(i, j, k) = sigma(i, j, k) * injection_flag(i,j,k);
+                            }
                         } else {
                             injection_flag(i,j,k) = 1;
                             sigma_inj_ring(i, j, k) = sigma(i, j, k) * injection_flag(i,j,k);
