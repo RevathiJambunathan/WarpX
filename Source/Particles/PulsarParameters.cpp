@@ -615,6 +615,7 @@ void
 Pulsar::FlagCellsInInjectionRing(const int lev)
 {
     FlagCellsInInjectionRing(m_injection_ring[lev].get(), lev, m_cell_inject_rmin, m_cell_inject_rmax);
+    m_totalcells_injectionring = m_injection_ring[0]->sum();
 }
 
 void
@@ -661,6 +662,7 @@ Pulsar::FlagCellsInInjectionRing(
             }
         );
     }
+
 }
 
 
@@ -2263,11 +2265,16 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     }
     int PairPlasmaParticles = ParticlesToBeInjected - GJParticles;
     amrex::Real num_GJParticles = 0.;
-    if (TotalInjectionCells > 0) {
-//        num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
-//        num_ppc_PC_real = 0.67*ParticlesToBeInjected/m_totalpolarcap_cells;
-//        num_ppc_eq_real = 0.33*ParticlesToBeInjected/(TotalInjectionCells - m_totalpolarcap_cells);
-        num_GJParticles = GJParticles/TotalInjectionCells;
+    if (use_FixedSigmaInput == 1) {
+        num_GJParticles = GJParticles/(m_totalcells_injectionring);
+        amrex::Print() << " GJParticles : " << GJParticles << " total cells in inj ting " << m_totalcells_injectionring << " TotalInjCels " << TotalInjectionCells << " num gp particles per cell " << num_GJParticles << "\n";
+    } else {
+        if (TotalInjectionCells > 0) {
+//            num_ppc_modified_real = ParticlesToBeInjected/TotalInjectionCells;
+//            num_ppc_PC_real = 0.67*ParticlesToBeInjected/m_totalpolarcap_cells;
+//            num_ppc_eq_real = 0.33*ParticlesToBeInjected/(TotalInjectionCells - m_totalpolarcap_cells);
+            num_GJParticles = GJParticles/TotalInjectionCells;
+        }
     }
 //    int num_ppc_PC = static_cast<int>(num_ppc_PC_real);
 //    int num_ppc_eq = static_cast<int>(num_ppc_eq_real);
