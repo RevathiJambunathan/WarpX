@@ -610,6 +610,7 @@ public:
     /** Number of particles to be injected per cell per species */
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_pcount;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_ring;
+    amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_injection_ringCC;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_inj_ring;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_sigma_threshold;
     amrex::Vector<std::unique_ptr<amrex::MultiFab> > m_PC_flag;

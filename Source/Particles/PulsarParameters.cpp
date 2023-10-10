@@ -400,6 +400,7 @@ Pulsar::InitDataAtRestart ()
     m_sigma_reldiff.resize(nlevs_max);
     m_pcount.resize(nlevs_max);
     m_injection_ring.resize(nlevs_max);
+    m_injection_ringCC.resize(nlevs_max);
     m_sigma_inj_ring.resize(nlevs_max);
     m_sigma_threshold.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
@@ -429,6 +430,8 @@ Pulsar::InitDataAtRestart ()
                                 ba, dm, 1, ng_EB_alloc);
         m_injection_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 amrex::convert(ba,amrex::IntVect::TheNodeVector()), dm, 1, ng_EB_alloc);
+        m_injection_ringCC[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_threshold[lev] = std::make_unique<amrex::MultiFab>(
@@ -444,6 +447,7 @@ Pulsar::InitDataAtRestart ()
         m_sigma_reldiff[lev]->setVal(0._rt);
         m_pcount[lev]->setVal(0._rt);
         m_injection_ring[lev]->setVal(0._rt);
+        m_injection_ringCC[lev]->setVal(0._rt);
         m_sigma_inj_ring[lev]->setVal(0._rt);
         m_sigma_threshold[lev]->setVal(0._rt);
 
@@ -495,6 +499,7 @@ Pulsar::InitData ()
     m_injected_cell.resize(nlevs_max);
     m_pcount.resize(nlevs_max);
     m_injection_ring.resize(nlevs_max);
+    m_injection_ringCC.resize(nlevs_max);
     m_sigma_inj_ring.resize(nlevs_max);
     m_sigma_threshold.resize(nlevs_max);
     amrex::ParmParse pp_particles("particles");
@@ -524,6 +529,8 @@ Pulsar::InitData ()
                                 ba, dm, 1, ng_EB_alloc);
         m_injection_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 amrex::convert(ba,amrex::IntVect::TheNodeVector() ), dm, 1, ng_EB_alloc);
+        m_injection_ringCC[lev] = std::make_unique<amrex::MultiFab>(
+                                ba, dm, 1, ng_EB_alloc);
         m_sigma_inj_ring[lev] = std::make_unique<amrex::MultiFab>(
                                 ba, dm, 1, ng_EB_alloc);
         m_sigma_threshold[lev] = std::make_unique<amrex::MultiFab>(
@@ -538,6 +545,7 @@ Pulsar::InitData ()
         m_sigma_reldiff[lev]->setVal(0._rt);
         m_pcount[lev]->setVal(0._rt);
         m_injection_ring[lev]->setVal(0._rt);
+        m_injection_ringCC[lev]->setVal(0._rt);
         m_sigma_inj_ring[lev]->setVal(0._rt);
         m_sigma_threshold[lev]->setVal(0._rt);
 
@@ -2080,10 +2088,10 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     int ParticlesToBeInjected = TotalParticlesToBeInjected(scale_factor);
     amrex::Print() << " particles to be injected " << ParticlesToBeInjected <<"\n";
 
-    m_totalcells_injectionring = m_injection_ring[lev]->sum();
     m_injection_flag[lev]->setVal(0);
     m_injected_cell[lev]->setVal(0);
     m_sigma_inj_ring[lev]->setVal(0);
+    m_injection_ringCC[lev]->setVal(0._rt);
     m_pcount[lev]->setVal(0);
     int use_FixedSigmaInput = m_use_FixedSigmaInput;
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
@@ -2094,6 +2102,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
         amrex::Array4<amrex::Real> const& injected_cell = m_injected_cell[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& sigma = m_magnetization[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& inj_ring = m_injection_ring[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const& inj_ringCC = m_injection_ringCC[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_inj_ring = m_sigma_inj_ring[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& sigma_threshold_loc = m_sigma_threshold[lev]->array(mfi);
         amrex::Array4<amrex::Real> const& PCflag = m_PC_flag[lev]->array(mfi);
@@ -2128,6 +2137,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                         amrex::Real rad = std::sqrt( (x-xc[0]) * (x-xc[0])
                                                    + (y-xc[1]) * (y-xc[1])
                                                    + (z-xc[2]) * (z-xc[2]));
+                        inj_ringCC(i,j,k) = 1;
                         if (use_FixedSigmaInput == 1) {
                             if (sigma(i,j,k) > Sigma0_threshold) {
                         //if (modify_Sigma0_threshold == 1) {
@@ -2153,6 +2163,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     }
 
     // Total injection cells
+    m_totalcells_injectionring = m_injection_ringCC[lev]->sum();
     amrex::Real TotalInjectionCells = SumInjectionFlag();
     amrex::Print() << " total inj cells : " << TotalInjectionCells << "\n";
     m_sum_inj_magnetization = 1;
