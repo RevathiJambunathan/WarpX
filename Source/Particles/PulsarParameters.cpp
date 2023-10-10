@@ -146,6 +146,7 @@ int Pulsar::m_pml_cubic_sigma;
 amrex::Real Pulsar::m_gammarad_real = 1.;
 amrex::Real Pulsar::m_gammarad_scaled = 1.;
 amrex::Real Pulsar::m_damping_strength = 4.;
+amrex::Real Pulsar::m_totalcells_injectionring = 0;
 
 Pulsar::Pulsar ()
 {
@@ -615,7 +616,6 @@ void
 Pulsar::FlagCellsInInjectionRing(const int lev)
 {
     FlagCellsInInjectionRing(m_injection_ring[lev].get(), lev, m_cell_inject_rmin, m_cell_inject_rmax);
-    m_totalcells_injectionring = m_injection_ring[0]->sum();
 }
 
 void
@@ -2080,6 +2080,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     int ParticlesToBeInjected = TotalParticlesToBeInjected(scale_factor);
     amrex::Print() << " particles to be injected " << ParticlesToBeInjected <<"\n";
 
+    m_totalcells_injectionring = m_injection_ring[lev]->sum();
     m_injection_flag[lev]->setVal(0);
     m_injected_cell[lev]->setVal(0);
     m_sigma_inj_ring[lev]->setVal(0);
