@@ -707,6 +707,12 @@ public:
     static amrex::Real m_gammarad_scaled;
     static amrex::Real m_damping_strength;
     static amrex::Real m_totalcells_injectionring;
+    static int m_do_scale_re_RR;
+    static amrex::Real m_re_scaled;
+    static amrex::Real m_gammarad_RR;
+    static amrex::Real m_BLC;
+    static amrex::Real m_beta_rec_RR;
+    static amrex::Real m_re_scaledratio;
 private:
 };
 

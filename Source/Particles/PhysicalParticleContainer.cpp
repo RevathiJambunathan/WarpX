@@ -2854,8 +2854,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     amrex::Real BC_width = Pulsar::m_BC_width;
     amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
-    amrex::Real gammarad_real = Pulsar::m_gammarad_real;
-    amrex::Real gammarad_scaled = Pulsar::m_gammarad_scaled;
+    amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
 #endif
 
 #ifdef AMREX_USE_OMP
@@ -3020,7 +3019,7 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                                              Exp, Eyp, Ezp, Bxp,
                                                              Byp, Bzp, qp, m,
 #ifdef PULSAR
-                                                             gammarad_real, gammarad_scaled,
+                                                             re_scaledratio,
 #endif
                                                              dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
@@ -3164,8 +3163,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Real BC_width = Pulsar::m_BC_width;
     amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
-    amrex::Real gammarad_real = Pulsar::m_gammarad_real;
-    amrex::Real gammarad_scaled = Pulsar::m_gammarad_scaled;
+    amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
 #endif
 
 
@@ -3417,7 +3415,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                               t_chi_max,
 #endif
 #ifdef PULSAR
-                              gammarad_real, gammarad_scaled,
+                              re_scaledratio,
 #endif
                               dt);
 	   // PulsarPartDiagData);
@@ -3457,7 +3455,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                   m, q, pusher_algo, do_crr, do_copy,
                                   t_chi_max,
 #ifdef PULSAR
-                                  gammarad_real, gammarad_scaled,
+                                  re_scaledratio,
 #endif
                                   dt);
             }

@@ -147,6 +147,12 @@ amrex::Real Pulsar::m_gammarad_real = 1.;
 amrex::Real Pulsar::m_gammarad_scaled = 1.;
 amrex::Real Pulsar::m_damping_strength = 4.;
 amrex::Real Pulsar::m_totalcells_injectionring = 0;
+int Pulsar::m_do_scale_re_RR = 0;
+amrex::Real Pulsar::m_re_scaled;
+amrex::Real Pulsar::m_gammarad_RR;
+amrex::Real Pulsar::m_BLC;
+amrex::Real Pulsar::m_beta_rec_RR;
+amrex::Real Pulsar::m_re_scaledratio = 1.;
 
 Pulsar::Pulsar ()
 {
@@ -383,6 +389,19 @@ Pulsar::ReadParameters () {
     pp.get("damping_strength", m_damping_strength);
     amrex::Print() << " damping strength in PML " << m_damping_strength << "\n";
     amrex::Print() << " cubic pml flag : " << m_pml_cubic_sigma  << "\n";
+    // for radiation reaction with scaled electron radius
+    pp.get("scale_re_for_RR", m_do_scale_re_RR);
+    if (m_do_scale_re_RR == 1) {
+        pp.get("gammarad_RR",m_gammarad_RR); // gammathreshold at which re is scaled
+        pp.get("beta_rec_RR",m_beta_rec_RR); // reconnection rate
+        amrex::Real S = m_RLC/m_R_star; // Scale separation ratio
+        m_BLC = m_B_star/(S*S*S); // Bfield at LC
+        m_re_scaled = m_beta_rec_RR * (3./2.) * PhysConst::m_e * PhysConst::c
+                    / (m_gammarad_RR * m_gammarad_RR * PhysConst::q_e * m_BLC);
+        amrex::Print() << " re_scaled at gammarad : " << m_gammarad_RR << " is : " << m_re_scaled << "\n";
+        m_re_scaledratio = m_re_scaled / PhysConst::r_e;
+        amrex::Print() << " ratio : re_scaled/re : " << m_re_scaledratio << "\n";
+    }
 }
 
 

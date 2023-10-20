@@ -27,7 +27,7 @@ void UpdateMomentumBorisWithRadiationReaction(
     const amrex::ParticleReal Bx, const amrex::ParticleReal By, const amrex::ParticleReal Bz,
     const amrex::ParticleReal q, const amrex::ParticleReal m,
 #ifdef PULSAR
-    const amrex::Real gammarad_real, const amrex::Real gammarad_scaled,
+    const amrex::Real re_scaledratio,
 #endif
     const amrex::Real dt )
 {
@@ -75,18 +75,17 @@ void UpdateMomentumBorisWithRadiationReaction(
     //Calculation of auxiliary quantities
     const amrex::ParticleReal bdotE = (bx_n*Ex + by_n*Ey + bz_n*Ez);
     const amrex::ParticleReal bdotE2 = bdotE*bdotE;
-#ifdef PULSAR
-    // To account for radiation reaction in the scaled pulsar simulation
-    // we scale the ultra-relativistic term, gamma_n with gamma_real/gamma_scaled
-    const amrex::ParticleReal gamma_scale_fac = gammarad_scaled/gammarad_real;
-    const amrex::ParticleReal coeff = gamma_scale_fac*gamma_scale_fac*gamma_n*gamma_n*(fl_q2-bdotE2);
-#else
     const amrex::ParticleReal coeff = gamma_n*gamma_n*(fl_q2-bdotE2);
-#endif
 
     //Radiation reaction constant
     const amrex::ParticleReal q_over_mc = q/(m*PhysConst::c);
+#ifdef PULSAR
+    // For a scaled down system, we scale up radiation reaction drag force by upscaling re
+    // re_scaled is derived by equating the drag force and accelerating force, for a set gammarad < sigma_LC
+    const amrex::ParticleReal RRcoeff = (2.0_prt/3.0_prt)*PhysConst::r_e*re_scaledratio*q_over_mc*q_over_mc;
+#else
     const amrex::ParticleReal RRcoeff = (2.0_prt/3.0_prt)*PhysConst::r_e*q_over_mc*q_over_mc;
+#endif
 
     //Compute the components of the RR force
     const amrex::ParticleReal frx =

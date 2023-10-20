@@ -409,8 +409,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
             const auto do_crr = do_classical_radiation_reaction;
 
 #ifdef PULSAR
-            amrex::Real gammarad_real = Pulsar::m_gammarad_real;
-            amrex::Real gammarad_scaled = Pulsar::m_gammarad_scaled;
+            amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
 #endif
 
             amrex::ParallelFor( np, [=] AMREX_GPU_DEVICE (long ip)
@@ -441,7 +440,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                                              Exp, Eyp, Ezp, Bxp,
                                                              Byp, Bzp, qp, m,
 #ifdef PULSAR
-                                                             gammarad_real, gammarad_scaled,
+                                                             re_scaledratio,
 #endif
                                                              dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
