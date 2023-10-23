@@ -397,7 +397,7 @@ Pulsar::ReadParameters () {
         amrex::Real S = m_RLC/m_R_star; // Scale separation ratio
         m_BLC = m_B_star/(S*S*S); // Bfield at LC
         m_re_scaled = m_beta_rec_RR * (3./2.) * PhysConst::q_e
-                    / ( 4 * MatchConst::pi * PhysConst::ep0 * m_gammarad_RR * m_gammarad_RR * PhysConst::c * m_BLC);
+                    / ( 4 * MathConst::pi * PhysConst::ep0 * m_gammarad_RR * m_gammarad_RR * PhysConst::c * m_BLC);
         amrex::Print() << " re_scaled at gammarad : " << m_gammarad_RR << " is : " << m_re_scaled << "\n";
         m_re_scaledratio = m_re_scaled / PhysConst::r_e;
         amrex::Print() << " ratio : re_scaled/re : " << m_re_scaledratio << "\n";
