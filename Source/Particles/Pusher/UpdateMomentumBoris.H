@@ -61,6 +61,52 @@ void UpdateMomentumBoris(
     ux += econst*Ex;
     uy += econst*Ey;
     uz += econst*Ez;
+
+
+#ifdef PULSAR
+    // 1(a) Find drift velocity
+    B_sq = Bx*Bx + By*By + Bz*Bz
+    // only if E << B -- else fix with thesis
+    vx_drift = (Ey*Bz - Ez*By)/(B_sq);
+    vy_drift = (Ez*Bx - Ex*Bz)/(B_sq);
+    vz_drift = (Ex*By - Ey*Bx)/(B_sq);
+
+    // 1(b) unit vector along drift velocity
+    drift_mag = std::sqrt(vx_drift*vx_drift + vy_drift*vy_drift + vz_drift*vz_drift);
+    vxd_hat = vx_drift/drift_mag;
+    vyd_hat = vy_drift/drift_mag;
+    vzd_hat = vz_drift/drift_mag;
+
+    // 1(c) gamma_drift = gamma_o = 1 / (sqrt ( 1 - drift_mag^2/c^2) )
+    gamma_drift = 1._prt/std::sqrt( 1._prt - drift_mag*drift_mag*inv_c2);
+
+    // 2 Bfield transform
+    // By construction, only Bperp to drifting frame is non-zero
+    Bx_prime = gamma_drift * ( Bx - inv_c2 * (vy_drift*Ez - vz_drift*Ey) );
+    By_prime = gamma_drfit * ( By - inv_c2 * (vz_drift*Ex - vx_drift*Ez) );
+    Bz_prime = gamma_drift * ( Bz - inv_c2 * (vx_drift*Ey - vy_drift*Ex) ); 
+
+    Bprime_mag = std::sqrt(Bx_prime*Bx_prime + By_prime*By_prime + Bz_prime*Bz_prime);
+    Bxprime_hat = Bx_prime/Bprime_mag;
+    Byprime_hat = By_prime/Bprime_mag;
+    Bzprime_hat = Bz_prime/Bprime_mag;
+
+    // New u momentum in drift frame 
+    udotBprimehat = ux*Bxprime_hat + uy*Byprime_hat + uz*Bzprime_hat;
+    ux_new_prime = udotBprimehat * Bxprime_hat;
+    uy_new_prime = udotBprimehat * Byprime_hat;
+    uz_new_prime = udotBprimehat * Bzprime_hat;
+
+    // New u momentum in lab frame
+    gamma_new_prime = std::sqrt( 1._prt + inv_c2 * ( ux_new_prime*ux_new_prime
+                                                   + uy_new_prime*uy_new_prime
+                                                   + uz_new_prime*uz_new_prime ) )
+    ux = gamma_drift * ( ux_new_prime + gamma_new_prime * vx_drift);
+    uy = gamma_drift * ( uy_new_prime + gamma_new_prime * vy_drift);
+    uz = gamma_drift * ( uz_new_prime + gamma_new_prime * vz_drift);
+
+#endif
+
 }
 
 #endif // WARPX_PARTICLES_PUSHER_UPDATEMOMENTUM_BORIS_H_
