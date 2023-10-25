@@ -410,6 +410,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
 
 #ifdef PULSAR
             amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
+            int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
 #endif
 
             amrex::ParallelFor( np, [=] AMREX_GPU_DEVICE (long ip)
@@ -441,12 +442,17 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                                              Byp, Bzp, qp, m,
 #ifdef PULSAR
                                                              re_scaledratio,
+                                                             do_zero_uperpB_driftframe,
 #endif
                                                              dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
                     UpdateMomentumBoris( uxpp[ip], uypp[ip], uzpp[ip],
                                          Exp, Eyp, Ezp, Bxp,
-                                         Byp, Bzp, qp, m, dt);
+                                         Byp, Bzp, qp, m,
+#ifdef PULSAR
+                                         do_zero_uperpB_driftframe,
+#endif
+                                         dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Vay) {
                     UpdateMomentumVay( uxpp[ip], uypp[ip], uzpp[ip],
                                        Exp, Eyp, Ezp, Bxp,

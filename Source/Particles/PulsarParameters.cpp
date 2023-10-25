@@ -153,7 +153,7 @@ amrex::Real Pulsar::m_gammarad_RR;
 amrex::Real Pulsar::m_BLC;
 amrex::Real Pulsar::m_beta_rec_RR;
 amrex::Real Pulsar::m_re_scaledratio = 1.;
-int Pulsar::m_do_zero_uperpB_driftframe;
+int Pulsar::m_do_zero_uperpB_driftframe = 0;
 
 Pulsar::Pulsar ()
 {

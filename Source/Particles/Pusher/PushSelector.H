@@ -67,6 +67,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #endif
 #ifdef PULSAR
                     const amrex::Real re_scaledratio,
+                    const int do_zero_uperpB_driftframe,
 #endif
                     const amrex::Real dt, amrex::Real * PulsarDiag = nullptr)
 {
@@ -86,14 +87,18 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                                                          Ex, Ey, Ez, Bx,
                                                          By, Bz, qp, m,
 #ifdef PULSAR
-                                                         re_scaledratio,
+                                                         re_scaledratio, do_zero_uperpB_driftframe,
 #endif
                                                          dt);
             }
             else {
                 UpdateMomentumBoris( ux, uy, uz,
                                      Ex, Ey, Ez, Bx,
-                                     By, Bz, qp, m, dt);
+                                     By, Bz, qp, m,
+#ifdef PULSAR
+                                     do_zero_uperpB_driftframe,
+#endif
+                                     dt);
             }
             amrex::ParticleReal x, y, z;
             GetPosition(i, x, y, z);
@@ -107,7 +112,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                                                      Ex, Ey, Ez, Bx,
                                                      By, Bz, qp, m,
 #ifdef PULSAR
-                                                     re_scaledratio,
+                                                     re_scaledratio, do_zero_uperpB_driftframe,
 #endif
                                                      dt);
             amrex::ParticleReal x, y, z;
@@ -118,7 +123,11 @@ void doParticlePush(const GetParticlePosition& GetPosition,
     } else if (pusher_algo == ParticlePusherAlgo::Boris) {
         UpdateMomentumBoris( ux, uy, uz,
                              Ex, Ey, Ez, Bx,
-                             By, Bz, qp, m, dt, PulsarDiag);
+                             By, Bz, qp, m,
+#ifdef PULSAR
+                             do_zero_uperpB_driftframe,
+#endif
+                             dt);
         amrex::ParticleReal x, y, z;
         GetPosition(i, x, y, z);
         UpdatePosition(x, y, z, ux, uy, uz, dt );

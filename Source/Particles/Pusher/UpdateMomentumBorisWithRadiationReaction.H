@@ -28,6 +28,7 @@ void UpdateMomentumBorisWithRadiationReaction(
     const amrex::ParticleReal q, const amrex::ParticleReal m,
 #ifdef PULSAR
     const amrex::Real re_scaledratio,
+    const int do_zero_uperpB_driftframe,
 #endif
     const amrex::Real dt )
 {
@@ -46,7 +47,11 @@ void UpdateMomentumBorisWithRadiationReaction(
         ux, uy, uz,
         Ex, Ey, Ez,
         Bx, By, Bz,
-        q, m, dt );
+        q, m,
+#ifdef PULSAR
+        do_zero_uperpB_driftframe,
+#endif
+        dt );
 
     //Estimation of the normalized momentum at intermediate (integer) time
     const amrex::ParticleReal ux_n = (ux+ux_old)*0.5_prt;
