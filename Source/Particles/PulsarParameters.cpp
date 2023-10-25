@@ -153,6 +153,7 @@ amrex::Real Pulsar::m_gammarad_RR;
 amrex::Real Pulsar::m_BLC;
 amrex::Real Pulsar::m_beta_rec_RR;
 amrex::Real Pulsar::m_re_scaledratio = 1.;
+int Pulsar::m_do_zero_uperpB_driftframe;
 
 Pulsar::Pulsar ()
 {
@@ -403,6 +404,8 @@ Pulsar::ReadParameters () {
         m_re_scaledratio = m_re_scaled / PhysConst::r_e;
         amrex::Print() << " ratio : re_scaled/re : " << m_re_scaledratio << "\n";
     }
+    pp.get("do_zero_uperpB_driftframe",m_do_zero_uperpB_driftframe);
+    amrex::Print() << " do zero uperp B " << m_do_zero_uperpB_driftframe << "\n";
 }
 
 
