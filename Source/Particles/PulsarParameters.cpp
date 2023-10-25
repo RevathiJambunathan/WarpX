@@ -2410,8 +2410,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     ConvertCartesianToSphericalCoord(x, y, z, xc,
                                                      r, theta, phi);
                     amrex::Real q = 1.609e-19;
-                    //amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
-                    //amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
+                    amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
+                    amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
 		    //amrex::Real num_part_real = 0.;
 		    amrex::Real shifted_theta = theta - chi;
                     amrex::Real GJ_factor = amrex::Math::abs( 1. - 3. * std::cos(shifted_theta)*std::cos(shifted_theta));
@@ -2419,6 +2419,10 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     amrex::Real sigma_factor = sigma_inj_ring(i,j,k)/sum_magnetization;
                     amrex::Real num_part_cell = (num_GJParticles * GJ_factor) + (PairPlasmaParticles * sigma_factor);
                     //amrex::Real num_part_cell = num_ppc_modified_real * factor;
+                    if (use_injection_rate == 1) {
+		        amrex::Real GJ_inj_rate = n_GJ * dx_lev[0] * dx_lev[0] * 3.e8;
+		        num_part_cell = GJ_inj_rate * injection_fac * dt / particle_wt;
+                    }
                     int numpart_int = static_cast<int>(num_part_cell);
                     if (numpart_int == 0) {
                         amrex::Real r1 = amrex::Random(engine);
@@ -2458,12 +2462,12 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 		    //        pcount(i,j,k) = num_part + 1;
 		    //    }
 		    //}
-		    //if (density_thresholdfactor >= 0 ) {
-		    //    if ( amrex::Math::abs(rho_GJ) < (density_thresholdfactor * rho_GJ_fac) ) {
-		    //        pcount(i,j,k) = 0;
-		    //        injected_cell(i,j,k) = 0;
-		    //    }
-		    //}
+		    if (density_thresholdfactor >= 0 ) {
+		        if ( amrex::Math::abs(rho_GJ) < (density_thresholdfactor * rho_GJ_fac) ) {
+		            pcount(i,j,k) = 0;
+		            injected_cell(i,j,k) = 0;
+		        }
+		    }
 		    //if (density_thresholdfactor < 0 ) {
 		    //    if ( amrex::Math::abs(rho_GJ) < ( amrex::Math::abs(density_thresholdfactor) * rho_GJ_fac) ) {
                     //        rho_GJ = rho_GJ_fac * amrex::Math::abs(density_thresholdfactor);
