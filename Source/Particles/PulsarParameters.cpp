@@ -2413,12 +2413,12 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     ConvertCartesianToSphericalCoord(x, y, z, xc,
                                                      r, theta, phi);
                     amrex::Real q = 1.609e-19;
-                    amrex::Real rho_GJ = rho_GJ_fac * (1. - 3. * std::cos(theta) * std::cos(theta) );
-                    amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
 		    //amrex::Real num_part_real = 0.;
 		    amrex::Real shifted_theta = theta - chi;
                     amrex::Real GJ_factor = amrex::Math::abs( 1. - 3. * std::cos(shifted_theta)*std::cos(shifted_theta));
 		    if (GJ_factor < GJdensitythreshold) GJ_factor = GJdensitythreshold;
+                    amrex::Real rho_GJ = rho_GJ_fac * GJ_factor;
+                    amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
                     amrex::Real sigma_factor = sigma_inj_ring(i,j,k)/sum_magnetization;
                     amrex::Real num_part_cell = (num_GJParticles * GJ_factor) + (PairPlasmaParticles * sigma_factor);
                     //amrex::Real num_part_cell = num_ppc_modified_real * factor;
