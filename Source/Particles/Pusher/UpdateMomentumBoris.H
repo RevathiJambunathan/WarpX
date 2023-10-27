@@ -77,14 +77,16 @@ void UpdateMomentumBoris(
         amrex::Real EdotB = Ex*Bx + Ey*By + Ez*Bz;
         amrex::Real EdotB_sq = EdotB*EdotB;
 
-        amrex::Real Eprime_sq = 2._prt * EdotB_sq
-                  / ( (B_sq - E_sq) + std::sqrt( (B_sq - E_sq) * (B_sq - E_sq ) + 4._prt * EdotB_sq ) );
+        amrex::Real c2 = PhysConst::c*PhysConst::c;
+        amrex::Real Eprime_sq = 2._prt * EdotB_sq * c2
+                  / ( ( (B_sq * c2) - E_sq)
+                    + std::sqrt( ( (B_sq*c2) - E_sq) * ( (B_sq*c2) - E_sq ) + 4._prt * EdotB_sq * c2 ) );
 
         // only if E << B -- else fix with thesis
-        if ( (B_sq > 0. ) && ( std::sqrt(Eprime_sq) < std::sqrt(B_sq) ) ) {
-            amrex::Real vx_drift = (Ey*Bz - Ez*By)/(B_sq);
-            amrex::Real vy_drift = (Ez*Bx - Ex*Bz)/(B_sq);
-            amrex::Real vz_drift = (Ex*By - Ey*Bx)/(B_sq);
+        if ( (B_sq + Eprime_sq/c2) > 0 ) {
+            amrex::Real vx_drift = (Ey*Bz - Ez*By)/(B_sq + Eprime_sq/c2);
+            amrex::Real vy_drift = (Ez*Bx - Ex*Bz)/(B_sq + Eprime_sq/c2);
+            amrex::Real vz_drift = (Ex*By - Ey*Bx)/(B_sq + Eprime_sq/c2);
 
             // 1(b) unit vector along drift velocity
             amrex::Real drift_mag = std::sqrt(vx_drift*vx_drift + vy_drift*vy_drift + vz_drift*vz_drift);
