@@ -2331,6 +2331,9 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
     // fill pcounts and injected cell flag
     amrex::Real BulkVel = m_part_bulkVelocity;
     amrex::Real chi = m_Chi;
+    amrex::Real omega_ramp_time = m_omega_ramp_time;
+    amrex::Real omega = m_omega_star;
+    amrex::Real cur_time = warpx.gett_new(lev);
     for (amrex::MFIter mfi(*m_injection_flag[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& tb = mfi.tilebox(iv);
@@ -2415,8 +2418,22 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                                                      r, theta, phi);
                     amrex::Real q = 1.609e-19;
 		    //amrex::Real num_part_real = 0.;
-		    amrex::Real shifted_theta = theta - chi;
-                    amrex::Real GJ_factor = amrex::Math::abs( 1. - 3. * std::cos(shifted_theta)*std::cos(shifted_theta));
+		    amrex::Real c_theta = std::cos(theta);
+                    amrex::Real s_theta = std::sin(theta);
+		    amrex::Real s_chi = std::sin(chi);
+                    amrex::Real c_chi = std::cos(chi);
+                    // Instantaneous phase, psi = phi - Omega*t
+                    amrex::Real omega_t_integral;
+                    if (cur_time < omega_ramp_time) {
+                        omega_t_integral = omega * cur_time / 2._rt;
+                    } else {
+                        omega_t_integral = omega * (cur_time - omega_ramp_time) + omega * omega_ramp_time / 2.;
+                    }
+                    amrex::Real psi = phi - omega_t_integral;
+                    amrex::Real c_psi = std::cos(psi);
+                    amrex::Real fac1 = c_chi * (1. - 3.*c_theta*c_theta);
+                    amrex::Real fac2 = - 3._rt * s_chi * c_psi * s_theta * c_theta;
+                    amrex::Real GJ_factor = fac1 + fac2;
 		    if (GJ_factor < GJdensitythreshold) GJ_factor = GJdensitythreshold;
                     amrex::Real rho_GJ = rho_GJ_fac * GJ_factor;
                     amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
@@ -2542,8 +2559,23 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                 ConvertCartesianToSphericalCoord(x, y, z, xc,
                                                  r, theta, phi);
 		amrex::Real q = 1.609e-19;
-		amrex::Real shifted_theta = theta - chi;
-                amrex::Real GJ_factor = amrex::Math::abs( 1. - 3. * std::cos(shifted_theta)*std::cos(shifted_theta));
+                amrex::Real c_theta = std::cos(theta);
+                amrex::Real s_theta = std::sin(theta);
+                amrex::Real s_chi = std::sin(chi);
+                amrex::Real c_chi = std::cos(chi);
+                // Instantaneous phase, psi = phi - Omega*t
+                amrex::Real omega_t_integral;
+                if (cur_time < omega_ramp_time) {
+                    omega_t_integral = omega * cur_time / 2._rt;
+                } else {
+                    omega_t_integral = omega * (cur_time - omega_ramp_time) + omega * omega_ramp_time / 2.;
+                }
+                amrex::Real psi = phi - omega_t_integral;
+                amrex::Real c_psi = std::cos(psi);
+                amrex::Real fac1 = c_chi * (1. - 3.*c_theta*c_theta);
+                amrex::Real fac2 = - 3._rt * s_chi * c_psi * s_theta * c_theta;
+                amrex::Real GJ_factor = fac1 + fac2;
+
 		if (GJ_factor < GJdensitythreshold) GJ_factor = GJdensitythreshold;
                 amrex::Real rho_GJ = rho_GJ_fac * GJ_factor;
                 amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
