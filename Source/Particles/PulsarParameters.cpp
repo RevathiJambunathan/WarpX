@@ -2420,8 +2420,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 		    //amrex::Real num_part_real = 0.;
 		    amrex::Real c_theta = std::cos(theta);
                     amrex::Real s_theta = std::sin(theta);
-		    amrex::Real s_chi = std::sin(chi);
-                    amrex::Real c_chi = std::cos(chi);
+		    amrex::Real s_chi = std::sin(2.*chi);
+                    amrex::Real c_chi = std::cos(2.*chi);
                     // Instantaneous phase, psi = phi - Omega*t
                     amrex::Real omega_t_integral;
                     if (cur_time < omega_ramp_time) {
@@ -2433,8 +2433,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                     amrex::Real c_psi = std::cos(psi);
                     amrex::Real fac1 = c_chi * (1. - 3.*c_theta*c_theta);
                     amrex::Real fac2 = - 3._rt * s_chi * c_psi * s_theta * c_theta;
-                    amrex::Real GJ_factor = fac1 + fac2;
-		    if (GJ_factor < GJdensitythreshold) GJ_factor = GJdensitythreshold;
+                    amrex::Real GJ_factor = amrex::Math::abs( fac1 + fac2 );
+		    if ( GJ_factor < GJdensitythreshold) GJ_factor = GJdensitythreshold;
                     amrex::Real rho_GJ = rho_GJ_fac * GJ_factor;
                     amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
                     amrex::Real sigma_factor = sigma_inj_ring(i,j,k)/sum_magnetization;
@@ -2561,8 +2561,8 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
 		amrex::Real q = 1.609e-19;
                 amrex::Real c_theta = std::cos(theta);
                 amrex::Real s_theta = std::sin(theta);
-                amrex::Real s_chi = std::sin(chi);
-                amrex::Real c_chi = std::cos(chi);
+                amrex::Real s_chi = std::sin(2.*chi);
+                amrex::Real c_chi = std::cos(2.*chi);
                 // Instantaneous phase, psi = phi - Omega*t
                 amrex::Real omega_t_integral;
                 if (cur_time < omega_ramp_time) {
@@ -2574,8 +2574,7 @@ Pulsar::FlagCellsForInjectionWithPcounts ()
                 amrex::Real c_psi = std::cos(psi);
                 amrex::Real fac1 = c_chi * (1. - 3.*c_theta*c_theta);
                 amrex::Real fac2 = - 3._rt * s_chi * c_psi * s_theta * c_theta;
-                amrex::Real GJ_factor = fac1 + fac2;
-
+                amrex::Real GJ_factor = amrex::Math::abs(fac1 + fac2);
 		if (GJ_factor < GJdensitythreshold) GJ_factor = GJdensitythreshold;
                 amrex::Real rho_GJ = rho_GJ_fac * GJ_factor;
                 amrex::Real n_GJ = amrex::Math::abs(rho_GJ)/q;
