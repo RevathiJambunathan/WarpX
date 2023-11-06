@@ -20,6 +20,8 @@ void UpdateMomentumBoris(
     const amrex::ParticleReal q, const amrex::ParticleReal m,
 #ifdef PULSAR
     const int do_zero_uperpB_driftframe,
+    const amrex::ParticleReal r_p,
+    const amrex::Real rmax_zero_uperpB_driftframe,
 #endif
     const amrex::Real dt, amrex::Real * PulsarDiag = nullptr )
 {
@@ -68,7 +70,7 @@ void UpdateMomentumBoris(
 
 
 #ifdef PULSAR
-    if (do_zero_uperpB_driftframe) {
+    if (do_zero_uperpB_driftframe && (r_p < rmax_zero_uperpB_driftframe) ) {
         // 1(a) Find drift velocity
         amrex::Real B_sq = Bx*Bx + By*By + Bz*Bz;
 
@@ -83,14 +85,14 @@ void UpdateMomentumBoris(
                     + std::sqrt( ( (B_sq*c2) - E_sq) * ( (B_sq*c2) - E_sq ) + 4._prt * EdotB_sq * c2 ) );
 
         // only if E << B -- else fix with thesis
-        if ( (B_sq + Eprime_sq/c2) > 0 ) {
+        if ( (B_sq + Eprime_sq/c2) > 1.e-30 ) {
             amrex::Real vx_drift = (Ey*Bz - Ez*By)/(B_sq + Eprime_sq/c2);
             amrex::Real vy_drift = (Ez*Bx - Ex*Bz)/(B_sq + Eprime_sq/c2);
             amrex::Real vz_drift = (Ex*By - Ey*Bx)/(B_sq + Eprime_sq/c2);
 
             // 1(b) unit vector along drift velocity
             amrex::Real drift_mag = std::sqrt(vx_drift*vx_drift + vy_drift*vy_drift + vz_drift*vz_drift);
-            if (drift_mag < PhysConst::c) {
+            if (drift_mag < (0.99 * PhysConst::c) ) {
 	        amrex::Real vxd_hat = vx_drift/drift_mag;
                 amrex::Real vyd_hat = vy_drift/drift_mag;
                 amrex::Real vzd_hat = vz_drift/drift_mag;

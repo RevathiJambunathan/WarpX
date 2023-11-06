@@ -29,6 +29,8 @@ void UpdateMomentumBorisWithRadiationReaction(
 #ifdef PULSAR
     const amrex::Real re_scaledratio,
     const int do_zero_uperpB_driftframe,
+    const amrex::ParticleReal r_p,
+    const amrex::Real rmax_zero_uperpB_driftframe,
 #endif
     const amrex::Real dt )
 {
@@ -49,7 +51,7 @@ void UpdateMomentumBorisWithRadiationReaction(
         Bx, By, Bz,
         q, m,
 #ifdef PULSAR
-        do_zero_uperpB_driftframe,
+        do_zero_uperpB_driftframe, r_p, rmax_zero_uperpB_driftframe,
 #endif
         dt );
 

@@ -411,6 +411,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
 #ifdef PULSAR
             amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
             int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
+            amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
 #endif
 
             amrex::ParallelFor( np, [=] AMREX_GPU_DEVICE (long ip)
@@ -422,6 +423,9 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                 amrex::ParticleReal xp, yp, zp;
                 getPosition(ip, xp, yp, zp);
 
+#ifdef PULSAR
+                amrex::ParticleReal r_p = std::sqrt(xp*xp + yp*yp + zp*zp);
+#endif
                 amrex::ParticleReal Exp = 0._prt, Eyp = 0._prt, Ezp = 0._prt;
                 amrex::ParticleReal Bxp = 0._prt, Byp = 0._prt, Bzp = 0._prt;
 
@@ -442,7 +446,8 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                                              Byp, Bzp, qp, m,
 #ifdef PULSAR
                                                              re_scaledratio,
-                                                             do_zero_uperpB_driftframe,
+                                                             do_zero_uperpB_driftframe, r_p,
+                                                             rmax_zero_uperp_driftframe,
 #endif
                                                              dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
@@ -450,7 +455,8 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                          Exp, Eyp, Ezp, Bxp,
                                          Byp, Bzp, qp, m,
 #ifdef PULSAR
-                                         do_zero_uperpB_driftframe,
+                                         do_zero_uperpB_driftframe, r_p,
+                                         rmax_zero_uperp_driftframe,
 #endif
                                          dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Vay) {
