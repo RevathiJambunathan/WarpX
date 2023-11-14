@@ -29,6 +29,10 @@ void UpdateMomentumBoris(
 
     const amrex::ParticleReal econst = 0.5_prt*q*dt/m;
 
+#ifdef PULSAR
+    amrex::Real abs_u_pre = std::sqrt(ux*ux + uy*uy + uz*uz);
+#endif
+
     // First half-push for E
     ux += econst*Ex;
     uy += econst*Ey;
@@ -92,7 +96,7 @@ void UpdateMomentumBoris(
 
             // 1(b) unit vector along drift velocity
             amrex::Real drift_mag = std::sqrt(vx_drift*vx_drift + vy_drift*vy_drift + vz_drift*vz_drift);
-            if (drift_mag < (0.99 * PhysConst::c) ) {
+            if (drift_mag < (PhysConst::c) ) {
 	        amrex::Real vxd_hat = vx_drift/drift_mag;
                 amrex::Real vyd_hat = vy_drift/drift_mag;
                 amrex::Real vzd_hat = vz_drift/drift_mag;
@@ -124,6 +128,13 @@ void UpdateMomentumBoris(
                 ux = gamma_drift * ( ux_new_prime + gamma_new_prime * vx_drift);
                 uy = gamma_drift * ( uy_new_prime + gamma_new_prime * vy_drift);
                 uz = gamma_drift * ( uz_new_prime + gamma_new_prime * vz_drift);
+
+                // debugging
+                amrex::Real abs_u_post = std::sqrt(ux*ux + uy*uy + uz*uz);
+                if ( abs_u_post > abs_u_pre || (drift_mag > 0.99999999*PhysConst::c))
+                {
+                    printf(" premom = %e  postmom = %e  gammadrift = %e gammanewprime = %e B_sq = %e Eprime_sq = %e drift_mag = %e \n", abs_u_pre, abs_u_post, gamma_drift, gamma_new_prime, B_sq, Eprime_sq, drift_mag );
+                }
             }
         }
     }
