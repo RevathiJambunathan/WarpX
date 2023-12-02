@@ -92,7 +92,7 @@ void UpdateMomentumBorisWithRadiationReaction(
     //const amrex::ParticleReal RRcoeff = (2.0_prt/3.0_prt)*PhysConst::r_e*re_scaledratio*q_over_mc*q_over_mc;
     // Since we re-write FRR as f(re*re), the coefficient is 2/3*4*pi*eps * re*re/m
     // The division by m is because in WarpX, we update u = gamma*v
-    const amrex::ParticleReal re2 = PhysConst::re * PhysConst::re;
+    const amrex::ParticleReal re2 = PhysConst::r_e * PhysConst::r_e;
     const amrex::ParticleReal re2_scaled = re2 * re_scaledratio * re_scaledratio;
     const amrex::ParticleReal RRcoeff = (2.0_prt/3.0_prt)*4 * MathConst::pi * PhyConst::ep0 * re2_scaled/m;
 #else
