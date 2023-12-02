@@ -94,7 +94,7 @@ void UpdateMomentumBorisWithRadiationReaction(
     // The division by m is because in WarpX, we update u = gamma*v
     const amrex::ParticleReal re2 = PhysConst::r_e * PhysConst::r_e;
     const amrex::ParticleReal re2_scaled = re2 * re_scaledratio * re_scaledratio;
-    const amrex::ParticleReal RRcoeff = (2.0_prt/3.0_prt)*4 * MathConst::pi * PhyConst::ep0 * re2_scaled/m;
+    const amrex::ParticleReal RRcoeff = (2.0_prt/3.0_prt)*4 * MathConst::pi * PhysConst::ep0 * re2_scaled/m;
 #else
     const amrex::ParticleReal RRcoeff = (2.0_prt/3.0_prt)*PhysConst::r_e*q_over_mc*q_over_mc;
 #endif
