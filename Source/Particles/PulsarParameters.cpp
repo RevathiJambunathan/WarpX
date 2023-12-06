@@ -1601,6 +1601,8 @@ Pulsar::TuneSigma0Threshold (const int step)
     const int nspecies = species_names.size();
     amrex::Real total_weight_allspecies = 0._rt;
     amrex::Real dt = warpx.getdt(0);
+    amrex::Real NpSp0_injected = 0._rt;
+    amrex::Real NpSp1_injected = 0._rt;
     // Total number of cells that have injected particles
 //    amrex::Real total_injected_cells = SumInjectionFlag();
 //    // for debugging print injected cell data
@@ -1614,6 +1616,8 @@ Pulsar::TuneSigma0Threshold (const int step)
     for (int isp = 0; isp < nspecies; ++isp) {
         amrex::Real ws_total = 0._rt;
         auto& pc = warpx.GetPartContainer().GetParticleContainer(isp);
+        auto pcomps = pc.getParticleComps();
+        const int i_injectiontime = pcomps["injectiontime"] - PIdx::nattribs;
         amrex::ReduceOps<amrex::ReduceOpSum> reduce_ops;
         amrex::Real cur_time = warpx.gett_new(0);
         auto ws_r = amrex::ParticleReduce<
@@ -1624,7 +1628,7 @@ Pulsar::TuneSigma0Threshold (const int step)
                             auto p = ptd.getSuperParticle(i);
                             amrex::ParticleReal wp = p.rdata(PIdx::w);
                             amrex::Real filter = 0._rt;
-                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[0][i];
+                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[i_injectiontime][i];
                             if ( injectiontime < cur_time + 0.1_rt*dt and
                                  injectiontime > cur_time - 0.1_rt*dt ) {
                                 filter = 1._rt;
@@ -1635,6 +1639,32 @@ Pulsar::TuneSigma0Threshold (const int step)
                     );
         ws_total = amrex::get<0>(ws_r);
         amrex::ParallelDescriptor::ReduceRealSum(ws_total);
+
+        amrex::Real Ntotal = 0._rt;
+        auto Ns_r = amrex::ParticleReduce<
+                        amrex::ReduceData < amrex::ParticleReal> >
+                    ( pc,
+                        [=] AMREX_GPU_DEVICE (const PTDType &ptd, const int i) noexcept
+                        {
+                            auto p = ptd.getSuperParticle(i);
+                            amrex::ParticleReal wp = p.rdata(PIdx::w);
+                            amrex::Real filter = 0._rt;
+                            amrex::ParticleReal injectiontime = ptd.m_runtime_rdata[i_injectiontime][i];
+                            if ( injectiontime < cur_time + 0.1_rt*dt and
+                                 injectiontime > cur_time - 0.1_rt*dt ) {
+                                filter = 1._rt;
+                            }
+                            return (filter);
+                        },
+                        reduce_ops
+                    );
+        Ntotal = amrex::get<0>(Ns_r);
+        amrex::ParallelDescriptor::ReduceRealSum(Ntotal);
+        if (isp == 0) {
+            NpSp0_injected = Ntotal;
+        } else {
+            NpSp1_injected = Ntotal;
+        }
         total_weight_allspecies += ws_total;
     }
     // injection rate is sum of particle weight over all species per timestep
@@ -1825,6 +1855,7 @@ Pulsar::TuneSigma0Threshold (const int step)
 //    amrex::Real Btp = m_B_star * (c_chi * s_theta - s_chi * c_theta * c_psi);
 //    amrex::Real Bphip = m_B_star * s_chi * s_psi;
     amrex::AllPrintToFile("ROI") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt <<  " " << specified_injection_rate << " " << current_injection_rate  <<"\n";
+    amrex::AllPrintToFile("NpInjectedInStar") << warpx.getistep(0) << " " << warpx.gett_new(0) << " " << dt << " " << NpSp0_injected << " " << NpSp1_injected << "\n";
 }
 
 amrex::Real

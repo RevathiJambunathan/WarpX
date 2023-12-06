@@ -3172,6 +3172,18 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
     int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
     amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+
+    const int i_EnterInStar     = particle_comps["EnterInStar"];
+    const int i_EnterInMag      =  particle_comps["EnterInMag"];
+    const int i_TimeEnterInStar = particle_comps["TimeEnterInStar"];
+    const int i_TimeEnterInMag  = particle_comps["TimeEnterInMag"];
+    const int i_TimeReenterInMag = particle_comps["TimeReenterInMag"];
+
+    amrex::ParticleReal* runtimeattr_EnterInStar      = pti.GetAttribs(i_EnterInStar     ).dataPtr() + offset;
+    amrex::ParticleReal* runtimeattr_EnterInMag       = pti.GetAttribs(i_EnterInMag      ).dataPtr() + offset;
+    amrex::ParticleReal* runtimeattr_TimeEnterInStar  = pti.GetAttribs(i_TimeEnterInStar ).dataPtr() + offset;
+    amrex::ParticleReal* runtimeattr_TimeEnterInMag   = pti.GetAttribs(i_TimeEnterInMag  ).dataPtr() + offset;
+    amrex::ParticleReal* runtimeattr_TimeReenterInMag = pti.GetAttribs(i_TimeReenterInMag).dataPtr() + offset;
 #endif
 
 
@@ -3320,6 +3332,7 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                 amrex::ParticleReal r_p, theta_p, phi_p;
                 Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
                                                           r_p, theta_p, phi_p);
+                amrex::ParticleReal rp_old = r_p;
                 Pulsar::getExternalEBOnParticle(r_p, theta_p, phi_p, chi_data,
                                     AddExternalMonopoleOnly,
                                     AddPulsarVacuumEFields,
@@ -3466,6 +3479,28 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                   re_scaledratio, do_zero_uperpB_driftframe, r_p, rmax_zero_uperp_driftframe,
 #endif
                                   dt);
+            }
+        }
+#endif
+
+#ifdef PULSAR
+        getPosition(ip, xp, yp, zp);
+        Pulsar::ConvertCartesianToSphericalCoord( xp, yp, zp, center_star_arr,
+                                                          r_p, theta_p, phi_p);
+        amrex::Real rp_new = r_p;
+        if ( (rp_old > Rstar_data) && (rp_new < Rstar_data) ) {
+            // Particle has entered Rstar. SetFlag , EnterInStar = 1, and note time
+            runtimeattr_EnterInStar[ip] = 1.;
+            runtimeattr_TimeEnterInStar[ip] = cur_time;
+        }
+        if ( (rp_old < Rstar_data) && (rp_new > Rstar_data) ) {
+            // Particle has entered magnetosphere. Set Flag to EnterInMag = 1, and note time, TimeEnterInMag
+            runtimeattr_EnterInMag[ip] = 1.;
+            runtimeattr_TimeEnterInMag[ip] = cur_time;
+            if ( (runtimeattr_EnterInStar[ip] < 1.1) && (runtimeattr_EnterInStar[ip] > 0.9) ) {
+                // check if particle has a flag from previous time, EnterInStar == 1,
+                // then this particle is reentering mag, note time for re-entering mag TimeReenterInMag
+                runtimeattr_TimeReenterInMag[ip] = cur_time;
             }
         }
 #endif
@@ -3683,12 +3718,22 @@ void PhysicalParticleContainer::PulsarParticleRemoval ()
 {
     amrex::Gpu::DeviceScalar<int> sumParticles(0);
     amrex::Gpu::DeviceScalar<amrex::Real> sumWeight(0.0);
+    amrex::Gpu::DeviceScalar<int> sumParticlesRemovedAfterEnterStar(0);
+    amrex::Gpu::DeviceScalar<int> sumParticlesInStar(0);
+    amrex::Gpu::DeviceScalar<int> sumParticlesEnterInStar(0);
+    amrex::Gpu::DeviceScalar<int> sumParticlesEnterInMag(0);
+    amrex::Gpu::DeviceScalar<int> sumParticlesReenterInMag(0);
     const amrex::Real q = this->charge;
     amrex::GpuArray<amrex::Real, 3> center_star_arr;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
         center_star_arr[i_dim] = Pulsar::m_center_star[i_dim];
     }
     amrex::Real max_particle_absorption_radius = Pulsar::m_max_particle_absorption_radius;
+    amrex::Real Rstar_data = Pulsar::m_R_star;
+    auto& warpx = WarpX::GetInstance();
+    amrex::Real cur_time = warpx.gett_new(0);
+    amrex::Real dt = warpx.getdt(0);
+
     // Remove Particles From inside sphere
     for (int lev = 0; lev <= finestLevel(); lev++)
     {
@@ -3705,8 +3750,23 @@ void PhysicalParticleContainer::PulsarParticleRemoval ()
            auto& attribs = pti.GetAttribs();
            auto&  wp = attribs[PIdx::w];
            int* pSum_d = sumParticles.dataPtr();
+           int* pSumRemovedEnterInStar_d = sumParticlesRemovedAfterEnterStar.dataPtr();
+           int* pSumInStar_d = sumParticlesInStar.dataPtr();
+           int* pSumEnterInStar_d = sumParticlesEnterInStar.dataPtr();
+           int* pSumEnterInMag_d = sumParticlesEnterInMag.dataPtr();
+           int* pSumReenterInMag_d = sumParticlesReenterInMag.dataPtr();
            amrex::Real* wSum_d = sumWeight.dataPtr();
            amrex::Real* wp_d = wp.dataPtr();
+           const int i_EnterInStar      = particle_comps["EnterInStar"];
+           const int i_EnterInMag       = particle_comps["EnterInMag"];
+           const int i_TimeEnterInStar  = particle_comps["TimeEnterInStar"];
+           const int i_TimeEnterInMag   = particle_comps["TimeEnterInMag"];
+           const int i_TimeReenterInMag = particle_comps["TimeReenterInMag"];
+           amrex::ParticleReal* runtime_EnterInStar      = pti.GetAttribs(i_EnterInStar).dataPtr();
+           amrex::ParticleReal* runtime_EnterInMag       = pti.GetAttribs(i_EnterInMag).dataPtr();
+           amrex::ParticleReal* runtime_TimeReenterInMag = pti.GetAttribs(i_TimeReenterInMag).dataPtr();
+           amrex::ParticleReal* runtime_TimeEnterInStar  = pti.GetAttribs(i_TimeEnterInStar).dataPtr();
+           amrex::ParticleReal* runtime_TimeEnterInMag   = pti.GetAttribs(i_TimeEnterInMag).dataPtr();
 
            amrex::ParallelFor(pti.numParticles(),
                  [=] AMREX_GPU_DEVICE (long i) {
@@ -3715,22 +3775,58 @@ void PhysicalParticleContainer::PulsarParticleRemoval ()
                      Real r = std::sqrt((x-xc)*(x-xc)
                                       + (y-yc)*(y-yc)
                                       + (z-zc)*(z-zc));
+                     // flag particles to be deleted and count them
                      if (r <= (max_particle_absorption_radius)) {
                          pp[i].id() = -1;
                          // atomic add
                          int const unity = 1;
                          amrex::Gpu::Atomic::AddNoRet(pSum_d,unity);
                          amrex::Gpu::Atomic::AddNoRet(wSum_d,wp_d[i]);
+
+                         // check if flag for EnterInStar==1, and count how many deleted particles are from entering
+                         if ( (runtime_EnterInStar[i] < 1.1) && (runtime_EnterInStar[i] > 0.9)) {
+                             int const one = 1;
+                             amrex::Gpu::Atomic::AddNoRet(pSumRemovedEnterInStar_d, one);
+                         }
+                     }
+                     // Total Particles In Star
+                     if (r < Rstar_data) {
+                         int const unity = 1;
+                         amrex::Gpu::Atomic::AddNoRet(pSumInStar_d,unity);
+                     }
+
+                     //Count particles Entering Star in this timestep
+                     if ( (runtime_EnterInStar[i] < 1.1) && (runtime_EnterInStar[i] > 0.9)) {
+                         // Because cur time has been updated by the time we do this diagnostic
+                         if ( (runtime_TimeEnterInStar[i] < (cur_time - dt + 0.1 * dt) ) &&
+                              (runtime_TimeEnterInStar[i] > (cur_time - dt - 0.1 * dt) )) {
+                             int const unity = 1;
+                             amrex::Gpu::Atomic::AddNoRet(pSumEnterInStar_d,unity);
+                         }
+                     }
+
+                     // Counter particles entering magnetosphere in this timestep
+                     if ( (runtime_EnterInMag[i] < 1.1) && (runtime_EnterInMag[i] > 0.9) ) {
+                         if ( (runtime_TimeEnterInMag[i] < (cur_time - dt + 0.1 * dt) ) &&
+                              (runtime_TimeEnterInMag[i] > (cur_time - dt - 0.1 * dt) )) {
+                             int const unity = 1;
+                             amrex::Gpu::Atomic::AddNoRet(pSumEnterInMag_d,unity);
+                         }
+                         // How many particle entering the magnetosphere are re-entering
+                         if ( (runtime_TimeReenterInMag[i] < (cur_time - dt + 0.1 * dt) ) &&
+                              (runtime_TimeReenterInMag[i] > (cur_time - dt - 0.1 * dt) )) {
+                             int const unity = 1;
+                             amrex::Gpu::Atomic::AddNoRet(pSumReenterInMag_d,unity);
+                         }
                      }
            });
        }
        amrex::Gpu::synchronize();
    }
-   auto& warpx = WarpX::GetInstance();
    if (q > 0) {
-       amrex::AllPrintToFile("TotalPositronsEnteringStar") << warpx.gett_new(0) <<  " " << sumParticles.dataValue() << " " << sumWeight.dataValue() << "\n";
+       amrex::AllPrintToFile("TotalPositronsDeletedInStar") << warpx.getistep(0) << " " << warpx.gett_new(0) <<  " " << sumParticles.dataValue() << " " << sumWeight.dataValue() << " " << sumParticlesRemovedAfterEnterStar.dataValue() << " " << sumParticlesInStar.dataValue() << " " << sumParticlesEnterInStar.dataValue() << " " << sumParticlesEnterInMag.dataValue() << " " << sumParticlesReenterInMag.dataValue() << "\n";
    } else {
-       amrex::AllPrintToFile("TotalElectronsEnteringStar") << warpx.gett_new(0) << " " << sumParticles.dataValue() << " " << sumWeight.dataValue() << "\n";
+       amrex::AllPrintToFile("TotalElectronsDeletedInStar") << warpx.getistep(0) << " "<< warpx.gett_new(0) << " " << sumParticles.dataValue() << " " << sumWeight.dataValue() << " " << sumParticlesRemovedAfterEnterStar.dataValue() << " " << sumParticlesInStar.dataValue() << " " <<  sumParticlesEnterInStar.dataValue() << " " << sumParticlesEnterInMag.dataValue() << " " << sumParticlesReenterInMag.dataValue() << "\n";
    }
 
 }

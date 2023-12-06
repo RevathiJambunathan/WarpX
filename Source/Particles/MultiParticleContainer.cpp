@@ -2149,6 +2149,23 @@ MultiParticleContainer::PulsarPairInjection ()
                                                ,loc_has_breit_wheeler_sp2, p_optical_depth_BW_sp2
 #endif
                                                );
+                    continue;
+                }
+                if ( !((rad > pulsar_particle_inject_rmin) &&
+                       (rad < pulsar_particle_inject_rmax) ) ) {
+                    ZeroInitializeAndSetNegativeID(p_sp1, pa_sp1, ip
+#ifdef WARPX_QED
+                                               ,loc_has_quantum_sync_sp1, p_optical_depth_QSR_sp1
+                                               ,loc_has_breit_wheeler_sp1, p_optical_depth_BW_sp1
+#endif
+                                               );
+                    ZeroInitializeAndSetNegativeID(p_sp2, pa_sp2, ip
+#ifdef WARPX_QED
+                                               ,loc_has_quantum_sync_sp2, p_optical_depth_QSR_sp2
+                                               ,loc_has_breit_wheeler_sp2, p_optical_depth_BW_sp2
+#endif
+                                               );
+                    continue;
                 }
                 // Initialize particle velocity along the Bfield line
                 XDim3 u;
