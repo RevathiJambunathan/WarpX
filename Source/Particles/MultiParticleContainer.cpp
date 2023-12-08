@@ -2135,8 +2135,8 @@ MultiParticleContainer::PulsarPairInjection ()
                                                  + (pos.y-yc)*(pos.y-yc)
                                                  + (pos.z-zc)*(pos.z-zc));
                 if (rad > 0) theta_p = std::acos(amrex::Math::abs(pos.z-zc)/rad);
-                if (amrex::Math::abs(theta_p) > pulsar_removeparticle_theta_min*MathConst::pi/180. and
-                    amrex::Math::abs(theta_p) < pulsar_removeparticle_theta_max*MathConst::pi/180.) {
+                if ( (amrex::Math::abs(theta_p) > (pulsar_removeparticle_theta_min*MathConst::pi/180. )) &&
+                     (amrex::Math::abs(theta_p) < (pulsar_removeparticle_theta_max*MathConst::pi/180. ))) {
                     ZeroInitializeAndSetNegativeID(p_sp1, pa_sp1, ip
 #ifdef WARPX_QED
                                                ,loc_has_quantum_sync_sp1, p_optical_depth_QSR_sp1
