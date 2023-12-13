@@ -155,6 +155,7 @@ amrex::Real Pulsar::m_beta_rec_RR;
 amrex::Real Pulsar::m_re_scaledratio = 1.;
 int Pulsar::m_do_zero_uperpB_driftframe = 0;
 amrex::Real Pulsar::m_rmax_zero_uperpB_driftframe;
+amrex::Real Pulsar::m_init_vphi = 1;
 
 Pulsar::Pulsar ()
 {
@@ -408,6 +409,7 @@ Pulsar::ReadParameters () {
     pp.get("do_zero_uperpB_driftframe",m_do_zero_uperpB_driftframe);
     amrex::Print() << " do zero uperp B " << m_do_zero_uperpB_driftframe << "\n";
     pp.get("rmax_zero_uperpB_driftframe",m_rmax_zero_uperpB_driftframe);
+    pp.get("vphi_init", m_init_vphi);
 }
 
 

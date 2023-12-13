@@ -715,6 +715,7 @@ public:
     static amrex::Real m_re_scaledratio;
     static int m_do_zero_uperpB_driftframe;
     static amrex::Real m_rmax_zero_uperpB_driftframe;
+    static amrex::Real m_init_vphi;
 private:
 };
 

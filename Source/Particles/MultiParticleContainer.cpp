@@ -1836,6 +1836,13 @@ MultiParticleContainer::PulsarPairInjection ()
     amrex::MultiFab* By_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 1);
     amrex::MultiFab* Bz_mf = WarpX::GetInstance().get_pointer_Bfield_fp(lev, 2);
     amrex::Real particle_speed = Pulsar::m_part_bulkVelocity;
+    amrex::Real time = WarpX::GetInstance().gett_new(lev);
+    amrex::Real omega_star_data = Pulsar::m_omega_star;
+    amrex::Real ramp_omega_time_data = Pulsar::m_omega_ramp_time;
+    amrex::Real Bstar_data = Pulsar::m_B_star;
+    amrex::Real Rstar_data = Pulsar::m_R_star;
+    amrex::Real chi = Pulsar::m_Chi;
+    amrex::Real init_vphi = Pulsar::m_init_vphi;
 
     amrex::Geometry const & geom = WarpX::GetInstance().Geom(lev);
     const amrex::RealBox& part_realbox = geom.ProbDomain();
@@ -2168,33 +2175,56 @@ MultiParticleContainer::PulsarPairInjection ()
                     continue;
                 }
                 // Initialize particle velocity along the Bfield line
+                // Since B is introduced near the star, using the dipole expression to get Bfield.
+                amrex::Real rp, thetap, phip;
+                Pulsar::ConvertCartesianToSphericalCoord(pos.x, pos.y, pos.z, center_star_arr, rp, thetap, phip);
+                amrex::Real Br, Btheta, Bphi;
+                Pulsar::ExternalBFieldSpherical(rp, thetap, phip, chi, time, omega_star_data, ramp_omega_time_data, Bstar_data, Rstar_data, pulsar_dR_star, Br, Btheta, Bphi);
+                amrex::Real Bmag_poloidal = std::sqrt(Br*Br + Btheta*Btheta);
+                amrex::Real vr = particle_speed * (Br)/Bmag_poloidal;
+                amrex::Real vtheta = particle_speed * (Btheta)/Bmag_poloidal;
+                amrex::Real omega_inst = Pulsar::Omega(omega_star_data, time, ramp_omega_time_data);
+                amrex::Real vphi = 0.;
+                if (init_vphi > 0) {Rstar_data * omega_inst;}
                 XDim3 u;
-                amrex::Real Bx_cc = ( Bx(lo_tile_index[0]+i  , lo_tile_index[1]+j, lo_tile_index[2]+k)
-                                    + Bx(lo_tile_index[0]+i+1, lo_tile_index[1]+j, lo_tile_index[2]+k) )
-                                    / 2.0_rt;
-                amrex::Real By_cc = ( By(lo_tile_index[0]+i, lo_tile_index[1]+j  , lo_tile_index[2]+k)
-                                    + By(lo_tile_index[0]+i, lo_tile_index[1]+j+1, lo_tile_index[2]+k) )
-                                    / 2.0_rt;
-                amrex::Real Bz_cc = ( Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k  )
-                                    + Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k+1) )
-                                    / 2.0_rt;
-                amrex::Real B_mag = std::sqrt( Bx_cc * Bx_cc + By_cc*By_cc + Bz_cc*Bz_cc);
-                amrex::Real unit_Bx = Bx_cc/B_mag;
-                amrex::Real unit_By = By_cc/B_mag;
-                amrex::Real unit_Bz = Bz_cc/B_mag;
-                amrex::Real vx = particle_speed * unit_Bx;
-                amrex::Real vy = particle_speed * unit_By;
-                amrex::Real vz = particle_speed * unit_Bz;
-                amrex::Real gamma = 1._rt/std::sqrt(1._rt - (vx*vx + vy*vy + vz*vz));
+//                amrex::Real Bx_cc = ( Bx(lo_tile_index[0]+i  , lo_tile_index[1]+j, lo_tile_index[2]+k)
+//                                    + Bx(lo_tile_index[0]+i+1, lo_tile_index[1]+j, lo_tile_index[2]+k) )
+//                                    / 2.0_rt;
+//                amrex::Real By_cc = ( By(lo_tile_index[0]+i, lo_tile_index[1]+j  , lo_tile_index[2]+k)
+//                                    + By(lo_tile_index[0]+i, lo_tile_index[1]+j+1, lo_tile_index[2]+k) )
+//                                    / 2.0_rt;
+//                amrex::Real Bz_cc = ( Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k  )
+//                                    + Bz(lo_tile_index[0]+i, lo_tile_index[1]+j, lo_tile_index[2]+k+1) )
+//                                    / 2.0_rt;
+//                amrex::Real B_mag = std::sqrt( Bx_cc * Bx_cc + By_cc*By_cc + Bz_cc*Bz_cc);
+//                amrex::Real unit_Bx = Bx_cc/B_mag;
+//                amrex::Real unit_By = By_cc/B_mag;
+//                amrex::Real unit_Bz = Bz_cc/B_mag;
+//                amrex::Real vx = particle_speed * unit_Bx;
+//                amrex::Real vy = particle_speed * unit_By;
+//                amrex::Real vz = particle_speed * unit_Bz;
+//                amrex::Real gamma = 1._rt/std::sqrt(1._rt - (vx*vx + vy*vy + vz*vz));
+//                if (pos.z < center_star_arr[2]) {
+//                    u.x = -1._rt * gamma * vx;
+//                    u.y = -1._rt * gamma * vy;
+//                    u.z = -1._rt * gamma * vz;
+//                } else {
+//                    u.x = gamma * vx;
+//                    u.y = gamma * vy;
+//                    u.z = gamma * vz;
+//                }
                 if (pos.z < center_star_arr[2]) {
-                    u.x = -1._rt * gamma * vx;
-                    u.y = -1._rt * gamma * vy;
-                    u.z = -1._rt * gamma * vz;
-                } else {
-                    u.x = gamma * vx;
-                    u.y = gamma * vy;
-                    u.z = gamma * vz;
+                    vr = - 1._rt * vr;
+                    vtheta = - 1._rt * vtheta;
                 }
+                amrex::Real vx, vy, vz;
+                Pulsar::ConvertSphericalToCartesianXComponent(vr,vtheta,vphi,rp,thetap,phip,vx);
+                Pulsar::ConvertSphericalToCartesianYComponent(vr,vtheta,vphi,rp,thetap,phip,vy);
+                Pulsar::ConvertSphericalToCartesianZComponent(vr,vtheta,vphi,rp,thetap,phip,vz);
+                amrex::Real gamma = 1._rt/std::sqrt(1._rt - (vx*vx + vy*vy + vz*vz));
+                u.x = gamma * vx;
+                u.y = gamma * vy;
+                u.z = gamma * vz;
 
                 u.x *= PhysConst::c;
                 u.y *= PhysConst::c;
