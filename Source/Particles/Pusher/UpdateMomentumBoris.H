@@ -131,10 +131,6 @@ void UpdateMomentumBoris(
 
                 // debugging
                 amrex::Real abs_u_post = std::sqrt(ux*ux + uy*uy + uz*uz);
-                if ( abs_u_post > abs_u_pre || (drift_mag > 0.99999999*PhysConst::c))
-                {
-                    printf(" premom = %e  postmom = %e  gammadrift = %e gammanewprime = %e B_sq = %e Eprime_sq = %e drift_mag = %e \n", abs_u_pre, abs_u_post, gamma_drift, gamma_new_prime, B_sq, Eprime_sq, drift_mag );
-                }
             }
         }
     }
