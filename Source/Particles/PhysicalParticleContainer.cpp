@@ -2854,7 +2854,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     amrex::Real BC_width = Pulsar::m_BC_width;
     amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
-    amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
+    amrex::Real re_scaledratio = 1.;
+    if (cur_time > Pulsar::m_RR_start_time) { re_scaledratio = Pulsar::m_re_scaledratio;}
     int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
     amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
 #endif
@@ -3169,7 +3170,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Real BC_width = Pulsar::m_BC_width;
     amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
-    amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
+    amrex::Real re_scaledratio = 1.;
+    if (cur_time > Pulsar::m_RR_start_time) { re_scaledratio = Pulsar::m_re_scaledratio;}
     int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
     amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
 #endif
