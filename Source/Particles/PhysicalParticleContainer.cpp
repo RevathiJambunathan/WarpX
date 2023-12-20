@@ -2856,8 +2856,12 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
     amrex::Real re_scaledratio = 1.;
     if (cur_time > Pulsar::m_RR_start_time) { re_scaledratio = Pulsar::m_re_scaledratio;}
-    int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
-    amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+    int do_zero_uperpB_driftframe = 0;
+    amrex::Real rmax_zero_uperp_driftframe = 0.;
+    if (cur_time > Pulsar::m_zerouperp_start_time) {
+        do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
+        rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+    }
 #endif
 
 #ifdef AMREX_USE_OMP
@@ -3172,8 +3176,12 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
     amrex::Real re_scaledratio = 1.;
     if (cur_time > Pulsar::m_RR_start_time) { re_scaledratio = Pulsar::m_re_scaledratio;}
-    int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
-    amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+    int do_zero_uperpB_driftframe = 0;
+    amrex::Real rmax_zero_uperp_driftframe = 0.;
+    if (cur_time > Pulsar::m_zerouperp_start_time) {
+        do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
+        rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+    }
 #endif
 
 
