@@ -713,6 +713,7 @@ public:
     static amrex::Real m_BLC;
     static amrex::Real m_beta_rec_RR;
     static amrex::Real m_re_scaledratio;
+    static amrex::Real m_scaledRR_rmax;
     static int m_do_zero_uperpB_driftframe;
     static amrex::Real m_rmax_zero_uperpB_driftframe;
     static amrex::Real m_RR_start_time;

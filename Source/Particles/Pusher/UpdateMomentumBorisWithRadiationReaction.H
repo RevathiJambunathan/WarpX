@@ -28,6 +28,7 @@ void UpdateMomentumBorisWithRadiationReaction(
     const amrex::ParticleReal q, const amrex::ParticleReal m,
 #ifdef PULSAR
     const amrex::Real re_scaledratio,
+    const amrex::Real scaledRR_rmax,
     const int do_zero_uperpB_driftframe,
     const amrex::ParticleReal r_p,
     const amrex::Real rmax_zero_uperpB_driftframe,
@@ -108,9 +109,11 @@ void UpdateMomentumBorisWithRadiationReaction(
         RRcoeff*(PhysConst::c*(flx_q*By - fly_q*Bx) + bdotE*Ez - coeff*bz_n);
 
     //Update momentum using the RR force
-    ux += frx*dt;
-    uy += fry*dt;
-    uz += frz*dt;
+    if (r_p < scaledRR_rmax) {
+        ux += frx*dt;
+        uy += fry*dt;
+        uz += frz*dt;
+    }
 }
 
 #endif // WARPX_PARTICLES_PUSHER_UPDATEMOMENTUM_BORIS_WITHRR_H_

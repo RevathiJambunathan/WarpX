@@ -157,6 +157,7 @@ int Pulsar::m_do_zero_uperpB_driftframe = 0;
 amrex::Real Pulsar::m_rmax_zero_uperpB_driftframe;
 amrex::Real Pulsar::m_RR_start_time;
 amrex::Real Pulsar::m_zerouperp_start_time;
+amrex::Real Pulsar::m_scaledRR_rmax;
 
 Pulsar::Pulsar ()
 {
@@ -412,6 +413,7 @@ Pulsar::ReadParameters () {
     pp.get("rmax_zero_uperpB_driftframe",m_rmax_zero_uperpB_driftframe);
     pp.get("RR_start_time",m_RR_start_time);
     pp.get("zerouperp_start_time",m_zerouperp_start_time);
+    pp.get("scaledRR_rmax",m_scaledRR_rmax);
 }
 
 

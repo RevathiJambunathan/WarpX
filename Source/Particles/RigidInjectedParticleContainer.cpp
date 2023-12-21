@@ -410,6 +410,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
 
 #ifdef PULSAR
             amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
+            amrex::Real scaledRR_rmax = Pulsar::m_scaledRR_rmax;
             int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
             amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
 #endif
@@ -445,7 +446,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                                              Exp, Eyp, Ezp, Bxp,
                                                              Byp, Bzp, qp, m,
 #ifdef PULSAR
-                                                             re_scaledratio,
+                                                             re_scaledratio, scaledRR_rmax,
                                                              do_zero_uperpB_driftframe, r_p,
                                                              rmax_zero_uperp_driftframe,
 #endif

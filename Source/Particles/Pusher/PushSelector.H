@@ -67,6 +67,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #endif
 #ifdef PULSAR
                     const amrex::Real re_scaledratio,
+                    const amrex::Real scaledRR_rmax,
                     const int do_zero_uperpB_driftframe,
                     const amrex::ParticleReal r_p,
                     const amrex::Real rmax_zero_uperp_driftframe,
@@ -94,7 +95,8 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                                                          Ex, Ey, Ez, Bx,
                                                          By, Bz, qp, m,
 #ifdef PULSAR
-                                                         re_scaledratio, do_zero_uperpB_driftframe, r_p,
+                                                         re_scaledratio, scaledRR_rmax,
+                                                         do_zero_uperpB_driftframe, r_p,
                                                          rmax_zero_uperp_driftframe,
 #endif
                                                          dt);
@@ -126,7 +128,8 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                                                      Ex, Ey, Ez, Bx,
                                                      By, Bz, qp, m,
 #ifdef PULSAR
-                                                     re_scaledratio, do_zero_uperpB_driftframe, r_p,
+                                                     re_scaledratio, scaledRR_rmax,
+                                                     do_zero_uperpB_driftframe, r_p,
                                                      rmax_zero_uperp_driftframe,
 #endif
                                                      dt);
