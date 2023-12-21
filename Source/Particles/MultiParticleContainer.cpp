@@ -2151,8 +2151,8 @@ MultiParticleContainer::PulsarPairInjection ()
                                                );
                     continue;
                 }
-                if ( !((rad > pulsar_particle_inject_rmin) &&
-                       (rad < pulsar_particle_inject_rmax) ) ) {
+                if ( ! ( ( rad > pulsar_particle_inject_rmin) &&
+                         ( rad < pulsar_particle_inject_rmax) )) {
                     ZeroInitializeAndSetNegativeID(p_sp1, pa_sp1, ip
 #ifdef WARPX_QED
                                                ,loc_has_quantum_sync_sp1, p_optical_depth_QSR_sp1

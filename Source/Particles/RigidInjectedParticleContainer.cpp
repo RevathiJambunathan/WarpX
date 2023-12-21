@@ -410,8 +410,11 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
 
 #ifdef PULSAR
             amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
+            amrex::Real scaledRR_rmax = Pulsar::m_scaledRR_rmax;
             int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
             amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+            amrex::Real dtheta = Pulsar::m_zerouperp_dtheta;
+            amrex::Real chi_data = Pulsar::m_Chi;
 #endif
 
             amrex::ParallelFor( np, [=] AMREX_GPU_DEVICE (long ip)
@@ -424,7 +427,9 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                 getPosition(ip, xp, yp, zp);
 
 #ifdef PULSAR
+                // RigidParticleContainer not used for Pulsars.
                 amrex::ParticleReal r_p = std::sqrt(xp*xp + yp*yp + zp*zp);
+                amrex::ParticleReal theta_p = 0.;
 #endif
                 amrex::ParticleReal Exp = 0._prt, Eyp = 0._prt, Ezp = 0._prt;
                 amrex::ParticleReal Bxp = 0._prt, Byp = 0._prt, Bzp = 0._prt;
@@ -445,8 +450,9 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                                              Exp, Eyp, Ezp, Bxp,
                                                              Byp, Bzp, qp, m,
 #ifdef PULSAR
-                                                             re_scaledratio,
+                                                             re_scaledratio, scaledRR_rmax,
                                                              do_zero_uperpB_driftframe, r_p,
+                                                             theta_p, dtheta, chi_data,
                                                              rmax_zero_uperp_driftframe,
 #endif
                                                              dt);
@@ -456,6 +462,7 @@ RigidInjectedParticleContainer::PushP (int lev, Real dt,
                                          Byp, Bzp, qp, m,
 #ifdef PULSAR
                                          do_zero_uperpB_driftframe, r_p,
+                                         theta_p, dtheta, chi_data,
                                          rmax_zero_uperp_driftframe,
 #endif
                                          dt);

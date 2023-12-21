@@ -67,8 +67,12 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #endif
 #ifdef PULSAR
                     const amrex::Real re_scaledratio,
+                    const amrex::Real scaledRR_rmax,
                     const int do_zero_uperpB_driftframe,
                     const amrex::ParticleReal r_p,
+                    const amrex::ParticleReal theta_p,
+                    const amrex::Real dtheta,
+                    const amrex::Real chi_data,
                     const amrex::Real rmax_zero_uperp_driftframe,
 #endif
                     const amrex::Real dt, amrex::Real * PulsarDiag = nullptr)
@@ -94,7 +98,9 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                                                          Ex, Ey, Ez, Bx,
                                                          By, Bz, qp, m,
 #ifdef PULSAR
-                                                         re_scaledratio, do_zero_uperpB_driftframe, r_p,
+                                                         re_scaledratio, scaledRR_rmax,
+                                                         do_zero_uperpB_driftframe, r_p,
+                                                         theta_p, dtheta, chi_data,
                                                          rmax_zero_uperp_driftframe,
 #endif
                                                          dt);
@@ -105,6 +111,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                                      By, Bz, qp, m,
 #ifdef PULSAR
                                      do_zero_uperpB_driftframe, r_p,
+                                     theta_p, dtheta, chi_data,
                                      rmax_zero_uperp_driftframe,
 #endif
                                      dt);
@@ -118,12 +125,6 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #endif
             UpdatePosition(x, y, z, ux, uy, uz, dt );
             SetPosition(i, x, y, z);
-#ifdef PULSAR
-            if ( std::sqrt(x*x + y*y + z*z) > 125200 )
-            {
-//                printf(" ux_pre = %e  uy_pre = %e  uz_pre = %e ux_post = %e uy_post = %e uz_post= %e x_pre = %f y_pre=%f z_pre=%f x=%f y=%f z=%f \n", ux_pre, uy_pre, uz_pre, ux, uy, uz, x_pre, y_pre, z_pre, x, y, z );
-            }
-#endif
         } else
 #endif
         {
@@ -132,7 +133,9 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                                                      Ex, Ey, Ez, Bx,
                                                      By, Bz, qp, m,
 #ifdef PULSAR
-                                                     re_scaledratio, do_zero_uperpB_driftframe, r_p,
+                                                     re_scaledratio, scaledRR_rmax,
+                                                     do_zero_uperpB_driftframe, r_p,
+                                                     theta_p, dtheta, chi_data,
                                                      rmax_zero_uperp_driftframe,
 #endif
                                                      dt);
@@ -147,6 +150,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                              By, Bz, qp, m,
 #ifdef PULSAR
                              do_zero_uperpB_driftframe, r_p,
+                             theta_p, dtheta, chi_data,
                              rmax_zero_uperp_driftframe,
 #endif
                              dt);
@@ -159,12 +163,6 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #endif
         UpdatePosition(x, y, z, ux, uy, uz, dt );
         SetPosition(i, x, y, z);
-#ifdef PULSAR
-        if ( std::sqrt(x*x + y*y + z*z) > 125200 )
-        {
-//            printf(" ux_pre = %e  uy_pre = %e  uz_pre = %e ux_post = %e uy_post = %e uz_post= %e x_pre = %f y_pre=%f z_pre=%f x=%f y=%f z=%f \n", ux_pre, uy_pre, uz_pre, ux, uy, uz, x_pre, y_pre, z_pre, x, y, z );
-        }
-#endif
     } else if (pusher_algo == ParticlePusherAlgo::Vay) {
         UpdateMomentumVay( ux, uy, uz,
                            Ex, Ey, Ez, Bx,

@@ -2854,9 +2854,18 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
     amrex::Real BC_width = Pulsar::m_BC_width;
     amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
-    amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
-    int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
-    amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+    amrex::Real re_scaledratio = 1.;
+    amrex::Real scaledRR_rmax = Pulsar::m_scaledRR_rmax;
+    if (cur_time > Pulsar::m_RR_start_time) {
+        re_scaledratio = Pulsar::m_re_scaledratio;
+    }
+    int do_zero_uperpB_driftframe = 0;
+    amrex::Real rmax_zero_uperp_driftframe = 0.;
+    amrex::Real dtheta = Pulsar::m_zerouperp_dtheta;
+    if (cur_time > Pulsar::m_zerouperp_start_time) {
+        do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
+        rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+    }
 #endif
 
 #ifdef AMREX_USE_OMP
@@ -3021,7 +3030,10 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                                              Exp, Eyp, Ezp, Bxp,
                                                              Byp, Bzp, qp, m,
 #ifdef PULSAR
-                                                             re_scaledratio, do_zero_uperpB_driftframe, r_p, rmax_zero_uperp_driftframe,
+                                                             re_scaledratio, scaledRR_rmax,
+                                                             do_zero_uperpB_driftframe, r_p,
+                                                             theta_p, dtheta, chi_data,
+                                                             rmax_zero_uperp_driftframe,
 #endif
                                                              dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Boris) {
@@ -3031,7 +3043,8 @@ PhysicalParticleContainer::PushP (int lev, Real dt,
                                          Exp, Eyp, Ezp, Bxp,
                                          Byp, Bzp, qp, m,
 #ifdef PULSAR
-                                         do_zero_uperpB_driftframe, r_p, rmax_zero_uperp_driftframe,
+                                         do_zero_uperpB_driftframe, r_p,
+                                         theta_p, dtheta, chi_data, rmax_zero_uperp_driftframe,
 #endif
                                          dt);
                 } else if (pusher_algo == ParticlePusherAlgo::Vay) {
@@ -3169,9 +3182,6 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::Real BC_width = Pulsar::m_BC_width;
     amrex::Real gather_buffer_boxmin = Pulsar::m_gatherbuffer_min;
     amrex::Real gather_buffer_boxmax = Pulsar::m_gatherbuffer_max;
-    amrex::Real re_scaledratio = Pulsar::m_re_scaledratio;
-    int do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
-    amrex::Real rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
 
     const int i_EnterInStar     = particle_comps["EnterInStar"];
     const int i_EnterInMag      =  particle_comps["EnterInMag"];
@@ -3184,6 +3194,16 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
     amrex::ParticleReal* runtimeattr_TimeEnterInStar  = pti.GetAttribs(i_TimeEnterInStar ).dataPtr() + offset;
     amrex::ParticleReal* runtimeattr_TimeEnterInMag   = pti.GetAttribs(i_TimeEnterInMag  ).dataPtr() + offset;
     amrex::ParticleReal* runtimeattr_TimeReenterInMag = pti.GetAttribs(i_TimeReenterInMag).dataPtr() + offset;
+    amrex::Real re_scaledratio = 1.;
+    amrex::Real scaledRR_rmax = Pulsar::m_scaledRR_rmax;
+    if (cur_time > Pulsar::m_RR_start_time) { re_scaledratio = Pulsar::m_re_scaledratio;}
+    int do_zero_uperpB_driftframe = 0;
+    amrex::Real rmax_zero_uperp_driftframe = 0.;
+    amrex::Real dtheta = Pulsar::m_zerouperp_dtheta;
+    if (cur_time > Pulsar::m_zerouperp_start_time) {
+        do_zero_uperpB_driftframe = Pulsar::m_do_zero_uperpB_driftframe;
+        rmax_zero_uperp_driftframe = Pulsar::m_rmax_zero_uperpB_driftframe;
+    }
 #endif
 
 
@@ -3436,7 +3456,8 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                               t_chi_max,
 #endif
 #ifdef PULSAR
-                              re_scaledratio, do_zero_uperpB_driftframe, r_p, rmax_zero_uperp_driftframe,
+                              re_scaledratio, scaledRR_rmax,
+                              do_zero_uperpB_driftframe, r_p, theta_p, dtheta, chi_data, rmax_zero_uperp_driftframe,
 #endif
                               dt);
 	   // PulsarPartDiagData);
@@ -3476,7 +3497,9 @@ PhysicalParticleContainer::PushPX (WarpXParIter& pti,
                                   m, q, pusher_algo, do_crr, do_copy,
                                   t_chi_max,
 #ifdef PULSAR
-                                  re_scaledratio, do_zero_uperpB_driftframe, r_p, rmax_zero_uperp_driftframe,
+                                  re_scaledratio, scaledRR_rmax,
+                                  do_zero_uperpB_driftframe, r_p,
+                                  theta_p, dtheta, chi_data, rmax_zero_uperp_driftframe,
 #endif
                                   dt);
             }

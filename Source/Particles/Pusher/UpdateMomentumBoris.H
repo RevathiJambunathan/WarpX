@@ -21,6 +21,9 @@ void UpdateMomentumBoris(
 #ifdef PULSAR
     const int do_zero_uperpB_driftframe,
     const amrex::ParticleReal r_p,
+    const amrex::ParticleReal theta_p,
+    const amrex::Real dtheta,
+    const amrex::Real chi_data,
     const amrex::Real rmax_zero_uperpB_driftframe,
 #endif
     const amrex::Real dt, amrex::Real * PulsarDiag = nullptr )
@@ -75,68 +78,67 @@ void UpdateMomentumBoris(
 
 #ifdef PULSAR
     if (do_zero_uperpB_driftframe && (r_p < rmax_zero_uperpB_driftframe) ) {
-        // 1(a) Find drift velocity
-        amrex::Real B_sq = Bx*Bx + By*By + Bz*Bz;
+        // equator is at 90, chi_data accounts for obliquity
+        amrex::Real theta_min = (90. + chi_data - dtheta) * MathConst::pi / 180.;
+        amrex::Real theta_max = (90. + chi_data + dtheta) * MathConst::pi / 180.;
+        if ( (theta_p > theta_min) && (theta_p < theta_max) ) {
+            // 1(a) Find drift velocity
+            amrex::Real B_sq = Bx*Bx + By*By + Bz*Bz;
 
-        amrex::Real E_sq = Ex*Ex + Ey*Ey + Ez*Ez;
+            amrex::Real E_sq = Ex*Ex + Ey*Ey + Ez*Ez;
 
-        amrex::Real EdotB = Ex*Bx + Ey*By + Ez*Bz;
-        amrex::Real EdotB_sq = EdotB*EdotB;
+            amrex::Real EdotB = Ex*Bx + Ey*By + Ez*Bz;
+            amrex::Real EdotB_sq = EdotB*EdotB;
 
-        amrex::Real c2 = PhysConst::c*PhysConst::c;
-        amrex::Real Eprime_sq = 2._prt * EdotB_sq * c2
-                  / ( ( (B_sq * c2) - E_sq)
-                    + std::sqrt( ( (B_sq*c2) - E_sq) * ( (B_sq*c2) - E_sq ) + 4._prt * EdotB_sq * c2 ) );
+            amrex::Real c2 = PhysConst::c*PhysConst::c;
+            amrex::Real Eprime_sq = 2._prt * EdotB_sq * c2
+                      / ( ( (B_sq * c2) - E_sq)
+                        + std::sqrt( ( (B_sq*c2) - E_sq) * ( (B_sq*c2) - E_sq ) + 4._prt * EdotB_sq * c2 ) );
 
-        // only if E << B -- else fix with thesis
-        if ( (B_sq + Eprime_sq/c2) > 1.e-30 ) {
-            amrex::Real vx_drift = (Ey*Bz - Ez*By)/(B_sq + Eprime_sq/c2);
-            amrex::Real vy_drift = (Ez*Bx - Ex*Bz)/(B_sq + Eprime_sq/c2);
-            amrex::Real vz_drift = (Ex*By - Ey*Bx)/(B_sq + Eprime_sq/c2);
+            // only if E << B -- else fix with thesis
+            if ( (B_sq + Eprime_sq/c2) > 1.e-30 ) {
+                amrex::Real vx_drift = (Ey*Bz - Ez*By)/(B_sq + Eprime_sq/c2);
+                amrex::Real vy_drift = (Ez*Bx - Ex*Bz)/(B_sq + Eprime_sq/c2);
+                amrex::Real vz_drift = (Ex*By - Ey*Bx)/(B_sq + Eprime_sq/c2);
 
-            // 1(b) unit vector along drift velocity
-            amrex::Real drift_mag = std::sqrt(vx_drift*vx_drift + vy_drift*vy_drift + vz_drift*vz_drift);
-            if (drift_mag < (PhysConst::c) ) {
-	        amrex::Real vxd_hat = vx_drift/drift_mag;
-                amrex::Real vyd_hat = vy_drift/drift_mag;
-                amrex::Real vzd_hat = vz_drift/drift_mag;
+                // 1(b) unit vector along drift velocity
+                amrex::Real drift_mag = std::sqrt(vx_drift*vx_drift + vy_drift*vy_drift + vz_drift*vz_drift);
+                if (drift_mag < (PhysConst::c) ) {
+                    amrex::Real vxd_hat = vx_drift/drift_mag;
+                    amrex::Real vyd_hat = vy_drift/drift_mag;
+                    amrex::Real vzd_hat = vz_drift/drift_mag;
 
-                // 1(c) gamma_drift = gamma_o = 1 / (sqrt ( 1 - drift_mag^2/c^2) )
-                amrex::Real gamma_drift = 1._prt/std::sqrt( 1._prt - drift_mag*drift_mag*inv_c2);
+                    // 1(c) gamma_drift = gamma_o = 1 / (sqrt ( 1 - drift_mag^2/c^2) )
+                    amrex::Real gamma_drift = 1._prt/std::sqrt( 1._prt - drift_mag*drift_mag*inv_c2);
 
-                // 2 Bfield transform
-                // By construction, only Bperp to drifting frame is non-zero
-                amrex::Real Bx_prime = gamma_drift * ( Bx - inv_c2 * (vy_drift*Ez - vz_drift*Ey) );
-                amrex::Real By_prime = gamma_drift * ( By - inv_c2 * (vz_drift*Ex - vx_drift*Ez) );
-                amrex::Real Bz_prime = gamma_drift * ( Bz - inv_c2 * (vx_drift*Ey - vy_drift*Ex) );
+                    // 2 Bfield transform
+                    // By construction, only Bperp to drifting frame is non-zero
+                    amrex::Real Bx_prime = gamma_drift * ( Bx - inv_c2 * (vy_drift*Ez - vz_drift*Ey) );
+                    amrex::Real By_prime = gamma_drift * ( By - inv_c2 * (vz_drift*Ex - vx_drift*Ez) );
+                    amrex::Real Bz_prime = gamma_drift * ( Bz - inv_c2 * (vx_drift*Ey - vy_drift*Ex) );
 
-                amrex::Real Bprime_mag = std::sqrt(Bx_prime*Bx_prime + By_prime*By_prime + Bz_prime*Bz_prime);
-                amrex::Real Bxprime_hat = Bx_prime/Bprime_mag;
-                amrex::Real Byprime_hat = By_prime/Bprime_mag;
-                amrex::Real Bzprime_hat = Bz_prime/Bprime_mag;
+                    amrex::Real Bprime_mag = std::sqrt(Bx_prime*Bx_prime + By_prime*By_prime + Bz_prime*Bz_prime);
+                    amrex::Real Bxprime_hat = Bx_prime/Bprime_mag;
+                    amrex::Real Byprime_hat = By_prime/Bprime_mag;
+                    amrex::Real Bzprime_hat = Bz_prime/Bprime_mag;
 
-                // New u momentum in drift frame
-                amrex::Real udotBprimehat = ux*Bxprime_hat + uy*Byprime_hat + uz*Bzprime_hat;
-                amrex::Real ux_new_prime = udotBprimehat * Bxprime_hat;
-                amrex::Real uy_new_prime = udotBprimehat * Byprime_hat;
-                amrex::Real uz_new_prime = udotBprimehat * Bzprime_hat;
+                    // New u momentum in drift frame
+                    amrex::Real udotBprimehat = ux*Bxprime_hat + uy*Byprime_hat + uz*Bzprime_hat;
+                    amrex::Real ux_new_prime = udotBprimehat * Bxprime_hat;
+                    amrex::Real uy_new_prime = udotBprimehat * Byprime_hat;
+                    amrex::Real uz_new_prime = udotBprimehat * Bzprime_hat;
 
-                // New u momentum in lab frame
-                amrex::Real gamma_new_prime = std::sqrt( 1._prt + inv_c2 * ( ux_new_prime*ux_new_prime
-                                                                           + uy_new_prime*uy_new_prime
-                                                                           + uz_new_prime*uz_new_prime ) );
-                ux = gamma_drift * ( ux_new_prime + gamma_new_prime * vx_drift);
-                uy = gamma_drift * ( uy_new_prime + gamma_new_prime * vy_drift);
-                uz = gamma_drift * ( uz_new_prime + gamma_new_prime * vz_drift);
+                    // New u momentum in lab frame
+                    amrex::Real gamma_new_prime = std::sqrt( 1._prt + inv_c2 * ( ux_new_prime*ux_new_prime
+                                                                               + uy_new_prime*uy_new_prime
+                                                                               + uz_new_prime*uz_new_prime ) );
+                    ux = gamma_drift * ( ux_new_prime + gamma_new_prime * vx_drift);
+                    uy = gamma_drift * ( uy_new_prime + gamma_new_prime * vy_drift);
+                    uz = gamma_drift * ( uz_new_prime + gamma_new_prime * vz_drift);
 
-                // debugging
-                amrex::Real abs_u_post = std::sqrt(ux*ux + uy*uy + uz*uz);
-                if ( abs_u_post > abs_u_pre || (drift_mag > 0.99999999*PhysConst::c))
-                {
-//                    printf(" premom = %e  postmom = %e  gammadrift = %e gammanewprime = %e B_sq = %e Eprime_sq = %e drift_mag = %e \n", abs_u_pre, abs_u_post, gamma_drift, gamma_new_prime, B_sq, Eprime_sq, drift_mag );
                 }
             }
-        }
+        } //theta condition
     }
 #endif
 
