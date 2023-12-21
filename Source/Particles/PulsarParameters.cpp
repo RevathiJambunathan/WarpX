@@ -158,6 +158,7 @@ amrex::Real Pulsar::m_rmax_zero_uperpB_driftframe;
 amrex::Real Pulsar::m_RR_start_time;
 amrex::Real Pulsar::m_zerouperp_start_time;
 amrex::Real Pulsar::m_scaledRR_rmax;
+amrex::Real Pulsar::m_zerouperp_dtheta;
 
 Pulsar::Pulsar ()
 {
@@ -414,6 +415,7 @@ Pulsar::ReadParameters () {
     pp.get("RR_start_time",m_RR_start_time);
     pp.get("zerouperp_start_time",m_zerouperp_start_time);
     pp.get("scaledRR_rmax",m_scaledRR_rmax);
+    pp.get("zerouperp_dtheta",m_zerouperp_dtheta);
 }
 
 

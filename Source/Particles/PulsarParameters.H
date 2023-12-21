@@ -718,6 +718,7 @@ public:
     static amrex::Real m_rmax_zero_uperpB_driftframe;
     static amrex::Real m_RR_start_time;
     static amrex::Real m_zerouperp_start_time;
+    static amrex::Real m_zerouperp_dtheta;
 private:
 };
 

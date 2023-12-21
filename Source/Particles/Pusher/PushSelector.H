@@ -70,6 +70,9 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                     const amrex::Real scaledRR_rmax,
                     const int do_zero_uperpB_driftframe,
                     const amrex::ParticleReal r_p,
+                    const amrex::ParticleReal theta_p,
+                    const amrex::Real dtheta,
+                    const amrex::Real chi_data,
                     const amrex::Real rmax_zero_uperp_driftframe,
 #endif
                     const amrex::Real dt, amrex::Real * PulsarDiag = nullptr)
@@ -97,6 +100,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #ifdef PULSAR
                                                          re_scaledratio, scaledRR_rmax,
                                                          do_zero_uperpB_driftframe, r_p,
+                                                         theta_p, dtheta, chi_data,
                                                          rmax_zero_uperp_driftframe,
 #endif
                                                          dt);
@@ -107,6 +111,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                                      By, Bz, qp, m,
 #ifdef PULSAR
                                      do_zero_uperpB_driftframe, r_p,
+                                     theta_p, dtheta, chi_data,
                                      rmax_zero_uperp_driftframe,
 #endif
                                      dt);
@@ -130,6 +135,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
 #ifdef PULSAR
                                                      re_scaledratio, scaledRR_rmax,
                                                      do_zero_uperpB_driftframe, r_p,
+                                                     theta_p, dtheta, chi_data,
                                                      rmax_zero_uperp_driftframe,
 #endif
                                                      dt);
@@ -144,6 +150,7 @@ void doParticlePush(const GetParticlePosition& GetPosition,
                              By, Bz, qp, m,
 #ifdef PULSAR
                              do_zero_uperpB_driftframe, r_p,
+                             theta_p, dtheta, chi_data,
                              rmax_zero_uperp_driftframe,
 #endif
                              dt);
