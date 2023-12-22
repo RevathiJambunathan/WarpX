@@ -105,6 +105,19 @@ void UpdateMomentumBorisWithRadiationReaction(
     const amrex::ParticleReal RRcoeff = (2.0_prt/3.0_prt)*PhysConst::r_e*q_over_mc*q_over_mc;
 #endif
 
+
+#ifdef PULSAR
+    //Update momentum using the RR force
+    if (r_p < scaledRR_rmax) {
+        amrex::Real lambda_n = gamma_n*(fl_q2-bdotE2) / (PhysConst::c);
+        if (lambda_n > 0) {
+            amrex::Real RRfactor = 1._prt/(1._prt + RRcoeff*lambda_n*dt);
+            ux = RRfactor * ux;
+            uy = RRfactor * uy;
+            uz = RRfactor * uz;
+        }    
+    }
+#else
     //Compute the components of the RR force
     const amrex::ParticleReal frx =
         RRcoeff*(PhysConst::c*(fly_q*Bz - flz_q*By) + bdotE*Ex - coeff*bx_n);
@@ -112,13 +125,10 @@ void UpdateMomentumBorisWithRadiationReaction(
         RRcoeff*(PhysConst::c*(flz_q*Bx - flx_q*Bz) + bdotE*Ey - coeff*by_n);
     const amrex::ParticleReal frz =
         RRcoeff*(PhysConst::c*(flx_q*By - fly_q*Bx) + bdotE*Ez - coeff*bz_n);
-
-    //Update momentum using the RR force
-    if (r_p < scaledRR_rmax) {
-        ux += frx*dt;
-        uy += fry*dt;
-        uz += frz*dt;
-    }
+    ux += frx*dt;
+    uy += fry*dt;
+    uz += frz*dt;
+#endif
 }
 
 #endif // WARPX_PARTICLES_PUSHER_UPDATEMOMENTUM_BORIS_WITHRR_H_
