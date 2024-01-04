@@ -109,12 +109,20 @@ void UpdateMomentumBorisWithRadiationReaction(
 #ifdef PULSAR
     //Update momentum using the RR force
     if (r_p < scaledRR_rmax) {
+        // Note : fl_q   = (E + v X B);
+        //        fl_q2  = fl_q * fl_q;
+        //        bdotE  = (v/c)_dot_E;
+        //        bdotE2 = bdotE * bdotE;
+        // In this implementation, we treat the gamma^2 term implicitly, i.e., (gamma*v)^(n+1)
         amrex::Real lambda_n = gamma_n*(fl_q2-bdotE2) / (PhysConst::c);
+        amrex::Real term1_xn = PhysConst::c * (fly_q*Bz - flz_q*By) + bdotE*Ex;
+        amrex::Real term1_yn = PhysConst::c * (flz_q*Bx - flx_q*Bz) + bdotE*Ey;
+        amrex::Real term1_zn = PhysConst::c * (flx_q*By - fly_q*Bx) + bdotE*Ez;
         if (lambda_n > 0) {
             amrex::Real RRfactor = 1._prt/(1._prt + RRcoeff*lambda_n*dt);
-            ux = RRfactor * ux;
-            uy = RRfactor * uy;
-            uz = RRfactor * uz;
+            ux = RRfactor * (ux + RRcoeff * dt * term1_xn);
+            uy = RRfactor * (uy + RRcoeff * dt * term1_yn);
+            uz = RRfactor * (uz + RRcoeff * dt * term1_zn);
         }    
     }
 #else
