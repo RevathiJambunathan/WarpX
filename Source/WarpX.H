@@ -1116,6 +1116,11 @@ public:
     // for cuda
     void BuildBufferMasksInBox ( amrex::Box tbx, amrex::IArrayBox &buffer_mask,
                                  const amrex::IArrayBox &guard_mask, int ng );
+
+    void InitInterpolationWeightsInBuffer( const amrex::Box tbx, amrex::FArrayBox &weights_gbuffer,
+                                         const amrex::IArrayBox & buffer_mask,
+                                         const amrex::IArrayBox &guard_mask, int ngbuffer,
+                                         bool do_interpolate, amrex::Real tanh_midpoint);
 #ifdef AMREX_USE_EB
     amrex::EBFArrayBoxFactory const& fieldEBFactory (int lev) const noexcept {
         return static_cast<amrex::EBFArrayBoxFactory const&>(*m_field_factory[lev]);

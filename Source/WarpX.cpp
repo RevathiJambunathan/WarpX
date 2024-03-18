@@ -3107,68 +3107,8 @@ WarpX::BuildBufferMasks ()
                 for (MFIter mfi(*weight_gbuffer, true); mfi.isValid(); ++mfi)
                 {
                     const Box& tbx = mfi.tilebox(IntVect::TheNodeVector(),weight_gbuffer->nGrowVect());
-                    auto const& gmsk = tmp[mfi].const_array();
-                    auto const& bmsk = (*bmasks)[mfi].array();
-                    auto const& wtmsk = (*weight_gbuffer)[mfi].array();
-                    amrex::ParallelFor(tbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                        wtmsk(i,j,k) = 0._rt;
-                        if (bmsk(i,j,k) == 0 && do_interpolate) {
-                            if(gmsk(i,j,k)==0) {
-                                wtmsk(i,j,k) = 0.;
-                                return;
-                            }
-                            //for (int ii = i-1; ii >= i-ngbuffer; --ii) {
-                            //    if (gmsk(ii,j,k)==0) {
-                            //        amrex::Real arg = (static_cast<amrex::Real>(i-ii)-ngbuffer*tanh_midpoint)
-                            //                          / ((1.-tanh_midpoint)*(ngbuffer/3.));
-                            //        wtmsk(i,j,k) = std::tanh(arg)*0.5 + 0.5;
-                            //        amrex::Print() << " i edge wt is " << wtmsk(i,j,k) << "\n";
-                            //        return;
-                            //    }
-                            //}
-                            //for (int ii = i+1; ii <= i+ngbuffer; ++ii) {
-                            //    if (gmsk(ii,j,k)==0) {
-                            //        amrex::Real arg = (static_cast<amrex::Real>(ii-i)-ngbuffer*tanh_midpoint)
-                            //                          / ((1.-tanh_midpoint)*(ngbuffer/3.));
-                            //        wtmsk(i,j,k) = std::tanh(arg)*0.5+0.5;
-                            //        amrex::Print() << " wt is " << wtmsk(i,j,k) << "\n";
-                            //        return;
-                            //    }
-                            //}
-                            for (int jj = j-1; jj >= j-ngbuffer; --jj) {
-                                if (gmsk(i,jj,k)==0) {
-                                    amrex::Real arg = (static_cast<amrex::Real>(j-jj)-ngbuffer*tanh_midpoint)
-                                                      / ((1.-tanh_midpoint)*(ngbuffer/3.));
-                                    wtmsk(i,j,k) = std::tanh(arg)*0.5 + 0.5;
-                                    return;
-                                }
-                            }
-                            for (int jj = j+1; jj <= j+ngbuffer; ++jj) {
-                                if (gmsk(i,jj,k)==0) {
-                                    amrex::Real arg = (static_cast<amrex::Real>(jj - j)-ngbuffer*tanh_midpoint)
-                                                      / ((1.-tanh_midpoint)*(ngbuffer/3.));
-                                    wtmsk(i,j,k) = std::tanh(arg)*0.5+0.5;
-                                    return;
-                                }
-                            }
-                            //for (int kk = k-1; kk >= k-ngbuffer; --kk) {
-                            //    if (gmsk(i,j,kk)==0) {
-                            //        amrex::Real arg = (static_cast<amrex::Real>(k-kk)-ngbuffer*tanh_midpoint)
-                            //                          / ((1.-tanh_midpoint)*(ngbuffer/3.));
-                            //        wtmsk(i,j,k) = std::tanh(arg)*0.5+0.5;
-                            //        return;
-                            //    }
-                            //}
-                            //for (int kk = k+1; kk <= k+ngbuffer; ++kk) {
-                            //    if (gmsk(i,j,kk)==0) {
-                            //        amrex::Real arg = (static_cast<amrex::Real>(kk-k)-ngbuffer*tanh_midpoint)
-                            //                          / ((1.-tanh_midpoint)*(ngbuffer/3.));
-                            //        wtmsk(i,j,k) = std::tanh(arg)*0.5+0.5;
-                            //        return;
-                            //    }
-                            //}
-                        }
-                    });
+                    InitInterpolationWeightsInBuffer( tbx, (*weight_gbuffer)[mfi], (*bmasks)[mfi], tmp[mfi],
+                                                      ngbuffer, do_interpolate, tanh_midpoint);
                 }
             }
         }
@@ -3205,6 +3145,78 @@ WarpX::BuildBufferMasksInBox ( const amrex::Box tbx, amrex::IArrayBox &buffer_ma
         msk(i,j,k) = 1;
     });
 }
+
+
+void
+WarpX::InitInterpolationWeightsInBuffer( const amrex::Box tbx, amrex::FArrayBox &weights_gbuffer,
+                                         const amrex::IArrayBox & buffer_mask,
+                                         const amrex::IArrayBox &guard_mask, int ngbuffer,
+                                         bool do_interpolate, amrex::Real tanh_midpoint)
+{
+    auto const& gmsk = guard_mask.const_array();
+    auto const& bmsk = buffer_mask.array();
+    auto const& wtmsk = weights_gbuffer.array();
+    amrex::ParallelFor(tbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+        wtmsk(i,j,k) = 0._rt;
+        if (bmsk(i,j,k) == 0 && do_interpolate) {
+            if(gmsk(i,j,k)==0) {
+                wtmsk(i,j,k) = 0.;
+                return;
+            }
+            //for (int ii = i-1; ii >= i-ngbuffer; --ii) {
+            //    if (gmsk(ii,j,k)==0) {
+            //        amrex::Real arg = (static_cast<amrex::Real>(i-ii)-ngbuffer*tanh_midpoint)
+            //                          / ((1.-tanh_midpoint)*(ngbuffer/3.));
+            //        wtmsk(i,j,k) = std::tanh(arg)*0.5 + 0.5;
+            //        amrex::Print() << " i edge wt is " << wtmsk(i,j,k) << "\n";
+            //        return;
+            //    }
+            //}
+            //for (int ii = i+1; ii <= i+ngbuffer; ++ii) {
+            //    if (gmsk(ii,j,k)==0) {
+            //        amrex::Real arg = (static_cast<amrex::Real>(ii-i)-ngbuffer*tanh_midpoint)
+            //                          / ((1.-tanh_midpoint)*(ngbuffer/3.));
+            //        wtmsk(i,j,k) = std::tanh(arg)*0.5+0.5;
+            //        amrex::Print() << " wt is " << wtmsk(i,j,k) << "\n";
+            //        return;
+            //    }
+            //}
+            for (int jj = j-1; jj >= j-ngbuffer; --jj) {
+                if (gmsk(i,jj,k)==0) {
+                    amrex::Real arg = (static_cast<amrex::Real>(j-jj)-ngbuffer*tanh_midpoint)
+                                      / ((1.-tanh_midpoint)*(ngbuffer/3.));
+                    wtmsk(i,j,k) = std::tanh(arg)*0.5 + 0.5;
+                    return;
+                }
+            }
+            for (int jj = j+1; jj <= j+ngbuffer; ++jj) {
+                if (gmsk(i,jj,k)==0) {
+                    amrex::Real arg = (static_cast<amrex::Real>(jj - j)-ngbuffer*tanh_midpoint)
+                                      / ((1.-tanh_midpoint)*(ngbuffer/3.));
+                    wtmsk(i,j,k) = std::tanh(arg)*0.5+0.5;
+                    return;
+                }
+            }
+            //for (int kk = k-1; kk >= k-ngbuffer; --kk) {
+            //    if (gmsk(i,j,kk)==0) {
+            //        amrex::Real arg = (static_cast<amrex::Real>(k-kk)-ngbuffer*tanh_midpoint)
+            //                          / ((1.-tanh_midpoint)*(ngbuffer/3.));
+            //        wtmsk(i,j,k) = std::tanh(arg)*0.5+0.5;
+            //        return;
+            //    }
+            //}
+            //for (int kk = k+1; kk <= k+ngbuffer; ++kk) {
+            //    if (gmsk(i,j,kk)==0) {
+            //        amrex::Real arg = (static_cast<amrex::Real>(kk-k)-ngbuffer*tanh_midpoint)
+            //                          / ((1.-tanh_midpoint)*(ngbuffer/3.));
+            //        wtmsk(i,j,k) = std::tanh(arg)*0.5+0.5;
+            //        return;
+            //    }
+            //}
+        }
+    });
+}
+
 
 amrex::Vector<amrex::Real> WarpX::getFornbergStencilCoefficients(const int n_order, const short a_grid_type)
 {
