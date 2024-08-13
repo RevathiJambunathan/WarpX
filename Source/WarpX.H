@@ -1103,7 +1103,7 @@ public:
 
     // for cuda
     void BuildBufferMasksInBox ( amrex::Box tbx, amrex::IArrayBox &buffer_mask,
-                                 const amrex::IArrayBox &guard_mask, const amrex::IntVect ng );
+                                 const amrex::IArrayBox &guard_mask, const int ng );
 
 #ifdef AMREX_USE_EB
     amrex::EBFArrayBoxFactory const& fieldEBFactory (int lev) const noexcept {
