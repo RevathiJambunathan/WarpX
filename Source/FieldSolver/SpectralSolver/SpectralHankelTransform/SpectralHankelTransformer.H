@@ -7,8 +7,9 @@
 #ifndef WARPX_SPECTRALHANKELTRANSFORMER_H_
 #define WARPX_SPECTRALHANKELTRANSFORMER_H_
 
-#include <AMReX_FArrayBox.H>
 #include "HankelTransform.H"
+
+#include <AMReX_FArrayBox.H>
 
 /* \brief Object that allows to transform the fields back and forth between the
  *  spectral and interpolation grid.
@@ -22,17 +23,17 @@ class SpectralHankelTransformer
 {
     public:
 
-        SpectralHankelTransformer () {};
+        SpectralHankelTransformer () = default;
 
-        SpectralHankelTransformer (const int nr,
-                                   const int n_rz_azimuthal_modes,
-                                   const amrex::Real rmax);
+        SpectralHankelTransformer (int nr,
+                                   int n_rz_azimuthal_modes,
+                                   amrex::Real rmax);
 
         void
         ExtractKrArray ();
 
         // Returns an array that holds the kr for all of the modes
-        HankelTransform::RealVector const & getKrArray () const {return m_kr;}
+        [[nodiscard]] HankelTransform::RealVector const & getKrArray () const {return m_kr;}
 
         // Converts a scalar field from the physical to the spectral space
         void

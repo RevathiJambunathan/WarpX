@@ -1,20 +1,72 @@
 /* Copyright 2019 Andrew Myers, Ann Almgren, Axel Huebl
  * David Grote, Maxence Thevenet, Michael Rowan
- * Remi Lehe, Weiqun Zhang, levinem
+ * Remi Lehe, Weiqun Zhang, levinem, Revathi Jambunathan
  *
  * This file is part of WarpX.
  *
  * License: BSD-3-Clause-LBNL
  */
 #include "WarpX.H"
+
+#include "Diagnostics/MultiDiagnostics.H"
+#include "Diagnostics/ReducedDiags/MultiReducedDiags.H"
+#include "EmbeddedBoundary/WarpXFaceInfoBox.H"
+#include "FieldSolver/FiniteDifferenceSolver/HybridPICModel/HybridPICModel.H"
+#include "Initialization/ExternalField.H"
+#include "Particles/MultiParticleContainer.H"
+#include "Particles/ParticleBoundaryBuffer.H"
+#include "Particles/WarpXParticleContainer.H"
+#include "Utils/TextMsg.H"
 #include "Utils/WarpXAlgorithmSelection.H"
+#include "Utils/WarpXProfilerWrapper.H"
 
-#include <AMReX_BLProfiler.H>
+#include <ablastr/coarsen/sample.H>
 
-#include <memory>
+#include <AMReX.H>
+#include <AMReX_BLassert.H>
+#include <AMReX_Box.H>
+#include <AMReX_BoxArray.H>
+#include <AMReX_Config.H>
+#include <AMReX_DistributionMapping.H>
+#include <AMReX_FabFactory.H>
+#include <AMReX_IArrayBox.H>
+#include <AMReX_IndexType.H>
+#include <AMReX_LayoutData.H>
+#include <AMReX_MFIter.H>
+#include <AMReX_MakeType.H>
+#include <AMReX_MultiFab.H>
+#include <AMReX_ParIter.H>
+#include <AMReX_ParallelContext.H>
+#include <AMReX_ParallelDescriptor.H>
+#include <AMReX_REAL.H>
+#include <AMReX_Vector.H>
+#include <AMReX_iMultiFab.H>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstddef>
+#include <memory>
+#include <utility>
+#include <vector>
 
 using namespace amrex;
+
+void
+WarpX::CheckLoadBalance (int step)
+{
+    if (step > 0 && load_balance_intervals.contains(step+1))
+    {
+        LoadBalance();
+
+        // Reset the costs to 0
+        ResetCosts();
+    }
+    if (!costs.empty())
+    {
+        RescaleCosts(step);
+    }
+}
 
 void
 WarpX::LoadBalance ()
@@ -22,145 +74,331 @@ WarpX::LoadBalance ()
     WARPX_PROFILE_REGION("LoadBalance");
     WARPX_PROFILE("WarpX::LoadBalance()");
 
+    AMREX_ALWAYS_ASSERT(!costs.empty());
     AMREX_ALWAYS_ASSERT(costs[0] != nullptr);
 
 #ifdef AMREX_USE_MPI
-    if (WarpX::load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Heuristic)
+    if (load_balance_costs_update_algo == LoadBalanceCostsUpdateAlgo::Heuristic)
     {
         // compute the costs on a per-rank basis
-        WarpX::ComputeCostsHeuristic(costs);
+        ComputeCostsHeuristic(costs);
     }
 
     // By default, do not do a redistribute; this toggles to true if RemakeLevel
     // is called for any level
-    int doLoadBalance = 0;
+    int loadBalancedAnyLevel = false;
 
     const int nLevels = finestLevel();
-    for (int lev = 0; lev <= nLevels; ++lev)
-    {
-        // Compute the new distribution mapping
-        DistributionMapping newdm;
-        const amrex::Real nboxes = costs[lev]->size();
-        const amrex::Real nprocs = ParallelContext::NProcsSub();
-        const int nmax = static_cast<int>(std::ceil(nboxes/nprocs*load_balance_knapsack_factor));
-        // These store efficiency (meaning, the  average 'cost' over all ranks,
-        // normalized to max cost) for current and proposed distribution mappings
-        amrex::Real currentEfficiency = 0.0;
-        amrex::Real proposedEfficiency = 0.0;
-
-        newdm = (load_balance_with_sfc)
-            ? DistributionMapping::makeSFC(*costs[lev],
-                                           currentEfficiency, proposedEfficiency,
-                                           false,
-                                           ParallelDescriptor::IOProcessorNumber())
-            : DistributionMapping::makeKnapSack(*costs[lev],
-                                                currentEfficiency, proposedEfficiency,
-                                                nmax,
-                                                false,
-                                                ParallelDescriptor::IOProcessorNumber());
-        // As specified in the above calls to makeSFC and makeKnapSack, the new
-        // distribution mapping is NOT communicated to all ranks; the loadbalanced
-        // dm is up-to-date only on root, and we can decide whether to broadcast
-        if ((load_balance_efficiency_ratio_threshold > 0.0)
-            && (ParallelDescriptor::MyProc() == ParallelDescriptor::IOProcessorNumber()))
+    if (do_SFC_dm_vectorlevel) {
+        amrex::Vector<amrex::Real> rcost;
+        amrex::Vector<int> current_pmap;
+        for (int lev = 0; lev <= nLevels; ++lev)
         {
-            doLoadBalance = (proposedEfficiency > load_balance_efficiency_ratio_threshold*currentEfficiency);
+            amrex::Vector<amrex::Real> rcost_lev(costs[lev]->size());
+            amrex::ParallelDescriptor::GatherLayoutDataToVector<amrex::Real>(*costs[lev],rcost_lev,
+                amrex::ParallelDescriptor::IOProcessorNumber());
+            rcost.insert(rcost.end(), rcost_lev.begin(), rcost_lev.end());
+            auto& pmap_lev = costs[lev]->DistributionMap().ProcessorMap();
+            current_pmap.insert(current_pmap.end(), pmap_lev.begin(), pmap_lev.end());
+        }
+        int doLoadBalance = false;
+        amrex::Real currentEfficiency = 0.;
+        amrex::Real proposedEfficiency = 0.;
+        const amrex::Real nboxes = rcost.size();
+//        const amrex::Real nprocs = ParallelContext::NProcsSub();
+//        const int nmax = static_cast<int>(std::ceil(nboxes/nprocs*load_balance_knapsack_factor));
+
+        amrex::BoxArray refined_ba = boxArray(0);
+        for (int lev = 1; lev <= nLevels; ++lev)
+        {
+            refined_ba.refine(refRatio(lev-1));
+            amrex::BoxList refined_bl = refined_ba.boxList();
+            refined_bl.join(boxArray(lev).boxList());
+            refined_ba = amrex::BoxArray(refined_bl);
         }
 
+        amrex::Vector<amrex::DistributionMapping> newdm(nLevels+1);
+        amrex::DistributionMapping r;
+        if (ParallelDescriptor::MyProc() == ParallelDescriptor::IOProcessorNumber())
+        {
+            std::vector<amrex::Long> cost(rcost.size());
+
+            amrex::Real wmax = *std::max_element(rcost.begin(), rcost.end());
+            amrex::Real scale = (wmax == 0) ? 1.e9_rt : 1.e9_rt/wmax;
+
+            for (int i = 0; i < rcost.size(); ++i) {
+                cost[i] = amrex::Long(rcost[i]*scale) + 1L;
+            }
+
+            // `sort` needs to be false here since there's a parallel reduce function
+            // in the processor map function, but we are executing only on root
+            int nprocs = ParallelDescriptor::NProcs();
+            r.SFCProcessorMap(refined_ba, cost, nprocs, proposedEfficiency, false);
+
+            amrex::DistributionMapping::ComputeDistributionMappingEfficiency(r,
+                                                                             rcost,
+                                                                             &currentEfficiency);
+
+            if ((load_balance_efficiency_ratio_threshold > 0.0))
+            {
+                doLoadBalance = (proposedEfficiency > load_balance_efficiency_ratio_threshold*currentEfficiency);
+                if ((getistep(0)+1) == 100) {
+                    doLoadBalance = true;
+                }
+            }
+            amrex::Print() << " doloadbalance : " << doLoadBalance << "\n";
+            amrex::Print() << proposedEfficiency << "\n";
+            amrex::Print() << currentEfficiency << "\n";
+        }
         ParallelDescriptor::Bcast(&doLoadBalance, 1,
                                   ParallelDescriptor::IOProcessorNumber());
 
         if (doLoadBalance)
         {
-            Vector<int> pmap;
+            amrex::Vector<int> pmap(rcost.size());
             if (ParallelDescriptor::MyProc() == ParallelDescriptor::IOProcessorNumber())
             {
-                pmap = newdm.ProcessorMap();
+                pmap = r.ProcessorMap();
             } else
             {
                 pmap.resize(static_cast<std::size_t>(nboxes));
             }
-            ParallelDescriptor::Bcast(&pmap[0], pmap.size(), ParallelDescriptor::IOProcessorNumber());
+            // Broadcast vector from which to construct new distribution mapping
+            amrex::ParallelDescriptor::Bcast(&pmap[0], pmap.size(), ParallelDescriptor::IOProcessorNumber());
 
-            if (ParallelDescriptor::MyProc() != ParallelDescriptor::IOProcessorNumber())
+            int lev_start = 0;
+            for (int lev = 0; lev <= nLevels; ++lev)
             {
-                newdm = DistributionMapping(pmap);
+                amrex::Vector<int> pmap_lev(pmap.begin() + lev_start,
+                                            pmap.begin() + lev_start + costs[lev]->size());
+                newdm[lev] = amrex::DistributionMapping(pmap_lev);
+                lev_start += costs[lev]->size();
             }
 
-            RemakeLevel(lev, t_new[lev], boxArray(lev), newdm);
+            for (int lev = 0; lev <= nLevels; ++lev)
+            {
+                RemakeLevel(lev, t_new[lev], boxArray(lev), newdm[lev]);
+                setLoadBalanceEfficiency(lev, proposedEfficiency);
+            }
+        }
+        loadBalancedAnyLevel = loadBalancedAnyLevel || doLoadBalance;
+    } else {
+        //if (do_similar_dm_refpatch) {
+        //    for (int lev = nLevels; lev > 0; --lev) {
+        //        ablastr::coarsen::sample::Coarsen(*costs[lev-1], *costs[lev],0,0,1,0,WarpX::RefRatio(lev-1));
+        //    }
+        //}
+        int startlev = WarpX::load_balance_startlevel;
+        for (int lev = startlev; lev <= nLevels; ++lev)
+        {
+            int doLoadBalance = false;
+
+            // Compute the new distribution mapping
+            DistributionMapping newdm;
+            const amrex::Real nboxes = costs[lev]->size();
+            const amrex::Real nprocs = ParallelContext::NProcsSub();
+            const int nmax = static_cast<int>(std::ceil(nboxes/nprocs*load_balance_knapsack_factor));
+            // These store efficiency (meaning, the  average 'cost' over all ranks,
+            // normalized to max cost) for current and proposed distribution mappings
+            amrex::Real currentEfficiency = 0.0;
+            amrex::Real proposedEfficiency = 0.0;
+
+            //if (lev == 0 || !do_similar_dm_refpatch) {
+            newdm = (load_balance_with_sfc)
+                ? DistributionMapping::makeSFC(*costs[lev],
+                                               currentEfficiency, proposedEfficiency,
+                                               false,
+                                               ParallelDescriptor::IOProcessorNumber())
+                : DistributionMapping::makeKnapSack(*costs[lev],
+                                                    currentEfficiency, proposedEfficiency,
+                                                    nmax,
+                                                    false,
+                                                    ParallelDescriptor::IOProcessorNumber());
+            //} else {
+            //    amrex::BoxArray coarse_ba = boxArray(lev-1);
+            //    amrex::DistributionMapping coarse_dm = DistributionMap(lev-1);
+            //    amrex::BoxArray ba = boxArray(lev);
+            //    ba.coarsen(WarpX::RefRatio(lev-1));
+            //    newdm = amrex::MakeSimilarDM(ba, coarse_ba, coarse_dm, getngEB());
+            //}
+            // As specified in the above calls to makeSFC and makeKnapSack, the new
+            // distribution mapping is NOT communicated to all ranks; the loadbalanced
+            // dm is up-to-date only on root, and we can decide whether to broadcast
+            if ((load_balance_efficiency_ratio_threshold > 0.0)
+                && (ParallelDescriptor::MyProc() == ParallelDescriptor::IOProcessorNumber()))
+            {
+                doLoadBalance = (proposedEfficiency > load_balance_efficiency_ratio_threshold*currentEfficiency);
+            }
+
+            ParallelDescriptor::Bcast(&doLoadBalance, 1,
+                                      ParallelDescriptor::IOProcessorNumber());
+
+            if (doLoadBalance)
+            {
+                Vector<int> pmap;
+                if (ParallelDescriptor::MyProc() == ParallelDescriptor::IOProcessorNumber())
+                {
+                    pmap = newdm.ProcessorMap();
+                } else
+                {
+                    pmap.resize(static_cast<std::size_t>(nboxes));
+                }
+                ParallelDescriptor::Bcast(pmap.data(), pmap.size(), ParallelDescriptor::IOProcessorNumber());
+
+                if (ParallelDescriptor::MyProc() != ParallelDescriptor::IOProcessorNumber())
+                {
+                    newdm = DistributionMapping(pmap);
+                }
+
+                RemakeLevel(lev, t_new[lev], boxArray(lev), newdm);
+
+                // Record the load balance efficiency
+                setLoadBalanceEfficiency(lev, proposedEfficiency);
+            }
+
+            loadBalancedAnyLevel = loadBalancedAnyLevel || doLoadBalance;
         }
     }
-    if (doLoadBalance)
+    if (loadBalancedAnyLevel)
     {
         mypc->Redistribute();
+        mypc->defineAllParticleTiles();
+
+        // redistribute particle boundary buffer
+        m_particle_boundary_buffer->redistribute();
+
+        // diagnostics & reduced diagnostics
+        // not yet needed:
+        //multi_diags->LoadBalance();
+        reduced_diags->LoadBalance();
     }
 #endif
 }
 
-
 void
 WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const DistributionMapping& dm)
 {
+
+    const auto RemakeMultiFab = [&](auto& mf, const bool redistribute){
+        if (mf == nullptr) { return; }
+        const IntVect& ng = mf->nGrowVect();
+        auto pmf = std::remove_reference_t<decltype(mf)>{};
+        AllocInitMultiFab(pmf, mf->boxArray(), dm, mf->nComp(), ng, lev, mf->tags()[0]);
+        if (redistribute) { pmf->Redistribute(*mf, 0, 0, mf->nComp(), ng); }
+        mf = std::move(pmf);
+    };
+
     if (ba == boxArray(lev))
     {
-        if (ParallelDescriptor::NProcs() == 1) return;
-
-#ifdef AMREX_USE_EB
-        m_field_factory[lev] = amrex::makeEBFabFactory(Geom(lev), ba, dm,
-                                                       {1,1,1}, // Not clear how many ghost cells we need yet
-                                                       amrex::EBSupport::full);
-#else
-        m_field_factory[lev] = std::make_unique<FArrayBoxFactory>();
-#endif
+        if (ParallelDescriptor::NProcs() == 1) { return; }
 
         // Fine patch
         for (int idim=0; idim < 3; ++idim)
         {
-            {
-                const IntVect& ng = Bfield_fp[lev][idim]->nGrowVect();
-                auto pmf = std::make_unique<MultiFab>(Bfield_fp[lev][idim]->boxArray(),
-                                                                  dm, Bfield_fp[lev][idim]->nComp(), ng);
-                pmf->Redistribute(*Bfield_fp[lev][idim], 0, 0, Bfield_fp[lev][idim]->nComp(), ng);
-                Bfield_fp[lev][idim] = std::move(pmf);
+            RemakeMultiFab(Bfield_fp[lev][idim], true);
+            RemakeMultiFab(Efield_fp[lev][idim], true);
+            if (m_p_ext_field_params->B_ext_grid_type == ExternalFieldType::read_from_file) {
+                RemakeMultiFab(Bfield_fp_external[lev][idim], true);
             }
-            {
-                const IntVect& ng = Efield_fp[lev][idim]->nGrowVect();
-                auto pmf = std::make_unique<MultiFab>(Efield_fp[lev][idim]->boxArray(),
-                                                                  dm, Efield_fp[lev][idim]->nComp(), ng);
-                pmf->Redistribute(*Efield_fp[lev][idim], 0, 0, Efield_fp[lev][idim]->nComp(), ng);
-                Efield_fp[lev][idim] = std::move(pmf);
+            if (m_p_ext_field_params->E_ext_grid_type == ExternalFieldType::read_from_file) {
+                RemakeMultiFab(Efield_fp_external[lev][idim], true);
             }
-            {
-                const IntVect& ng = current_fp[lev][idim]->nGrowVect();
-                auto pmf = std::make_unique<MultiFab>(current_fp[lev][idim]->boxArray(),
-                                                                  dm, current_fp[lev][idim]->nComp(), ng);
-                current_fp[lev][idim] = std::move(pmf);
+            if (mypc->m_B_ext_particle_s == "read_from_file") {
+                RemakeMultiFab(B_external_particle_field[lev][idim], true);
             }
-            if (current_store[lev][idim])
-            {
-                const IntVect& ng = current_store[lev][idim]->nGrowVect();
-                auto pmf = std::make_unique<MultiFab>(current_store[lev][idim]->boxArray(),
-                                                                  dm, current_store[lev][idim]->nComp(), ng);
-                // no need to redistribute
-                current_store[lev][idim] = std::move(pmf);
+            if (mypc->m_E_ext_particle_s == "read_from_file") {
+                RemakeMultiFab(E_external_particle_field[lev][idim], true);
             }
+            RemakeMultiFab(current_fp[lev][idim], false);
+            RemakeMultiFab(current_store[lev][idim], false);
+            if (current_deposition_algo == CurrentDepositionAlgo::Vay) {
+                RemakeMultiFab(current_fp_vay[lev][idim], false);
+            }
+            if (do_current_centering) {
+                RemakeMultiFab(current_fp_nodal[lev][idim], false);
+            }
+            if (fft_do_time_averaging) {
+                RemakeMultiFab(Efield_avg_fp[lev][idim], true);
+                RemakeMultiFab(Bfield_avg_fp[lev][idim], true);
+            }
+            if (WarpX::electromagnetic_solver_id == ElectromagneticSolverAlgo::HybridPIC) {
+                RemakeMultiFab(m_hybrid_pic_model->current_fp_temp[lev][idim], true);
+                RemakeMultiFab(m_hybrid_pic_model->current_fp_ampere[lev][idim], false);
+                RemakeMultiFab(m_hybrid_pic_model->current_fp_external[lev][idim],true);
+            }
+#ifdef AMREX_USE_EB
+            if (WarpX::electromagnetic_solver_id != ElectromagneticSolverAlgo::PSATD) {
+                RemakeMultiFab(m_edge_lengths[lev][idim], false);
+                RemakeMultiFab(m_face_areas[lev][idim], false);
+                if(WarpX::electromagnetic_solver_id == ElectromagneticSolverAlgo::ECT){
+                    RemakeMultiFab(Venl[lev][idim], false);
+                    RemakeMultiFab(m_flag_info_face[lev][idim], false);
+                    RemakeMultiFab(m_flag_ext_face[lev][idim], false);
+                    RemakeMultiFab(m_area_mod[lev][idim], false);
+                    RemakeMultiFab(ECTRhofield[lev][idim], false);
+                    m_borrowing[lev][idim] = std::make_unique<amrex::LayoutData<FaceInfoBox>>(amrex::convert(ba, Bfield_fp[lev][idim]->ixType().toIntVect()), dm);
+                }
+            }
+#endif
         }
 
-        if (F_fp[lev] != nullptr) {
-            const IntVect& ng = F_fp[lev]->nGrowVect();
-            auto pmf = std::make_unique<MultiFab>(F_fp[lev]->boxArray(),
-                                                              dm, F_fp[lev]->nComp(), ng);
-            pmf->Redistribute(*F_fp[lev], 0, 0, F_fp[lev]->nComp(), ng);
-            F_fp[lev] = std::move(pmf);
+        RemakeMultiFab(F_fp[lev], true);
+        RemakeMultiFab(rho_fp[lev], false);
+        // phi_fp should be redistributed since we use the solution from
+        // the last step as the initial guess for the next solve
+        RemakeMultiFab(phi_fp[lev], true);
+
+        if (WarpX::electromagnetic_solver_id == ElectromagneticSolverAlgo::HybridPIC) {
+            RemakeMultiFab(m_hybrid_pic_model->rho_fp_temp[lev], true);
+            RemakeMultiFab(m_hybrid_pic_model->electron_pressure_fp[lev], false);
         }
 
-        if (rho_fp[lev] != nullptr) {
-            const int nc = rho_fp[lev]->nComp();
-            const IntVect& ng = rho_fp[lev]->nGrowVect();
-            auto pmf = std::make_unique<MultiFab>(rho_fp[lev]->boxArray(),
-                                                              dm, nc, ng);
-            rho_fp[lev] = std::move(pmf);
+#ifdef AMREX_USE_EB
+        RemakeMultiFab(m_distance_to_eb[lev], false);
+
+        int max_guard = guard_cells.ng_FieldSolver.max();
+        m_field_factory[lev] = amrex::makeEBFabFactory(Geom(lev), ba, dm,
+                                                       {max_guard, max_guard, max_guard},
+                                                       amrex::EBSupport::full);
+
+        InitializeEBGridData(lev);
+#else
+        m_field_factory[lev] = std::make_unique<FArrayBoxFactory>();
+#endif
+
+#ifdef WARPX_USE_FFT
+        if (electromagnetic_solver_id == ElectromagneticSolverAlgo::PSATD) {
+            if (spectral_solver_fp[lev] != nullptr) {
+                // Get the cell-centered box
+                BoxArray realspace_ba = ba;   // Copy box
+                realspace_ba.enclosedCells(); // Make it cell-centered
+                auto ngEB = getngEB();
+                auto dx = CellSize(lev);
+
+#   ifdef WARPX_DIM_RZ
+                if ( !fft_periodic_single_box ) {
+                    realspace_ba.grow(1, ngEB[1]); // add guard cells only in z
+                }
+                AllocLevelSpectralSolverRZ(spectral_solver_fp,
+                                           lev,
+                                           realspace_ba,
+                                           dm,
+                                           dx);
+#   else
+                if ( !fft_periodic_single_box ) {
+                    realspace_ba.grow(ngEB);   // add guard cells
+                }
+                bool const pml_flag_false = false;
+                AllocLevelSpectralSolver(spectral_solver_fp,
+                                         lev,
+                                         realspace_ba,
+                                         dm,
+                                         dx,
+                                         pml_flag_false);
+#   endif
+            }
         }
+#endif
 
         // Aux patch
         if (lev == 0 && Bfield_aux[0][0]->ixType() == Bfield_fp[0][0]->ixType())
@@ -172,20 +410,8 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
         } else {
             for (int idim=0; idim < 3; ++idim)
             {
-                {
-                    const IntVect& ng = Bfield_aux[lev][idim]->nGrowVect();
-                    auto pmf = std::make_unique<MultiFab>(Bfield_aux[lev][idim]->boxArray(),
-                                                                      dm, Bfield_aux[lev][idim]->nComp(), ng);
-                    // pmf->Redistribute(*Bfield_aux[lev][idim], 0, 0, Bfield_aux[lev][idim]->nComp(), ng);
-                    Bfield_aux[lev][idim] = std::move(pmf);
-                }
-                {
-                    const IntVect& ng = Efield_aux[lev][idim]->nGrowVect();
-                    auto pmf = std::make_unique<MultiFab>(Efield_aux[lev][idim]->boxArray(),
-                                                                      dm, Efield_aux[lev][idim]->nComp(), ng);
-                    // pmf->Redistribute(*Efield_aux[lev][idim], 0, 0, Efield_aux[lev][idim]->nComp(), ng);
-                    Efield_aux[lev][idim] = std::move(pmf);
-                }
+                RemakeMultiFab(Bfield_aux[lev][idim], false);
+                RemakeMultiFab(Efield_aux[lev][idim], false);
             }
         }
 
@@ -193,105 +419,80 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
         if (lev > 0) {
             for (int idim=0; idim < 3; ++idim)
             {
-                {
-                    const IntVect& ng = Bfield_cp[lev][idim]->nGrowVect();
-                    auto pmf = std::make_unique<MultiFab>(Bfield_cp[lev][idim]->boxArray(),
-                                                                      dm, Bfield_cp[lev][idim]->nComp(), ng);
-                    pmf->Redistribute(*Bfield_cp[lev][idim], 0, 0, Bfield_cp[lev][idim]->nComp(), ng);
-                    Bfield_cp[lev][idim] = std::move(pmf);
-                }
-                {
-                    const IntVect& ng = Efield_cp[lev][idim]->nGrowVect();
-                    auto pmf = std::make_unique<MultiFab>(Efield_cp[lev][idim]->boxArray(),
-                                                                      dm, Efield_cp[lev][idim]->nComp(), ng);
-                    pmf->Redistribute(*Efield_cp[lev][idim], 0, 0, Efield_cp[lev][idim]->nComp(), ng);
-                    Efield_cp[lev][idim] = std::move(pmf);
-                }
-                {
-                    const IntVect& ng = current_cp[lev][idim]->nGrowVect();
-                    auto pmf = std::make_unique<MultiFab>(current_cp[lev][idim]->boxArray(),
-                                                                       dm, current_cp[lev][idim]->nComp(), ng);
-                    current_cp[lev][idim] = std::move(pmf);
+                RemakeMultiFab(Bfield_cp[lev][idim], true);
+                RemakeMultiFab(Efield_cp[lev][idim], true);
+                RemakeMultiFab(current_cp[lev][idim], false);
+                if (fft_do_time_averaging) {
+                    RemakeMultiFab(Efield_avg_cp[lev][idim], true);
+                    RemakeMultiFab(Bfield_avg_cp[lev][idim], true);
                 }
             }
+            RemakeMultiFab(F_cp[lev], true);
+            RemakeMultiFab(rho_cp[lev], false);
 
-            if (F_cp[lev] != nullptr) {
-                const IntVect& ng = F_cp[lev]->nGrowVect();
-                auto pmf = std::make_unique<MultiFab>(F_cp[lev]->boxArray(),
-                                                                  dm, F_cp[lev]->nComp(), ng);
-                pmf->Redistribute(*F_cp[lev], 0, 0, F_cp[lev]->nComp(), ng);
-                F_cp[lev] = std::move(pmf);
-            }
+#ifdef WARPX_USE_FFT
+            if (electromagnetic_solver_id == ElectromagneticSolverAlgo::PSATD) {
+                if (spectral_solver_cp[lev] != nullptr) {
+                    BoxArray cba = ba;
+                    cba.coarsen(refRatio(lev-1));
+                    const std::array<Real,3> cdx = CellSize(lev-1);
 
-            if (rho_cp[lev] != nullptr) {
-                const int nc = rho_cp[lev]->nComp();
-                const IntVect& ng = rho_cp[lev]->nGrowVect();
-                auto pmf  = std::make_unique<MultiFab>(rho_cp[lev]->boxArray(),
-                                                                  dm, nc, ng);
-                rho_cp[lev] = std::move(pmf);
+                    // Get the cell-centered box
+                    BoxArray c_realspace_ba = cba;  // Copy box
+                    c_realspace_ba.enclosedCells(); // Make it cell-centered
+
+                    auto ngEB = getngEB();
+
+#   ifdef WARPX_DIM_RZ
+                    c_realspace_ba.grow(1, ngEB[1]); // add guard cells only in z
+                    AllocLevelSpectralSolverRZ(spectral_solver_cp,
+                                               lev,
+                                               c_realspace_ba,
+                                               dm,
+                                               cdx);
+#   else
+                    c_realspace_ba.grow(ngEB);
+                    bool const pml_flag_false = false;
+                    AllocLevelSpectralSolver(spectral_solver_cp,
+                                             lev,
+                                             c_realspace_ba,
+                                             dm,
+                                             cdx,
+                                             pml_flag_false);
+#   endif
+                }
             }
+#endif
         }
 
         if (lev > 0 && (n_field_gather_buffer > 0 || n_current_deposition_buffer > 0)) {
             for (int idim=0; idim < 3; ++idim)
             {
-                if (Bfield_cax[lev][idim])
-                {
-                    const IntVect& ng = Bfield_cax[lev][idim]->nGrowVect();
-                    auto pmf = std::make_unique<MultiFab>(Bfield_cax[lev][idim]->boxArray(),
-                                                                      dm, Bfield_cax[lev][idim]->nComp(), ng);
-                    // pmf->ParallelCopy(*Bfield_cax[lev][idim], 0, 0, Bfield_cax[lev][idim]->nComp(), ng, ng);
-                    Bfield_cax[lev][idim] = std::move(pmf);
-                }
-                if (Efield_cax[lev][idim])
-                {
-                    const IntVect& ng = Efield_cax[lev][idim]->nGrowVect();
-                    auto pmf = std::make_unique<MultiFab>(Efield_cax[lev][idim]->boxArray(),
-                                                                      dm, Efield_cax[lev][idim]->nComp(), ng);
-                    // pmf->ParallelCopy(*Efield_cax[lev][idim], 0, 0, Efield_cax[lev][idim]->nComp(), ng, ng);
-                    Efield_cax[lev][idim] = std::move(pmf);
-                }
-                if (current_buf[lev][idim])
-                {
-                    const IntVect& ng = current_buf[lev][idim]->nGrowVect();
-                    auto pmf = std::make_unique<MultiFab>(current_buf[lev][idim]->boxArray(),
-                                                                      dm, current_buf[lev][idim]->nComp(), ng);
-                    // pmf->ParallelCopy(*current_buf[lev][idim], 0, 0, current_buf[lev][idim]->nComp(), ng, ng);
-                    current_buf[lev][idim] = std::move(pmf);
-                }
+                RemakeMultiFab(Bfield_cax[lev][idim], false);
+                RemakeMultiFab(Efield_cax[lev][idim], false);
+                RemakeMultiFab(current_buf[lev][idim], false);
             }
-            if (charge_buf[lev])
-            {
-                const IntVect& ng = charge_buf[lev]->nGrowVect();
-                auto pmf = std::make_unique<MultiFab>(charge_buf[lev]->boxArray(),
-                                                                  dm, charge_buf[lev]->nComp(), ng);
-                // pmf->ParallelCopy(*charge_buf[lev][idim], 0, 0, charge_buf[lev]->nComp(), ng, ng);
-                charge_buf[lev] = std::move(pmf);
-            }
-            if (current_buffer_masks[lev])
-            {
-                const IntVect& ng = current_buffer_masks[lev]->nGrowVect();
-                auto pmf = std::make_unique<iMultiFab>(current_buffer_masks[lev]->boxArray(),
-                                                                    dm, current_buffer_masks[lev]->nComp(), ng);
-                // pmf->ParallelCopy(*current_buffer_masks[lev], 0, 0, current_buffer_masks[lev]->nComp(), ng, ng);
-                current_buffer_masks[lev] = std::move(pmf);
-            }
-            if (gather_buffer_masks[lev])
-            {
-                const IntVect& ng = gather_buffer_masks[lev]->nGrowVect();
-                auto pmf = std::make_unique<iMultiFab>(gather_buffer_masks[lev]->boxArray(),
-                                                                    dm, gather_buffer_masks[lev]->nComp(), ng);
-                // pmf->ParallelCopy(*gather_buffer_masks[lev], 0, 0, gather_buffer_masks[lev]->nComp(), ng, ng);
-                gather_buffer_masks[lev] = std::move(pmf);
+            RemakeMultiFab(charge_buf[lev], false);
+            // we can avoid redistributing these since we immediately re-build the values via BuildBufferMasks()
+            RemakeMultiFab(current_buffer_masks[lev], false);
+            RemakeMultiFab(gather_buffer_masks[lev], false);
+
+            if (current_buffer_masks[lev] || gather_buffer_masks[lev]) {
+                BuildBufferMasks();
             }
         }
+
+        // Re-initialize the lattice element finder with the new ba and dm.
+        m_accelerator_lattice[lev]->InitElementFinder(lev, ba, dm);
 
         if (costs[lev] != nullptr)
         {
             costs[lev] = std::make_unique<LayoutData<Real>>(ba, dm);
-            for (int i : costs[lev]->IndexArray())
+            const auto iarr = costs[lev]->IndexArray();
+            for (const auto& i : iarr)
             {
                 (*costs[lev])[i] = 0.0;
+                setLoadBalanceEfficiency(lev, -1);
             }
         }
 
@@ -299,10 +500,14 @@ WarpX::RemakeLevel (int lev, Real /*time*/, const BoxArray& ba, const Distributi
 
     } else
     {
-        amrex::Abort("RemakeLevel: to be implemented");
+        WARPX_ABORT_WITH_MESSAGE("RemakeLevel: to be implemented");
     }
+
     // Re-initialize diagnostic functors that stores pointers to the user-requested fields at level, lev.
     multi_diags->InitializeFieldFunctors( lev );
+
+    // Reduced diagnostics
+    // not needed yet
 }
 
 void
@@ -310,7 +515,7 @@ WarpX::ComputeCostsHeuristic (amrex::Vector<std::unique_ptr<amrex::LayoutData<am
 {
     for (int lev = 0; lev <= finest_level; ++lev)
     {
-        const auto & mypc_ref = WarpX::GetInstance().GetPartContainer();
+        const auto & mypc_ref = GetInstance().GetPartContainer();
         const auto nSpecies = mypc_ref.nSpecies();
 
         // Species loop
@@ -325,7 +530,7 @@ WarpX::ComputeCostsHeuristic (amrex::Vector<std::unique_ptr<amrex::LayoutData<am
             }
         }
 
-        //Cell loop
+        // Cell loop
         MultiFab* Ex = Efield_fp[lev][0].get();
         for (MFIter mfi(*Ex, false); mfi.isValid(); ++mfi)
         {
@@ -338,11 +543,43 @@ WarpX::ComputeCostsHeuristic (amrex::Vector<std::unique_ptr<amrex::LayoutData<am
 void
 WarpX::ResetCosts ()
 {
+    AMREX_ALWAYS_ASSERT(!costs.empty());
+    AMREX_ALWAYS_ASSERT(costs[0] != nullptr);
+
     for (int lev = 0; lev <= finest_level; ++lev)
     {
-        for (int i : costs[lev]->IndexArray())
+        const auto iarr = costs[lev]->IndexArray();
+        for (const auto& i : iarr)
         {
+            // Reset costs
             (*costs[lev])[i] = 0.0;
+        }
+    }
+}
+
+void
+WarpX::RescaleCosts (int step)
+{
+    // rescale is only used for timers
+    if (WarpX::load_balance_costs_update_algo != LoadBalanceCostsUpdateAlgo::Timers)
+    {
+        return;
+    }
+
+    AMREX_ALWAYS_ASSERT(costs.size() == finest_level + 1);
+
+    for (int lev = 0; lev <= finest_level; ++lev)
+    {
+        if (costs[lev])
+        {
+            // Perform running average of the costs
+            // (Giving more importance to most recent costs; only needed
+            // for timers update, heuristic load balance considers the
+            // instantaneous costs)
+            for (const auto& i : costs[lev]->IndexArray())
+            {
+                (*costs[lev])[i] *= (1._rt - 2._rt/load_balance_intervals.localPeriod(step+1));
+            }
         }
     }
 }

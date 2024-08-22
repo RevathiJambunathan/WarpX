@@ -8,11 +8,24 @@
 #define WARPX_SPECTRAL_BASE_ALGORITHM_H_
 
 #include "FieldSolver/SpectralSolver/SpectralKSpace.H"
+#include "Utils/WarpX_Complex.H"
+
+#include "FieldSolver/SpectralSolver/SpectralFieldData_fwd.H"
 #include "FieldSolver/SpectralSolver/SpectralFieldData.H"
 
-#include <AMReX.H>
+#include <ablastr/utils/Enums.H>
 
-#if WARPX_USE_PSATD
+#include <AMReX_BaseFab.H>
+#include <AMReX_Config.H>
+#include <AMReX_FabArray.H>
+#include <AMReX_REAL.H>
+
+#include <AMReX_BaseFwd.H>
+
+#include <array>
+#include <memory>
+
+#if WARPX_USE_FFT
 
 /* \brief Class that updates the field in spectral space
  * and stores the coefficients of the corresponding update equation.
@@ -26,11 +39,17 @@ class SpectralBaseAlgorithm
     public:
         // Virtual member function ; meant to be overridden in subclasses
         virtual void pushSpectralFields(SpectralFieldData& f) const = 0;
-        virtual int getRequiredNumberOfFields() const = 0;
+
         // The destructor should also be a virtual function, so that
         // a pointer to subclass of `SpectraBaseAlgorithm` actually
         // calls the subclass's destructor.
-        virtual ~SpectralBaseAlgorithm() {}
+        virtual ~SpectralBaseAlgorithm() = default;
+
+        // Default move and copy operations
+        SpectralBaseAlgorithm(const SpectralBaseAlgorithm&) = default;
+        SpectralBaseAlgorithm& operator=(const SpectralBaseAlgorithm&) = default;
+        SpectralBaseAlgorithm(SpectralBaseAlgorithm&&) = default;
+        SpectralBaseAlgorithm& operator=(SpectralBaseAlgorithm&&) = default;
 
         /**
          * \brief Virtual function for current correction in Fourier space
@@ -38,13 +57,8 @@ class SpectralBaseAlgorithm
          * This virtual function is pure and must be defined in derived classes.
          *
          * \param[in,out] field_data All fields in Fourier space
-         * \param[in,out] current    Array of unique pointers to \c MultiFab storing
-         *                           the three components of the current density
-         * \param[in]     rho        Unique pointer to \c MultiFab storing the charge density
          */
-        virtual void CurrentCorrection (SpectralFieldData& field_data,
-                                        std::array<std::unique_ptr<amrex::MultiFab>,3>& current,
-                                        const std::unique_ptr<amrex::MultiFab>& rho) = 0;
+        virtual void CurrentCorrection (SpectralFieldData& field_data) = 0;
 
         /**
          * \brief Virtual function for Vay current deposition in Fourier space
@@ -52,16 +66,14 @@ class SpectralBaseAlgorithm
          * This virtual function is pure and must be defined in derived classes.
          *
          * \param[in,out] field_data All fields in Fourier space
-         * \param[in,out] current    Array of unique pointers to \c MultiFab storing
-         *                           the three components of the current density
          */
-        virtual void VayDeposition (SpectralFieldData& field_data,
-                                    std::array<std::unique_ptr<amrex::MultiFab>,3>& current) = 0;
+        virtual void VayDeposition (SpectralFieldData& field_data) = 0;
 
         /**
          * \brief Compute spectral divergence of E
          */
-        void ComputeSpectralDivE ( SpectralFieldData& field_data,
+        void ComputeSpectralDivE ( int lev,
+                                   SpectralFieldData& field_data,
                                    const std::array<std::unique_ptr<amrex::MultiFab>,3>& Efield,
                                    amrex::MultiFab& divE );
 
@@ -72,32 +84,26 @@ class SpectralBaseAlgorithm
         using SpectralComplexCoefficients = \
             amrex::FabArray< amrex::BaseFab <Complex> >;
 
-        // Constructor
+        /**
+        * \brief Constructor
+        */
         SpectralBaseAlgorithm(const SpectralKSpace& spectral_kspace,
                               const amrex::DistributionMapping& dm,
-                              const int norder_x, const int norder_y,
-                              const int norder_z, const bool nodal)
-          // Compute and assign the modified k vectors
-          : modified_kx_vec(spectral_kspace.getModifiedKComponent(dm,0,norder_x,nodal)),
-#if (AMREX_SPACEDIM==3)
-            modified_ky_vec(spectral_kspace.getModifiedKComponent(dm,1,norder_y,nodal)),
-            modified_kz_vec(spectral_kspace.getModifiedKComponent(dm,2,norder_z,nodal))
-#else
-            modified_kz_vec(spectral_kspace.getModifiedKComponent(dm,1,norder_z,nodal))
-#endif
-          {
-#if (AMREX_SPACEDIM!=3)
-            amrex::ignore_unused(norder_y);
-#endif
-          }
+                              const SpectralFieldIndex& spectral_index,
+                              int norder_x,
+                              int norder_y,
+                              int norder_z,
+                              ablastr::utils::enums::GridType grid_type);
+
+        SpectralFieldIndex m_spectral_index;
 
         // Modified finite-order vectors
         KVectorComponent modified_kx_vec;
-#if (AMREX_SPACEDIM==3)
+#if defined(WARPX_DIM_3D)
         KVectorComponent modified_ky_vec;
 #endif
         KVectorComponent modified_kz_vec;
 };
 
-#endif // WARPX_USE_PSATD
+#endif // WARPX_USE_FFT
 #endif // WARPX_SPECTRAL_BASE_ALGORITHM_H_

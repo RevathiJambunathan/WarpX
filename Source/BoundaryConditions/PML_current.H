@@ -5,10 +5,11 @@
  *
  * License: BSD-3-Clause-LBNL
  */
-#ifndef PML_CURRENT_H_
-#define PML_CURRENT_H_
+#ifndef WARPX_PML_CURRENT_H_
+#define WARPX_PML_CURRENT_H_
 
 #include "BoundaryConditions/PMLComponent.H"
+
 #include <AMReX.H>
 #include <AMReX_FArrayBox.H>
 
@@ -21,7 +22,7 @@ void push_ex_pml_current (int j, int k, int l,
                           int ylo, int zlo,
                           amrex::Real mu_c2_dt)
 {
-#if (AMREX_SPACEDIM == 3)
+#if defined(WARPX_DIM_3D)
     amrex::Real alpha_xy, alpha_xz;
     if (sigjy[k-ylo]+sigjz[l-zlo] == 0){
         alpha_xy = 0.5;
@@ -48,7 +49,7 @@ void push_ey_pml_current (int j, int k, int l,
                           int xlo, int zlo,
                           amrex::Real mu_c2_dt)
 {
-#if (AMREX_SPACEDIM == 3)
+#if defined(WARPX_DIM_3D)
     amrex::Real alpha_yx, alpha_yz;
     if (sigjx[j-xlo]+sigjz[l-zlo] == 0){
         alpha_yx = 0.5;
@@ -76,7 +77,7 @@ void push_ez_pml_current (int j, int k, int l,
                           int xlo, int ylo,
                           amrex::Real mu_c2_dt)
 {
-#if (AMREX_SPACEDIM == 3)
+#if defined(WARPX_DIM_3D)
     amrex::Real alpha_zx, alpha_zy;
     if (sigjx[j-xlo]+sigjy[k-ylo]==0){
         alpha_zx = 0.5;
@@ -102,7 +103,7 @@ void damp_jx_pml (int j, int k, int l,
                   amrex::Real const* const sigjz,
                   int xlo, int ylo, int zlo)
 {
-#if (AMREX_SPACEDIM == 3)
+#if defined(WARPX_DIM_3D)
     jx(j,k,l) = jx(j,k,l) * sigsjx[j-xlo] * sigjy[k-ylo] * sigjz[l-zlo];
 #else
     jx(j,k,l) = jx(j,k,l) * sigsjx[j-xlo] * sigjz[k-zlo];
@@ -118,7 +119,7 @@ void damp_jy_pml (int j, int k, int l,
                   amrex::Real const * const sigjz,
                   int xlo, int ylo, int zlo)
 {
-#if (AMREX_SPACEDIM == 3)
+#if defined(WARPX_DIM_3D)
     jy(j,k,l) = jy(j,k,l) * sigjx[j-xlo] * sigsjy[k-ylo] * sigjz[l-zlo];
 #else
     jy(j,k,l) = jy(j,k,l) * sigjx[j-xlo] * sigjz[k-zlo];
@@ -134,7 +135,7 @@ void damp_jz_pml (int j, int k, int l,
                   amrex::Real const * const sigsjz,
                   int xlo, int ylo, int zlo)
 {
-#if (AMREX_SPACEDIM == 3)
+#if defined(WARPX_DIM_3D)
     jz(j,k,l) = jz(j,k,l) * sigjx[j-xlo] * sigjy[k-ylo] * sigsjz[l-zlo];
 #else
     jz(j,k,l) = jz(j,k,l) * sigjx[j-xlo] * sigsjz[k-zlo];
@@ -142,4 +143,4 @@ void damp_jz_pml (int j, int k, int l,
 #endif
 }
 
-#endif
+#endif //WARPX_PML_CURRENT_H_

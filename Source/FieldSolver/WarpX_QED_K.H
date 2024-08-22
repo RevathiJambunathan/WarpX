@@ -5,25 +5,27 @@
  * License: BSD-3-Clause-LBNL
  */
 
-#ifndef WarpX_QED_K_h
-#define WarpX_QED_K_h
+#ifndef WARPX_QED_K_h
+#define WARPX_QED_K_h
 
 #include "Utils/WarpXConst.H"
-#include <AMReX_FArrayBox.H>
+
 #include <AMReX.H>
+#include <AMReX_FArrayBox.H>
 
 #include <cmath>
 
 /**
  * calc_M calculates the Magnetization field of the vacuum at a specific point and returns it as a three component vector
  * \param[in] arr This is teh empty array that will be filled with the components of the M-field
- * \param[in] ex The x-component of the E-field at the point at whicht the M-field is to be calculated
- * \param[in] ey The y-component of the E-field at the point at whicht the M-field is to be calculated
- * \param[in] ez The z-component of the E-field at the point at whicht the M-field is to be calculated
- * \param[in] bx The x-component of the B-field at the point at whicht the M-field is to be calculated
- * \param[in] by The y-component of the B-field at the point at whicht the M-field is to be calculated
- * \param[in] bz The z-component of the B-field at the point at whicht the M-field is to be calculated
+ * \param[in] ex The x-component of the E-field at the point at which the M-field is to be calculated
+ * \param[in] ey The y-component of the E-field at the point at which the M-field is to be calculated
+ * \param[in] ez The z-component of the E-field at the point at which the M-field is to be calculated
+ * \param[in] bx The x-component of the B-field at the point at which the M-field is to be calculated
+ * \param[in] by The y-component of the B-field at the point at which the M-field is to be calculated
+ * \param[in] bz The z-component of the B-field at the point at which the M-field is to be calculated
  * \param[in] xi_c2 The quantum parameter * c2 being used for the simulation
+ * \param[in] c2 the speed of light squared
  */
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
 void calc_M(amrex::Real arr [], amrex::Real ex, amrex::Real ey, amrex::Real ez,
@@ -44,27 +46,33 @@ void calc_M(amrex::Real arr [], amrex::Real ex, amrex::Real ey, amrex::Real ez,
  * warpx_hybrid_QED_push uses an FDTD scheme to calculate QED corrections to
  * Maxwell's equations and preforms a half timestep correction to the E-fields
  *
- * \param[in] Ex This function modifies the Ex field at the end
- * \param[in] Ey This function modifies the Ey field at the end
- * \param[in] Ez This function modifies the Ez field at the end
+ * \param[in] j mesh index
+ * \param[in] k mesh index
+ * \param[in] l mesh index
+ * \param[inout] Ex This function modifies the Ex field at the end
+ * \param[inout] Ey This function modifies the Ey field at the end
+ * \param[inout] Ez This function modifies the Ez field at the end
  * \param[in] Bx The QED corrections are non-linear functions of B. However,
  *            they do not modify B itself
  * \param[in] By The QED corrections are non-linear functions of B. However,
  *            they do not modify B itself
  * \param[in] Bz The QED corrections are non-linear functions of B. However,
  *            they do not modify B itself
- * \param[in] tempEx Since the corrections to E at a given node are non-linear functions
+ * \param[in] tmpEx Since the corrections to E at a given node are non-linear functions
  *            of the values of E on the surronding nodes, temp arrays are used so that
  *            modifications to one node do not influence the corrections to the surronding nodes
- * \param[in] tempEy Since the corrections to E at a given node are non-linear functions
+ * \param[in] tmpEy Since the corrections to E at a given node are non-linear functions
  *            of the values of E on the surronding nodes, temp arrays are used so that modifications to
  *            one node do not influence the corrections to the surronding nodes
- * \param[in] tempEz Since the corrections to E at a given node are non-linear functions
+ * \param[in] tmpEz Since the corrections to E at a given node are non-linear functions
  *            of the values of E on the surronding nodes, temp arrays are used so that modifications to
  *            one node do not influence the corrections to the surronding nodes
+ * \param[in] Jx the current field in x
+ * \param[in] Jy the current field in y
+ * \param[in] Jz the current field in z
  * \param[in] dx The x spatial step, used for calculating curls
  * \param[in] dy The y spatial step, used for calculating curls
- * \param[in] dz The z spatial step, used for calulating curls
+ * \param[in] dz The z spatial step, used for calculating curls
  * \param[in] dt The temporal step, used for the half push/correction to the E-fields at the end of the function
  * \param[in] xi_c2 Quantum parameter * c**2
  */
@@ -89,7 +97,7 @@ constexpr amrex::Real c2i = 1._rt/c2;
 const amrex::Real dxi = 1._rt/dx;
 const amrex::Real dzi = 1._rt/dz;
 
-#if (AMREX_SPACEDIM == 3)
+#if defined(WARPX_DIM_3D)
 const amrex::Real dyi = 1._rt/dy;
 
     // Picking out points for stencil to be used in curl function of M
@@ -101,7 +109,7 @@ const amrex::Real dyi = 1._rt/dy;
     amrex::Real Mpz [3] = {0._rt,0._rt,0._rt};
     amrex::Real Mnz [3] = {0._rt,0._rt,0._rt};
 
-    // Calcualting the M-field at the chosen stencil points
+    // Calculating the M-field at the chosen stencil points
 
     calc_M(Mpx, tmpEx(j+1,k,l), tmpEy(j+1,k,l), tmpEz(j+1,k,l),
            Bx(j+1,k,l), By(j+1,k,l), Bz(j+1,k,l), xi_c2, c2);
@@ -174,7 +182,7 @@ const amrex::Real dyi = 1._rt/dy;
         + 7._rt*c2*bz*(BVxB + Bmu0J) )
     };
 
-    // Calcualting matrix values for the QED correction algorithm
+    // Calculating matrix values for the QED correction algorithm
 
     const amrex::Real a00 = beta + xi_c2*( 8._rt*c2i*ex*ex + 14._rt*bx*bx );
 
@@ -190,7 +198,7 @@ const amrex::Real dyi = 1._rt/dy;
 
     const amrex::Real detA = a00*( a11*a22 - a12*a12 ) - a01*( a01*a22 - a02*a12 )+a02*( a01*a12 - a02*a11 );
 
-    // Calcualting the rows of the inverse matrix using the general 3x3 inverse form
+    // Calculating the rows of the inverse matrix using the general 3x3 inverse form
 
     const amrex::Real invAx[3] = {a22*a11 - a12*a12, a12*a02 - a22*a01, a12*a01 - a11*a02};
 
@@ -198,7 +206,7 @@ const amrex::Real dyi = 1._rt/dy;
 
     const amrex::Real invAz[3] = {a12*a01 - a02*a11, a02*a01 - a12*a00, a11*a00 - a01*a01};
 
-    // Calcualting the final QED corrections by mutliplying the Omega vector with the inverse matrix
+    // Calculating the final QED corrections by mutliplying the Omega vector with the inverse matrix
 
     const amrex::Real dEx = (-1._rt/detA)*(invAx[0]*Omega[0] +
                                            invAx[1]*Omega[1] +
@@ -212,7 +220,7 @@ const amrex::Real dyi = 1._rt/dy;
                                            invAz[1]*Omega[1] +
                                            invAz[2]*Omega[2]);
 
-   // Adding the QED corrections to the origional fields
+    // Adding the QED corrections to the original fields
 
     Ex(j,k,l) = Ex(j,k,l) + 0.5_rt*dt*dEx;
 
@@ -231,7 +239,7 @@ const amrex::Real dyi = 1._rt/dy;
     amrex::Real Mpz [3] = {0._rt,0._rt,0._rt};
     amrex::Real Mnz [3] = {0._rt,0._rt,0._rt};
 
-    // Calcualting the M-field at the chosen stencil points
+    // Calculating the M-field at the chosen stencil points
 
     calc_M(Mpx, tmpEx(j+1,k,0), tmpEy(j+1,k,0), tmpEz(j+1,k,0),
            Bx(j+1,k,0), By(j+1,k,0), Bz(j+1,k,0), xi_c2, c2);
@@ -300,7 +308,7 @@ const amrex::Real dyi = 1._rt/dy;
         + 7._rt*c2*bz*(BVxB + Bmu0J) )
     };
 
-    // Calcualting matrix values for the QED correction algorithm
+    // Calculating matrix values for the QED correction algorithm
 
     const amrex::Real a00 = beta + xi_c2*( 8._rt*c2i*ex*ex + 14._rt*bx*bx );
 
@@ -316,7 +324,7 @@ const amrex::Real dyi = 1._rt/dy;
 
     const amrex::Real detA = a00*( a11*a22 - a12*a12 ) - a01*( a01*a22 - a02*a12 ) + a02*( a01*a12 - a02*a11 );
 
-    // Calcualting inverse matrix values using the general 3x3 form
+    // Calculating inverse matrix values using the general 3x3 form
 
     const amrex::Real invAx[3] = {a22*a11 - a12*a12, a12*a02 - a22*a01, a12*a01 - a11*a02};
 
@@ -324,7 +332,7 @@ const amrex::Real dyi = 1._rt/dy;
 
     const amrex::Real invAz[3] = {a12*a01 - a02*a11, a02*a01 - a12*a00, a11*a00 - a01*a01};
 
-    // Calcualting the final QED corrections by mutliplying the Omega vector with the inverse matrix
+    // Calculating the final QED corrections by mutliplying the Omega vector with the inverse matrix
 
     const amrex::Real dEx = (-1._rt/detA)*(invAx[0]*Omega[0] +
                                            invAx[1]*Omega[1] +
@@ -338,7 +346,7 @@ const amrex::Real dyi = 1._rt/dy;
                                            invAz[1]*Omega[1] +
                                            invAz[2]*Omega[2]);
 
-   // Adding the QED corrections to the origional fields
+    // Adding the QED corrections to the original fields
 
     Ex(j,k,0) = Ex(j,k,0) + 0.5_rt*dt*dEx;
 
@@ -351,4 +359,4 @@ const amrex::Real dyi = 1._rt/dy;
 
 }
 
-#endif
+#endif //WARPX_QED_K_h

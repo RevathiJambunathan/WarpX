@@ -1,31 +1,24 @@
-target_sources(WarpX
-  PRIVATE
-    SpectralFieldData.cpp
-    SpectralKSpace.cpp
-    SpectralSolver.cpp
-)
+foreach(D IN LISTS WarpX_DIMS)
+    warpx_set_suffix_dims(SD ${D})
+    target_sources(lib_${SD}
+      PRIVATE
+        SpectralFieldData.cpp
+        SpectralKSpace.cpp
+        SpectralSolver.cpp
+    )
 
-if(WarpX_COMPUTE STREQUAL CUDA)
-    target_sources(WarpX
-      PRIVATE
-        WrapCuFFT.cpp
-    )
-else()
-    target_sources(WarpX
-      PRIVATE
-        WrapFFTW.cpp
-    )
-endif()
+    if(D STREQUAL "RZ")
+        target_sources(lib_${SD}
+          PRIVATE
+            SpectralSolverRZ.cpp
+            SpectralFieldDataRZ.cpp
+            SpectralKSpaceRZ.cpp
+            SpectralBinomialFilter.cpp
+        )
+    endif()
+endforeach()
 
-if(WarpX_DIMS STREQUAL RZ)
-    target_sources(WarpX
-      PRIVATE
-        SpectralSolverRZ.cpp
-        SpectralFieldDataRZ.cpp
-        SpectralKSpaceRZ.cpp
-        SpectralBinomialFilter.cpp
-    )
+if(RZ IN_LIST WarpX_DIMS)
     add_subdirectory(SpectralHankelTransform)
 endif()
-
 add_subdirectory(SpectralAlgorithms)

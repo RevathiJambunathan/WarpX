@@ -8,13 +8,12 @@
 #ifndef WARPX_DIAGNOSTICS_REDUCEDDIAGS_REDUCEDDIAGS_H_
 #define WARPX_DIAGNOSTICS_REDUCEDDIAGS_REDUCEDDIAGS_H_
 
-#include "Utils/IntervalsParser.H"
+#include "Utils/Parser/IntervalsParser.H"
 
 #include <AMReX_REAL.H>
 
 #include <string>
 #include <vector>
-#include <fstream>
 
 /**
  *  Base class for reduced diagnostics. Each type of reduced diagnostics is
@@ -35,36 +34,67 @@ public:
     std::string m_rd_name;
 
     /// output intervals
-    IntervalsParser m_intervals;
+    utils::parser::IntervalsParser m_intervals;
 
-    /// check if it is a restart run
-    int m_IsNotRestart = 1;
+    /// check if header should be written
+    bool m_write_header = false;
 
     /// separator in the output file
     std::string m_sep = " ";
 
+    /// precision for data in the output file
+    int m_precision = 14;
+
     /// output data
     std::vector<amrex::Real> m_data;
 
-    /** constructor
-     *  @param[in] rd_name reduced diags name */
-    ReducedDiags(std::string rd_name);
-
-    /** Virtual destructor for polymorphism
+    /**
+     * constructor
+     * @param[in] rd_name reduced diags names
      */
-    virtual ~ReducedDiags() = default;
+    ReducedDiags (const std::string& rd_name);
 
-    /// function to compute diags
-    virtual void ComputeDiags(int step) = 0;
-
-    /** write to file function
-     *  @param[in] step time step */
-    virtual void WriteToFile(int step) const;
-
-    /** This function queries deprecated input parameters and abort
-     *  the run if one of them is specified.
+    /**
+     * Virtual destructor for polymorphism
      */
-    void BackwardCompatibility ();
+    virtual ~ReducedDiags () = default;
+
+    // Default move and copy operations
+    ReducedDiags(const ReducedDiags&) = default;
+    ReducedDiags& operator=(const ReducedDiags&) = default;
+    ReducedDiags(ReducedDiags&&) = default;
+    ReducedDiags& operator=(ReducedDiags&&) = default;
+
+
+    /**
+     * function to initialize data after amr
+     * levels are initialized.
+     */
+    virtual void InitData ();
+
+    /** Redistribute parallel data structures during load balance
+     */
+    virtual void LoadBalance ();
+
+    /**
+     * function to compute diags
+     *
+     * @param[in] step current time step
+     */
+    virtual void ComputeDiags (int step) = 0;
+
+    /**
+     * write to file function
+     *
+     * @param[in] step current time step
+     */
+    virtual void WriteToFile (int step) const;
+
+    /**
+     * This function queries deprecated input parameters and aborts
+     * the run if one of them is specified.
+     */
+    void BackwardCompatibility () const;
 
 };
 

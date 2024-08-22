@@ -8,8 +8,21 @@
 #ifndef WARPX_RigidInjectedParticleContainer_H_
 #define WARPX_RigidInjectedParticleContainer_H_
 
+#include "Evolve/WarpXDtType.H"
+#include "Evolve/WarpXPushType.H"
+#include "Particles/Gather/ScaleFields.H"
 #include "PhysicalParticleContainer.H"
+
+#include "WarpXParticleContainer_fwd.H"
+
+#include <AMReX_REAL.H>
 #include <AMReX_Vector.H>
+
+#include <AMReX_BaseFwd.H>
+#include <AMReX_AmrCoreFwd.H>
+
+#include <iosfwd>
+#include <string>
 
 /**
  * When injecting a particle beam (typically for a plasma wakefield
@@ -36,26 +49,25 @@ public:
     RigidInjectedParticleContainer (amrex::AmrCore* amr_core,
                                     int ispecies,
                                     const std::string& name);
-    virtual ~RigidInjectedParticleContainer () {}
+    ~RigidInjectedParticleContainer () override = default;
 
-    virtual void InitData() override;
+    RigidInjectedParticleContainer ( RigidInjectedParticleContainer const &)             = delete;
+    RigidInjectedParticleContainer& operator= ( RigidInjectedParticleContainer const & ) = delete;
+    RigidInjectedParticleContainer ( RigidInjectedParticleContainer&& )                  = default;
+    RigidInjectedParticleContainer& operator= ( RigidInjectedParticleContainer&& )       = default;
+
+
+    void InitData() override;
 
     virtual void RemapParticles();
-    virtual void BoostandRemapParticles();
 
-    virtual void Evolve (int lev,
+    void Evolve (int lev,
                          const amrex::MultiFab& Ex,
                          const amrex::MultiFab& Ey,
                          const amrex::MultiFab& Ez,
                          const amrex::MultiFab& Bx,
                          const amrex::MultiFab& By,
                          const amrex::MultiFab& Bz,
-                         const amrex::MultiFab& Ex_avg,
-                         const amrex::MultiFab& Ey_avg,
-                         const amrex::MultiFab& Ez_avg,
-                         const amrex::MultiFab& Bx_avg,
-                         const amrex::MultiFab& By_avg,
-                         const amrex::MultiFab& Bz_avg,
                          amrex::MultiFab& jx,
                          amrex::MultiFab& jy,
                          amrex::MultiFab& jz,
@@ -72,23 +84,25 @@ public:
                          const amrex::MultiFab* cBz,
                          amrex::Real t,
                          amrex::Real dt,
-                         DtType a_dt_type=DtType::Full) override;
+                         DtType a_dt_type=DtType::Full,
+                         bool skip_deposition=false,
+                         PushType push_type=PushType::Explicit) override;
 
-    virtual void PushPX (WarpXParIter& pti,
+    void PushPX (WarpXParIter& pti,
                          amrex::FArrayBox const * exfab,
                          amrex::FArrayBox const * eyfab,
                          amrex::FArrayBox const * ezfab,
                          amrex::FArrayBox const * bxfab,
                          amrex::FArrayBox const * byfab,
                          amrex::FArrayBox const * bzfab,
-                         const int ngE, const int /*e_is_nodal*/,
-                         const long offset,
-                         const long np_to_push,
+                         amrex::IntVect ngEB, int /*e_is_nodal*/,
+                         long offset,
+                         long np_to_push,
                          int lev, int gather_lev,
                          amrex::Real dt, ScaleFields scaleFields,
                          DtType a_dt_type=DtType::Full) override;
 
-    virtual void PushP (int lev, amrex::Real dt,
+    void PushP (int lev, amrex::Real dt,
                         const amrex::MultiFab& Ex,
                         const amrex::MultiFab& Ey,
                         const amrex::MultiFab& Ez,
@@ -96,26 +110,23 @@ public:
                         const amrex::MultiFab& By,
                         const amrex::MultiFab& Bz) override;
 
-    virtual void ReadHeader (std::istream& is) override;
+    void ReadHeader (std::istream& is) override;
 
-    virtual void WriteHeader (std::ostream& os) const override;
+    void WriteHeader (std::ostream& os) const override;
 
 private:
 
     // User input quantities
-    amrex::Real zinject_plane = 0.;
-    bool projected = true; // When true, particle transverse positions are directly projected (without adjusment)
-    bool focused = false; // When true, particle transverse positions are adjusted to account for distance between zinject and z=0
+    amrex::ParticleReal zinject_plane = 0.;
     bool rigid_advance = true; // When true, particles are advance with vzbar before injection
 
-    amrex::Real vzbeam_ave_boosted;
+    amrex::ParticleReal vzbeam_ave_boosted;
 
-    amrex::Vector<int> done_injecting;
-    amrex::Vector<amrex::Real> zinject_plane_levels;
+    amrex::Vector<amrex::ParticleReal> zinject_plane_levels;
 
-    // Temporary quantites
-    amrex::Real zinject_plane_lev;
-    amrex::Real zinject_plane_lev_previous;
+    // Temporary quantities
+    amrex::ParticleReal zinject_plane_lev;
+    amrex::ParticleReal zinject_plane_lev_previous;
     bool done_injecting_lev;
 
 };

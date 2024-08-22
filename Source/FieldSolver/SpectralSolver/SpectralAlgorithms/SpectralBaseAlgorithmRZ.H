@@ -10,6 +10,9 @@
 #include "FieldSolver/SpectralSolver/SpectralKSpaceRZ.H"
 #include "FieldSolver/SpectralSolver/SpectralFieldDataRZ.H"
 
+#include <ablastr/utils/Enums.H>
+
+
 /* \brief Class that updates the field in spectral space
  * and stores the coefficients of the corresponding update equation.
  *
@@ -22,11 +25,32 @@ class SpectralBaseAlgorithmRZ
     public:
         // Virtual member function ; meant to be overridden in subclasses
         virtual void pushSpectralFields(SpectralFieldDataRZ & f) = 0;
-        virtual int getRequiredNumberOfFields() const = 0;
+
         // The destructor should also be a virtual function, so that
         // a pointer to subclass of `SpectraBaseAlgorithm` actually
         // calls the subclass's destructor.
-        virtual ~SpectralBaseAlgorithmRZ() {};
+        virtual ~SpectralBaseAlgorithmRZ() = default;
+
+        /**
+         * \brief Default Copy constructor
+         */
+        SpectralBaseAlgorithmRZ ( SpectralBaseAlgorithmRZ const &) = default;
+
+        /**
+         * \brief Default Copy operator
+         */
+        SpectralBaseAlgorithmRZ& operator= ( SpectralBaseAlgorithmRZ const & ) = default;
+
+
+        /**
+         * \brief Default Move constructor
+         */
+        SpectralBaseAlgorithmRZ ( SpectralBaseAlgorithmRZ&& ) = default;
+
+        /**
+         * \brief Default Move operator
+         */
+        SpectralBaseAlgorithmRZ& operator= ( SpectralBaseAlgorithmRZ&& ) = default;
 
         /**
          * \brief Virtual function for current correction in Fourier space
@@ -34,18 +58,14 @@ class SpectralBaseAlgorithmRZ
          * This virtual function is pure and must be defined in derived classes.
          *
          * \param[in,out] field_data All fields in Fourier space
-         * \param[in,out] current    Array of unique pointers to \c MultiFab storing
-         *                           the three components of the current density
-         * \param[in]     rho        Unique pointer to \c MultiFab storing the charge density
          */
-        virtual void CurrentCorrection ( SpectralFieldDataRZ& field_data,
-                                         std::array<std::unique_ptr<amrex::MultiFab>,3>& current,
-                                         const std::unique_ptr<amrex::MultiFab>& rho ) = 0;
+        virtual void CurrentCorrection (SpectralFieldDataRZ& field_data) = 0;
 
         /**
          * \brief Compute spectral divergence of E
          */
-        void ComputeSpectralDivE ( SpectralFieldDataRZ& field_data,
+        void ComputeSpectralDivE ( int lev,
+                                   SpectralFieldDataRZ& field_data,
                                    const std::array<std::unique_ptr<amrex::MultiFab>,3>& Efield,
                                    amrex::MultiFab& divE );
 
@@ -55,11 +75,8 @@ class SpectralBaseAlgorithmRZ
          * This virtual function is pure and must be defined in derived classes.
          *
          * \param[in,out] field_data All fields in Fourier space
-         * \param[in,out] current    Array of unique pointers to \c MultiFab storing
-         *                           the three components of the current density
          */
-        virtual void VayDeposition (SpectralFieldDataRZ& field_data,
-                                    std::array<std::unique_ptr<amrex::MultiFab>,3>& current) = 0;
+        virtual void VayDeposition (SpectralFieldDataRZ& field_data) = 0;
 
     protected: // Meant to be used in the subclasses
 
@@ -69,10 +86,15 @@ class SpectralBaseAlgorithmRZ
         // Constructor
         SpectralBaseAlgorithmRZ(SpectralKSpaceRZ const & spectral_kspace,
                                 amrex::DistributionMapping const & dm,
-                                int const norder_z, bool const nodal)
+                                const SpectralFieldIndex& spectral_index,
+                                int const norder_z,
+                                ablastr::utils::enums::GridType grid_type)
           // Compute and assign the modified k vectors
-          : modified_kz_vec(spectral_kspace.getModifiedKComponent(dm, 1, norder_z, nodal))
-          {};
+          : m_spectral_index(spectral_index),
+            modified_kz_vec(spectral_kspace.getModifiedKComponent(dm, 1, norder_z, grid_type))
+        {}
+
+        SpectralFieldIndex m_spectral_index;
 
         // Modified finite-order vectors
         KVectorComponent modified_kz_vec;

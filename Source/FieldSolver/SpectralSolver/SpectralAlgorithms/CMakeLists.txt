@@ -1,18 +1,22 @@
-target_sources(WarpX
-  PRIVATE
-    GalileanAlgorithm.cpp
-    PMLPsatdAlgorithm.cpp
-    PsatdAlgorithm.cpp
-    SpectralBaseAlgorithm.cpp
-    AvgGalileanAlgorithm.cpp
-    ComovingPsatdAlgorithm.cpp
-)
-
-if(WarpX_DIMS STREQUAL RZ)
-    target_sources(WarpX
+foreach(D IN LISTS WarpX_DIMS)
+    warpx_set_suffix_dims(SD ${D})
+    target_sources(lib_${SD}
       PRIVATE
-        SpectralBaseAlgorithmRZ.cpp
-        PsatdAlgorithmRZ.cpp
-        GalileanPsatdAlgorithmRZ.cpp
+        PsatdAlgorithmFirstOrder.cpp
+        PsatdAlgorithmJConstantInTime.cpp
+        PsatdAlgorithmJLinearInTime.cpp
+        PsatdAlgorithmPml.cpp
+        SpectralBaseAlgorithm.cpp
+        PsatdAlgorithmComoving.cpp
     )
-endif()
+
+    if(D STREQUAL "RZ")
+        target_sources(lib_${SD}
+          PRIVATE
+            SpectralBaseAlgorithmRZ.cpp
+            PsatdAlgorithmRZ.cpp
+            PsatdAlgorithmGalileanRZ.cpp
+            PsatdAlgorithmPmlRZ.cpp
+        )
+    endif()
+endforeach()

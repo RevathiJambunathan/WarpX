@@ -7,68 +7,36 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "WarpX.H"
-#include "Initialization/WarpXAMReXInit.H"
-#include "Utils/MPIInitHelpers.H"
-#include "Utils/WarpXUtil.H"
+
+#include "Initialization/WarpXInit.H"
 #include "Utils/WarpXProfilerWrapper.H"
 
-#include <AMReX.H>
-#include <AMReX_BLProfiler.H>
-#include <AMReX_ParallelDescriptor.H>
+#include <ablastr/utils/timer/Timer.H>
 
-#if defined(AMREX_USE_HIP) && defined(WARPX_USE_PSATD)
-#include <rocfft.h>
-#endif
+#include <AMReX_Print.H>
 
 int main(int argc, char* argv[])
 {
-    using namespace amrex;
-
-    auto mpi_thread_levels = utils::warpx_mpi_init(argc, argv);
-
-    warpx_amrex_init(argc, argv);
-
-    utils::warpx_check_mpi_thread_level(mpi_thread_levels);
-
-#if defined(AMREX_USE_HIP) && defined(WARPX_USE_PSATD)
-    rocfft_setup();
-#endif
-
-    ConvertLabParamsToBoost();
-
-#ifdef WARPX_DIM_RZ
-    CheckGriddingForRZSpectral();
-#endif
-
-    WARPX_PROFILE_VAR("main()", pmain);
-
-    const auto strt_total = static_cast<Real>(amrex::second());
-
+    warpx::initialization::initialize_external_libraries(argc, argv);
     {
-        WarpX warpx;
+        WARPX_PROFILE_VAR("main()", pmain);
 
+        auto timer = ablastr::utils::timer::Timer{};
+        timer.record_start_time();
+
+        auto& warpx = WarpX::GetInstance();
         warpx.InitData();
-
         warpx.Evolve();
+        const auto is_warpx_verbose = warpx.Verbose();
+        WarpX::Finalize();
 
-        auto end_total = static_cast<Real>(amrex::second()) - strt_total;
-
-        ParallelDescriptor::ReduceRealMax(end_total, ParallelDescriptor::IOProcessorNumber());
-        if (warpx.Verbose()) {
-            Print() << "Total Time                     : " << end_total << '\n';
-            Print() << "WarpX Version: " << WarpX::Version() << '\n';
-            Print() << "PICSAR Version: " << WarpX::PicsarVersion() << '\n';
+        timer.record_stop_time();
+        if (is_warpx_verbose){
+            amrex::Print() << "Total Time                     : "
+                           << timer.get_global_duration() << '\n';
         }
+
+        WARPX_PROFILE_VAR_STOP(pmain);
     }
-
-    WARPX_PROFILE_VAR_STOP(pmain);
-
-#if defined(AMREX_USE_HIP) && defined(WARPX_USE_PSATD)
-    rocfft_cleanup();
-#endif
-
-    Finalize();
-#if defined(AMREX_USE_MPI)
-    MPI_Finalize();
-#endif
+    warpx::initialization::finalize_external_libraries();
 }

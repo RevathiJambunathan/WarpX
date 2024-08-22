@@ -4,11 +4,11 @@
 #include "FlushFormat.H"
 
 #include <AMReX_AmrMesh.H>
-#if defined(BL_USE_SENSEI_INSITU)
-#  include <AMReX_AmrMeshInSituBridge.H>
+#if defined(AMREX_USE_SENSEI_INSITU)
+#  include <AMReX_AmrMeshParticleInSituBridge.H>
 #else
 namespace amrex {
-using AmrMeshInSituBridge = void;
+using AmrMeshParticleInSituBridge = void;
 }
 #endif
 
@@ -33,27 +33,35 @@ class FlushFormatSensei : public FlushFormat
 {
 public:
     FlushFormatSensei();
-    ~FlushFormatSensei();
+    ~FlushFormatSensei() override;
 
-    FlushFormatSensei(const FlushFormatSensei &) = delete;
-    void operator=(const FlushFormatSensei &) = delete;
+    FlushFormatSensei(const FlushFormatSensei &)            = delete;
+    FlushFormatSensei& operator=(const FlushFormatSensei &) = delete;
+    FlushFormatSensei(FlushFormatSensei&&)                  = default;
+    FlushFormatSensei& operator=(FlushFormatSensei&& )      = default;
 
-    /** \breif Construct.
-     * \parm[in] amr_mesh an AmrMesh instance
-     * \parm[in] diag_name ParmParse scope string.
+    /** Construct.
+     *
+     * \param[in] amr_mesh an AmrMesh instance
+     * \param[in] diag_name ParmParse scope string.
      */
-    FlushFormatSensei (amrex::AmrMesh *amr_mesh, std::string diag_name);
+    FlushFormatSensei (amrex::AmrMesh *amr_mesh, const std::string& diag_name);
 
     /** Do in-situ visualization for field and particle data */
-    virtual void WriteToFile (
-        const amrex::Vector<std::string> varnames,
+    void WriteToFile (
+        const amrex::Vector<std::string>& varnames,
         const amrex::Vector<amrex::MultiFab>& mf,
         amrex::Vector<amrex::Geometry>& geom,
-        const amrex::Vector<int> iteration, const double time,
-        const amrex::Vector<ParticleDiag>& particle_diags, int nlev, const std::string prefix,
+        amrex::Vector<int> iteration, double time,
+        const amrex::Vector<ParticleDiag>& particle_diags, int nlev,
+        std::string prefix, int file_min_digits,
         bool plot_raw_fields,
         bool plot_raw_fields_guards,
-        bool plot_raw_rho, bool plot_raw_F) const override;
+        bool use_pinned_pc = false,
+        bool isBTD = false, int snapshotID = -1,
+        int bufferID = 1, int numBuffers = 1,
+        const amrex::Geometry& full_BTD_snapshot = amrex::Geometry(),
+        bool isLastBTDFlush = false) const override;
 
     /** \brief Do in-situ visualization for particle data.
      * \param[in] particle_diags Each element of this vector handles output of 1 species.
@@ -63,7 +71,7 @@ public:
 private:
     std::string m_insitu_config;
     int m_insitu_pin_mesh = 0;
-    amrex::AmrMeshInSituBridge * m_insitu_bridge = nullptr;
+    amrex::AmrMeshParticleInSituBridge * m_insitu_bridge = nullptr;
     amrex::AmrMesh * m_amr_mesh = nullptr;
 };
 

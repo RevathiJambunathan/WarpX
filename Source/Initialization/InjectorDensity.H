@@ -6,21 +6,27 @@
  *
  * License: BSD-3-Clause-LBNL
  */
-#ifndef INJECTOR_DENSITY_H_
-#define INJECTOR_DENSITY_H_
+#ifndef WARPX_INJECTOR_DENSITY_H_
+#define WARPX_INJECTOR_DENSITY_H_
 
-#include "Parser/GpuParser.H"
-#include "CustomDensityProb.H"
 #include "Utils/WarpXConst.H"
 
-#include <AMReX_Gpu.H>
-#include <AMReX_Dim3.H>
+#include <AMReX.H>
+#include <AMReX_Array.H>
+#include <AMReX_GpuQualifiers.H>
+#include <AMReX_Math.H>
+#include <AMReX_Parser.H>
+#include <AMReX_REAL.H>
+
+#include <cmath>
+#include <string>
 
 // struct whose getDensity returns constant density.
 struct InjectorDensityConstant
 {
     InjectorDensityConstant (amrex::Real a_rho) noexcept : m_rho(a_rho) {}
 
+    [[nodiscard]]
     AMREX_GPU_HOST_DEVICE
     amrex::Real
     getDensity (amrex::Real, amrex::Real, amrex::Real) const noexcept
@@ -35,9 +41,10 @@ private:
 // struct whose getDensity returns local density computed from parser.
 struct InjectorDensityParser
 {
-    InjectorDensityParser (WarpXParser const& a_parser) noexcept
+    InjectorDensityParser (amrex::ParserExecutor<3> const& a_parser) noexcept
         : m_parser(a_parser) {}
 
+    [[nodiscard]]
     AMREX_GPU_HOST_DEVICE
     amrex::Real
     getDensity (amrex::Real x, amrex::Real y, amrex::Real z) const noexcept
@@ -45,8 +52,7 @@ struct InjectorDensityParser
         return m_parser(x,y,z);
     }
 
-    // InjectorDensityParser constructs this GpuParser from WarpXParser.
-    GpuParser<3> m_parser;
+    amrex::ParserExecutor<3> m_parser;
 };
 
 // struct whose getDensity returns local density computed from predefined profile.
@@ -56,6 +62,7 @@ struct InjectorDensityPredefined
 
     void clear ();
 
+    [[nodiscard]]
     AMREX_GPU_HOST_DEVICE
     amrex::Real
     getDensity (amrex::Real x, amrex::Real y, amrex::Real z) const noexcept
@@ -72,15 +79,15 @@ struct InjectorDensityPredefined
             // From testing, it seems that (for at least some setups), it is only
             // necessary to case n0 as double to get good agreement between single
             // and double precision, but just in case, all are cast as double.
-            double z_start   = p[0];
-            double ramp_up   = p[1];
-            double plateau   = p[2];
-            double ramp_down = p[3];
-            double rc        = p[4];
-            double n0        = p[5];
-            double n;
-            double kp = PhysConst::q_e/PhysConst::c
+            const double z_start   = p[0];
+            const double ramp_up   = p[1];
+            const double plateau   = p[2];
+            const double ramp_down = p[3];
+            const double rc        = p[4];
+            const double n0        = p[5];
+            const double kp = PhysConst::q_e/PhysConst::c
                 *std::sqrt( n0/(PhysConst::m_e*PhysConst::ep0) );
+            double n;
 
             // Longitudinal profile, normalized to 1
             if        ((z-z_start)>=0               and
@@ -107,7 +114,7 @@ struct InjectorDensityPredefined
 
 private:
     enum struct Profile { null, parabolic_channel };
-    Profile profile;
+    Profile profile{Profile::null};
     amrex::GpuArray<amrex::Real,6> p;
 };
 
@@ -116,7 +123,6 @@ private:
 // instance of:
 // - InjectorDensityConstant  : to generate constant density;
 // - InjectorDensityParser    : to generate density from parser;
-// - InjectorDensityCustom    : to generate density from custom profile;
 // - InjectorDensityPredefined: to generate density from predefined profile;
 // The choice is made at runtime, depending in the constructor called.
 // This mimics virtual functions.
@@ -129,15 +135,9 @@ struct InjectorDensity
     { }
 
     // This constructor stores a InjectorDensityParser in union object.
-    InjectorDensity (InjectorDensityParser* t, WarpXParser const& a_parser)
+    InjectorDensity (InjectorDensityParser* t, amrex::ParserExecutor<3> const& a_parser)
         : type(Type::parser),
           object(t,a_parser)
-    { }
-
-    // This constructor stores a InjectorDensityCustom in union object.
-    InjectorDensity (InjectorDensityCustom* t, std::string const& a_species_name)
-        : type(Type::custom),
-          object(t,a_species_name)
     { }
 
     // This constructor stores a InjectorDensityPredefined in union object.
@@ -153,10 +153,14 @@ struct InjectorDensity
     void operator= (InjectorDensity const&) = delete;
     void operator= (InjectorDensity &&) = delete;
 
+    // Default destructor
+    ~InjectorDensity () = default;
+
     void clear ();
 
     // call getDensity from the object stored in the union
     // (the union is called Object, and the instance is called object).
+    [[nodiscard]]
     AMREX_GPU_HOST_DEVICE
     amrex::Real
     getDensity (amrex::Real x, amrex::Real y, amrex::Real z) const noexcept
@@ -171,10 +175,6 @@ struct InjectorDensity
         {
             return object.constant.getDensity(x,y,z);
         }
-        case Type::custom:
-        {
-            return object.custom.getDensity(x,y,z);
-        }
         case Type::predefined:
         {
             return object.predefined.getDensity(x,y,z);
@@ -188,23 +188,20 @@ struct InjectorDensity
     }
 
 private:
-    enum struct Type { constant, custom, predefined, parser };
+    enum struct Type { constant, predefined, parser };
     Type type;
 
     // An instance of union Object constructs and stores any one of
-    // the objects declared (constant or parser or custom or predefined).
+    // the objects declared (constant or parser or predefined).
     union Object {
         Object (InjectorDensityConstant*, amrex::Real a_rho) noexcept
             : constant(a_rho) {}
-        Object (InjectorDensityParser*, WarpXParser const& a_parser) noexcept
+        Object (InjectorDensityParser*, amrex::ParserExecutor<3> const& a_parser) noexcept
             : parser(a_parser) {}
-        Object (InjectorDensityCustom*, std::string const& a_species_name) noexcept
-            : custom(a_species_name) {}
         Object (InjectorDensityPredefined*, std::string const& a_species_name) noexcept
             : predefined(a_species_name) {}
         InjectorDensityConstant   constant;
         InjectorDensityParser     parser;
-        InjectorDensityCustom     custom;
         InjectorDensityPredefined predefined;
     };
     Object object;
@@ -221,4 +218,4 @@ struct InjectorDensityDeleter {
     }
 };
 
-#endif
+#endif //WARPX_INJECTOR_DENSITY_H_
