@@ -16,3 +16,5 @@ foreach(D IN LISTS WarpX_DIMS)
         WarpXInitData.cpp
     )
 endforeach()
+
+add_subdirectory(DivCleaner)
