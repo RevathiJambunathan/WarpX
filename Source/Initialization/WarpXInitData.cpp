@@ -1001,9 +1001,7 @@ WarpX::InitLevelData (int lev, Real /*time*/)
             m_p_ext_field_params->Bxfield_parser->compile<4>(),
             m_p_ext_field_params->Byfield_parser->compile<4>(),
             m_p_ext_field_params->Bzfield_parser->compile<4>(),
-            lev, PatchType::fine, 'f',
-            m_fields.get_alldirs(FieldType::edge_lengths, lev),
-            m_fields.get_alldirs(FieldType::face_areas, lev));
+            lev, PatchType::fine, m_eb_update_B);
 
         if (lev > 0) {
             ComputeExternalFieldOnGridUsingParser(
@@ -1050,18 +1048,6 @@ WarpX::InitLevelData (int lev, Real /*time*/)
     // The default maxlevel_extEMfield_init value is the total number of levels in the simulation
     if ((m_p_ext_field_params->E_ext_grid_type == ExternalFieldType::parse_ext_grid_function)
         && (lev <= maxlevel_extEMfield_init)) {
-
-        InitializeExternalFieldsOnGridUsingParser(
-            Efield_fp[lev][0].get(),
-            Efield_fp[lev][1].get(),
-            Efield_fp[lev][2].get(),
-            m_p_ext_field_params->Exfield_parser->compile<3>(),
-            m_p_ext_field_params->Eyfield_parser->compile<3>(),
-            m_p_ext_field_params->Ezfield_parser->compile<3>(),
-            m_edge_lengths[lev],
-            m_face_areas[lev],
-            'E',
-            lev, PatchType::fine);
 
 #ifdef AMREX_USE_EB
         if (eb_enabled) {
