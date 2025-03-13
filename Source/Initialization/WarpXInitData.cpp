@@ -1037,7 +1037,7 @@ WarpX::InitLevelData (int lev, Real /*time*/)
                                m_p_ext_field_params->Bxfield_parser->compile<3>(),
                                m_p_ext_field_params->Byfield_parser->compile<3>(),
                                m_p_ext_field_params->Bzfield_parser->compile<3>(), lev, PatchType::fine);
-    
+
 #endif
     }
 
