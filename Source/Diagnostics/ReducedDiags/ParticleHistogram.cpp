@@ -188,8 +188,7 @@ void ParticleHistogram::ComputeDiags (int step)
 
     bool const do_parser_filter = m_do_parser_filter;
     // figure out which particle attribute is upstream
-    auto pcomps = myspc.getParticleComps();
-    const int iupstream = pcomps["upstream"];
+    const int iupstream = myspc.GetRealCompIndex("upstream");
 
     // zero-out old data on the host
     std::fill(m_data.begin(), m_data.end(), amrex::Real(0.0));

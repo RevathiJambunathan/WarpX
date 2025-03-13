@@ -398,7 +398,9 @@ FlushFormatPlotfile::WriteParticles(const std::string& dir,
         // plot by default
         int_flags.resize(tmp.NumIntComps(), 1);
 
-        auto rtmap = pc->getParticleComps();
+        int ius = pc->GetRealCompIndex("upstream");
+        int itr = pc->GetRealCompIndex("track");
+        std::map<std::string, int> rtmap = {{"upstream",ius},{"track",itr}};
 
         const auto mass = pc->AmIA<PhysicalSpecies::photon>() ? PhysConst::m_e : pc->getMass();
         RandomFilter const random_filter(part_diag.m_do_random_filter,

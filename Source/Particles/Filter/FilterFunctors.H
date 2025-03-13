@@ -101,8 +101,8 @@ struct ParserFilter
             m_mass{a_mass},
             m_t{time}
     {
-                m_ius = a_rt_param_map["upstream"] - PIdx::nattribs;
-                m_itr = a_rt_param_map["track"] - PIdx::nattribs;
+                m_ius = a_rt_param_map["upstream"];
+                m_itr = a_rt_param_map["track"];
     }
 
     /**

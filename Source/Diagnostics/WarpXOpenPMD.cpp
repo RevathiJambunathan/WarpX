@@ -544,7 +544,10 @@ for (const auto & particle_diag : particle_diags) {
         pinned_pc->make_alike<amrex::PinnedArenaAllocator>() :
         pc->make_alike<amrex::PinnedArenaAllocator>();
 
-    auto rtmap = pc->getParticleComps();
+    int ius = pc->GetRealCompIndex("upstream");
+    int itr = pc->GetRealCompIndex("track");
+    std::map<std::string, int> rtmap = {{"upstream",ius},{"track",itr}};
+
 
     const auto mass = pc->AmIA<PhysicalSpecies::photon>() ? PhysConst::m_e : pc->getMass();
     RandomFilter const random_filter(particle_diag.m_do_random_filter,
@@ -553,7 +556,7 @@ for (const auto & particle_diag : particle_diags) {
                                        particle_diag.m_uniform_stride);
     ParserFilter parser_filter(particle_diag.m_do_parser_filter,
                                utils::parser::compileParser<ParticleDiag::m_nvars>
-                                     (particle_diags[i].m_particle_filter_parser.get()),
+                                     (particle_diag.m_particle_filter_parser.get()),
                                       pc->getMass(), time, rtmap);
     parser_filter.m_units = InputUnits::SI;
     GeometryFilter const geometry_filter(particle_diag.m_do_geom_filter,
