@@ -51,8 +51,8 @@ struct RandomFilter
         return ( (!m_is_active) || (amrex::Random(engine) < m_fraction) );
     }
 private:
-    const bool m_is_active; //! select all particles if false
-    const amrex::Real m_fraction = 1.0; //! range: [0.0:1.0] where 0 is no & 1 is all particles
+    bool m_is_active; //! select all particles if false
+    amrex::Real m_fraction = 1.0; //! range: [0.0:1.0] where 0 is no & 1 is all particles
 };
 
 /**
@@ -78,8 +78,8 @@ struct UniformFilter
         return ( (!m_is_active) || ( p.id()%m_stride == 0 ) );
     }
 private:
-    const bool m_is_active; //! select all particles if false
-    const int m_stride = 0; //! selection of every n-th particle
+    bool m_is_active; //! select all particles if false
+    int m_stride = 0; //! selection of every n-th particle
 };
 
 /**
@@ -101,8 +101,8 @@ struct ParserFilter
             m_mass{a_mass},
             m_t{time}
     {
-                m_ius = a_rt_param_map["upstream"] - PIdx::nattribs;
-                m_itr = a_rt_param_map["track"] - PIdx::nattribs;
+                m_ius = a_rt_param_map["upstream"];
+                m_itr = a_rt_param_map["track"];
     }
 
     /**
@@ -171,7 +171,7 @@ struct ParserFilter
     }
 private:
     /** Whether this diagnostics is activated. Select all particles if false */
-    const bool m_is_active;
+    bool m_is_active;
     /** Record indices of user-defined vars */
     int m_ius;
     int m_itr;
@@ -211,9 +211,9 @@ struct GeometryFilter
     }
 private:
     /** Whether this diagnostics is activated. Select all particles if false */
-    const bool m_is_active;
+    bool m_is_active;
     /** Physical extent of the axis-aligned region used for particle check */
-    const amrex::RealBox m_domain;
+    amrex::RealBox m_domain;
 };
 
 #endif // WARPX_FILTERFUNCTORS_H

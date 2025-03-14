@@ -48,9 +48,8 @@
 using namespace amrex;
 #ifndef WARPX_DIM_RZ
 void
-Reconnection_Perturbation::AddBfieldPerturbation (amrex::MultiFab *Bx,
-                              amrex::MultiFab *By,
-                              amrex::MultiFab *Bz,
+Reconnection_Perturbation::AddBfieldPerturbation (
+                              warpx::fields::FieldType field,
                               amrex::ParserExecutor<3> const& xfield_parser,
                               amrex::ParserExecutor<3> const& yfield_parser,
                               amrex::ParserExecutor<3> const& zfield_parser, const int lev,
@@ -65,6 +64,12 @@ Reconnection_Perturbation::AddBfieldPerturbation (amrex::MultiFab *Bx,
         }
     }
     const RealBox& real_box = warpx.Geom(lev).ProbDomain();
+
+    using ablastr::fields::Direction;
+    amrex::MultiFab* Bx = warpx.m_fields.get(field, Direction{0}, lev);
+    amrex::MultiFab* By = warpx.m_fields.get(field, Direction{1}, lev);
+    amrex::MultiFab* Bz = warpx.m_fields.get(field, Direction{2}, lev);
+
     amrex::IntVect x_nodal_flag = Bx->ixType().toIntVect();
     amrex::IntVect z_nodal_flag = Bz->ixType().toIntVect();
     amrex::ignore_unused(xfield_parser, yfield_parser, By);

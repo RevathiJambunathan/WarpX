@@ -50,9 +50,8 @@ public:
 
     Reconnection_Perturbation (){}
 #ifndef WARPX_DIM_RZ
-    static void AddBfieldPerturbation (amrex::MultiFab *Bx,
-                              amrex::MultiFab *By,
-                              amrex::MultiFab *Bz,
+    static void AddBfieldPerturbation (
+                              warpx::fields::FieldType field,
                               amrex::ParserExecutor<3> const& xfield_parser,
                               amrex::ParserExecutor<3> const& yfield_parser,
                               amrex::ParserExecutor<3> const& zfield_parser, const int lev,
