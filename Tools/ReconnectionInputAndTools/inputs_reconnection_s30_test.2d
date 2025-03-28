@@ -43,6 +43,10 @@ algo.current_deposition = esirkepov
 algo.field_gathering = energy-conserving
 warpx.use_filter = 1
 amrex.the_arena_is_managed = 1
+
+#### to avoid divB cleaning of externally applied B field ###
+warpx.do_divb_cleaning_external = false
+
 #################################
 ########## DIAGNOSTICS ##########
 #################################
