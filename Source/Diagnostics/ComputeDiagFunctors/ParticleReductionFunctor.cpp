@@ -53,7 +53,7 @@ ParticleReductionFunctor::operator() (amrex::MultiFab& mf_dst, const int dcomp, 
     // Temporary cell-centered, multi-component MultiFab for storing particles per cell.
     amrex::MultiFab red_mf(warpx.boxArray(m_lev), warpx.DistributionMap(m_lev), 1, ng);
     auto& pc = warpx.GetPartContainer().GetParticleContainer(m_ispec);
-    const int iupstream = pc.GetRealCompIndex("upstream");
+    const int iupstream = pc.GetRealCompIndex("upstream") - PIdx::nattribs ;
 
     // Copy over member variables so they can be captured in the lambda
     auto map_fn = m_map_fn;
@@ -82,7 +82,7 @@ ParticleReductionFunctor::operator() (amrex::MultiFab& mf_dst, const int dcomp, 
                 const amrex::ParticleReal ux = p.rdata(PIdx::ux) / PhysConst::c;
                 const amrex::ParticleReal uy = p.rdata(PIdx::uy) / PhysConst::c;
                 const amrex::ParticleReal uz = p.rdata(PIdx::uz) / PhysConst::c;
-                const amrex::ParticleReal upstream = ptd.m_runtime_rdata[iupstream][pind];
+                const amrex::ParticleReal upstream = ptd.m_runtime_rdata[iupstream][pind] ;
                 const bool filtered_out_flag = ((do_filter) && (filter_fn(xw, yw, zw, ux, uy, uz, upstream) == 0.0_prt));
                 const amrex::Real value = (filtered_out_flag) ? (0._rt):(map_fn(xw, yw, zw, ux, uy, uz, upstream));
                 amrex::Gpu::Atomic::AddNoRet(&out_array(ii, jj, kk, 0), (amrex::Real)(p.rdata(PIdx::w) * value));
