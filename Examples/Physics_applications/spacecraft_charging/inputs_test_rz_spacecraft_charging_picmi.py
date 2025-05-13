@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-#
+##!/usr/bin/env python3
+##
 # --- Input file for spacecraft charging testing in RZ.
 # --- This input defines a conducting sphere (spacecraft) immersed in a thermal
 # --- plasma with the same given initial conditions as in the article:
@@ -36,7 +36,7 @@ class SpaceChargeFieldCorrector(object):
 
         # shortcuts
         self.Direction = libwarpx.libwarpx_so.Direction
-        self.dir_r, self.dir_z = self.Direction(0), self.Direction(1)
+        self.dir_r, self.dir_z = self.Direction(0), self.Direction(2)
 
     def correct_space_charge_fields(self, q=None):
         """
