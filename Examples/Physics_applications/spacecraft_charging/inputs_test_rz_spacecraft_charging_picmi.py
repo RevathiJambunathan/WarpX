@@ -82,7 +82,6 @@ class SpaceChargeFieldCorrector(object):
         self.spacecraft_capacitance = 1.0 / q_v  # the potential was set to 1V
 
         warpx = sim.extension.warpx
-        amrex = sim.extension.amr
         fields = warpx.multifab_register()
 
         phi = fields.get("phi_fp", 0)
@@ -95,7 +94,7 @@ class SpaceChargeFieldCorrector(object):
         normalized_Er = fields.alloc_init(
             "normalized_Er",
             0,
-            warpx.boxArray(0).convert(amrex.IntVect(0, 1)),
+            Er.box_array(),
             warpx.DistributionMap(0),
             1,
             Er.n_grow_vect,
@@ -106,7 +105,7 @@ class SpaceChargeFieldCorrector(object):
         normalized_Ez = fields.alloc_init(
             "normalized_Ez",
             0,
-            warpx.boxArray(0).convert(amrex.IntVect(1, 0)),
+            Ez.box_array(),
             warpx.DistributionMap(0),
             1,
             Ez.n_grow_vect,
@@ -117,7 +116,7 @@ class SpaceChargeFieldCorrector(object):
         normalized_phi = fields.alloc_init(
             "normalized_phi",
             0,
-            warpx.boxArray(0).convert(amrex.IntVect(1, 1)),
+            phi.box_array(),
             warpx.DistributionMap(0),
             1,
             phi.n_grow_vect,
