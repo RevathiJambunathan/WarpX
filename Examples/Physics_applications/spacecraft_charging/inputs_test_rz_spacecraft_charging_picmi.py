@@ -40,6 +40,7 @@ class SpaceChargeFieldCorrector(object):
             libwarpx.libwarpx_so.Direction(2),
         )
 
+
     def correct_space_charge_fields(self, q=None):
         """
         Function that will be called at each iteration,
@@ -102,6 +103,7 @@ class SpaceChargeFieldCorrector(object):
             True,
             True,
         )
+        
         normalized_Ez = fields.alloc_init(
             "normalized_Ez",
             0,
@@ -113,6 +115,7 @@ class SpaceChargeFieldCorrector(object):
             True,
             True,
         )
+
         normalized_phi = fields.alloc_init(
             "normalized_phi",
             0,
@@ -126,12 +129,14 @@ class SpaceChargeFieldCorrector(object):
         )
 
         # Record fields
+
         normalized_Er.copymf(Er, 0, 0, 1, Er.n_grow_vect)
         normalized_Er.mult(1 / q_v, 0)
         normalized_Ez.copymf(Ez, 0, 0, 1, Ez.n_grow_vect)
         normalized_Ez.mult(1 / q_v, 0)
         normalized_phi.copymf(phi, 0, 0, 1, phi.n_grow_vect)
         normalized_phi.mult(1 / q_v, 0)
+
 
         self.saved_first_iteration_fields = True
         self.correct_space_charge_fields(q=0)
