@@ -26,10 +26,10 @@ void warpx_damp_pml_ex (int i, int j, int k, amrex::Array4<amrex::Real> const& E
                         int xlo, int ylo, int zlo,
                         const bool dive_cleaning, const bool abc_in_pml)
 {
-#if defined(WARPX_DIM_1D_Z)
+#if (AMREX_SPACEDIM == 1)
     amrex::ignore_unused(i, j, k, Ex, Ex_stag, sigma_fac_x, sigma_fac_y, sigma_fac_z,
            sigma_star_fac_x, sigma_star_fac_y, sigma_star_fac_z, xlo, ylo, zlo, dive_cleaning, abc_in_pml);
-    amrex::Abort("PML not implemented in Cartesian 1D geometry");
+    amrex::Abort("PML not implemented in 1D geometry");
 #endif
 
 #if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
@@ -121,10 +121,10 @@ void warpx_damp_pml_ey (int i, int j, int k, amrex::Array4<amrex::Real> const& E
                         int xlo, int ylo, int zlo,
                         const bool dive_cleaning, const bool abc_in_pml)
 {
-#if defined(WARPX_DIM_1D_Z)
+#if (AMREX_SPACEDIM == 1)
     amrex::ignore_unused(i, j, k, Ey, Ey_stag, sigma_fac_x, sigma_fac_y, sigma_fac_z,
            sigma_star_fac_x, sigma_star_fac_y, sigma_star_fac_z, xlo, ylo, zlo, dive_cleaning, abc_in_pml);
-    amrex::Abort("PML not implemented in Cartesian 1D geometry");
+    amrex::Abort("PML not implemented in 1D geometry");
 #endif
 
 #if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
@@ -219,10 +219,10 @@ void warpx_damp_pml_ez (int i, int j, int k, amrex::Array4<amrex::Real> const& E
                         int xlo, int ylo, int zlo,
                         const bool dive_cleaning, const bool abc_in_pml)
 {
-#if defined(WARPX_DIM_1D_Z)
+#if (AMREX_SPACEDIM == 1)
     amrex::ignore_unused(i, j, k, Ez, Ez_stag, sigma_fac_x, sigma_fac_y, sigma_fac_z,
            sigma_star_fac_x, sigma_star_fac_y, sigma_star_fac_z, xlo, ylo, zlo, dive_cleaning, abc_in_pml);
-    amrex::Abort("PML not implemented in Cartesian 1D geometry");
+    amrex::Abort("PML not implemented in 1D geometry");
 #endif
 
 #if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
@@ -314,10 +314,10 @@ void warpx_damp_pml_bx (int i, int j, int k, amrex::Array4<amrex::Real> const& B
                         int xlo, int ylo, int zlo,
                         const bool divb_cleaning, const bool abc_in_pml)
 {
-#if defined(WARPX_DIM_1D_Z)
+#if (AMREX_SPACEDIM == 1)
     amrex::ignore_unused(i, j, k, Bx, Bx_stag, sigma_fac_x, sigma_fac_y, sigma_fac_z,
            sigma_star_fac_x, sigma_star_fac_y, sigma_star_fac_z, xlo, ylo, zlo, divb_cleaning, abc_in_pml);
-    amrex::Abort("PML not implemented in Cartesian 1D geometry");
+    amrex::Abort("PML not implemented in 1D geometry");
 #endif
 
 #if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
@@ -409,10 +409,10 @@ void warpx_damp_pml_by (int i, int j, int k, amrex::Array4<amrex::Real> const& B
                         int xlo, int ylo, int zlo,
                         const bool divb_cleaning, const bool abc_in_pml)
 {
-#if defined(WARPX_DIM_1D_Z)
+#if (AMREX_SPACEDIM == 1)
     amrex::ignore_unused(i, j, k, By, By_stag, sigma_fac_x, sigma_fac_y, sigma_fac_z,
            sigma_star_fac_x, sigma_star_fac_y, sigma_star_fac_z, xlo, ylo, zlo, divb_cleaning, abc_in_pml);
-    amrex::Abort("PML not implemented in Cartesian 1D geometry");
+    amrex::Abort("PML not implemented in 1D geometry");
 #endif
 
 #if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
@@ -507,10 +507,10 @@ void warpx_damp_pml_bz (int i, int j, int k, amrex::Array4<amrex::Real> const& B
                         int xlo, int ylo, int zlo,
                         const bool divb_cleaning, const bool abc_in_pml)
 {
-#if defined(WARPX_DIM_1D_Z)
+#if (AMREX_SPACEDIM == 1)
     amrex::ignore_unused(i, j, k, Bz, Bz_stag, sigma_fac_x, sigma_fac_y, sigma_fac_z,
            sigma_star_fac_x, sigma_star_fac_y, sigma_star_fac_z, xlo, ylo, zlo, divb_cleaning, abc_in_pml);
-    amrex::Abort("PML not implemented in Cartesian 1D geometry");
+    amrex::Abort("PML not implemented in 1D geometry");
 #endif
 
 #if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
@@ -601,10 +601,10 @@ void warpx_damp_pml_scalar (int i, int j, int k, amrex::Array4<amrex::Real> cons
                             const amrex::Real* const sigma_star_fac_z,
                             int xlo, int ylo, int zlo)
 {
-#if defined(WARPX_DIM_1D_Z)
+#if (AMREX_SPACEDIM == 1)
     amrex::ignore_unused(i, j, k, arr, arr_stag, sigma_fac_x, sigma_fac_y, sigma_fac_z,
            sigma_star_fac_x, sigma_star_fac_y, sigma_star_fac_z, xlo, ylo, zlo);
-    amrex::Abort("PML not implemented in Cartesian 1D geometry");
+    amrex::Abort("PML not implemented in 1D geometry");
 #endif
 
 #if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
