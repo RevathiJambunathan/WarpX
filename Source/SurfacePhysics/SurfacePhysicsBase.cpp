@@ -50,12 +50,18 @@ void SurfacePhysicsBase::ReadParameters ()
     for (const auto& species : chem_surface_species) {
         std::string symbol;
         utils::parser::query(pp_surface, species, "symbol", symbol);
-        surface_species[species] = symbol;
+        amrex::Print() << " species : " << species << " " << symbol << "\n";
+        surface_species_vec.emplace_back(species,symbol);
     }
+    m_num_surface_species = chem_surface_species.size();
+    amrex::Print() << " num surface species : " << m_num_surface_species << "\n";
+
+    surface_species_fraction.resize(m_num_surface_species);
+    pp_chem.queryarr("surface_species_fraction", surface_species_fraction);
 
     std::set<std::string> known_symbols;
     for (const auto& [_, symbol] : gas_species) known_symbols.insert(symbol);
-    for (const auto& [_, symbol] : surface_species) known_symbols.insert(symbol);
+    for (const auto& [species, symbol] : surface_species_vec) known_symbols.insert(symbol);
 
 
     amrex::Vector<std::string> gas_surface_reactions;
@@ -76,6 +82,7 @@ void SurfacePhysicsBase::ReadParameters ()
             for (const auto& reactant : rxn.reactants) {
                 std::string species_type = is_gas_species(reactant) ? "gas" : "surface";
                 rxn.reactant_type.push_back(species_type);
+                rxn.reactant_sp_val.push_back(-1);
             }
             for (const auto& product : rxn.products) {
                 std::string species_type = is_gas_species(product) ? "gas" : "surface";
@@ -93,6 +100,79 @@ void SurfacePhysicsBase::ReadParameters ()
     } else {
         amrex::Print() << " no reactions specified for surface physics \n";
     }
+
+
+
+    reaction_has_surface_products.resize(reactions.size(),0);
+    surface_sp_is_reactant.resize(surface_species_vec.size()*reactions.size(),0);
+    surface_sp_is_product.resize(surface_species_vec.size()*reactions.size(),0);
+    for (int irxn = 0; irxn < reactions.size(); irxn++) {
+        const Reaction& rxn = reactions[irxn];
+        amrex::Print() << " Reaction " << irxn << "\n";
+        for (int ip = 0; ip < rxn.product_type.size(); ++ip) {
+            if (rxn.product_type[ip] == "surface") {
+                reaction_has_surface_products[irxn] = 1;
+                continue;
+            }
+        }
+    }
+
+    for (int irxn = 0; irxn < reactions.size(); irxn++) {
+        Reaction& rxn = reactions[irxn];
+        amrex::Print() << " Reaction " << irxn << "\n";
+        for (int ir = 0; ir < rxn.reactant_type.size(); ++ir) {
+            rxn.reactant_sp_val[ir] = -1;
+            if (rxn.reactant_type[ir] == "surface") {
+                amrex::Print() << " ir :  " << rxn.reactants[ir] << "\n";
+                int index = -1;
+                for (size_t i = 0; i < surface_species_vec.size(); i++){
+                    if (surface_species_vec[i].second == rxn.reactants[ir]) {
+                        index = static_cast<int>(i);
+                        continue;
+                    }
+                }
+                rxn.reactant_sp_val[ir] = index;
+            }
+        }
+    }
+
+    for (int isp = 0; isp < surface_species_vec.size() ; ++isp) {
+        const std::string& symbol = surface_species_vec[isp].second;
+        const std::string& name = surface_species_vec[isp].first;
+        amrex::Print() << " symbol : " << symbol << "\n";
+        amrex::Print() << " name " << name << "\n";
+//        amrex::Print() << " symbol from srf " << surface_species[isp] << "\n";
+        for (int irxn = 0; irxn < reactions.size(); irxn++) {
+            const Reaction& rxn = reactions[irxn];
+            amrex::Print() << " eq : " << rxn.equation << "\n";
+            bool found = (std::find(rxn.reactants.begin(), rxn.reactants.end(), symbol) != rxn.reactants.end());
+            amrex::Print() << " found ? " << found << "\n";
+            surface_sp_is_reactant[isp*reactions.size() + irxn] = found ? 1 : 0;
+            bool prod_found = (std::find(rxn.products.begin(), rxn.products.end(), symbol) != rxn.products.end());
+            surface_sp_is_product[isp*reactions.size() + irxn] = prod_found ? 1 : 0;
+        }
+    }
+    for (int isp = 0; isp < surface_species_vec.size() ; ++isp) {
+        const std::string& symbol = surface_species_vec[isp].second;
+        amrex::Print() << " symbol : " << symbol << "\n";
+        for (int irxn = 0; irxn < reactions.size(); irxn++) {
+            const Reaction& rxn = reactions[irxn];
+            amrex::Print() << " eq : " << rxn.equation << "\n";
+            amrex::Print() << " reaction has surface ? " << reaction_has_surface_products[irxn] << "\n";
+            amrex::Print() << "is reactant : " << surface_sp_is_reactant[isp*reactions.size() + irxn] << "\n";
+            amrex::Print() << "is product : " << surface_sp_is_product[isp*reactions.size() + irxn] << "\n";
+        }
+    }
+
+
+    // for testing purposes reading in constant values for site density, influx, and plasma_Ein
+    pp_chem.get("surface_site_density", m_surface_site_density);
+    pp_chem.get("plasma_influx", m_plasma_influx);
+    pp_chem.get("plasma_Ein", m_plasma_Ein);
+    pp_chem.get("dt", m_chem_dt);
+    pp_chem.get("start_time",m_start_time);
+    pp_chem.get("end_time",m_end_time);
+    m_cur_time = 0.;
 }
 
 bool
@@ -108,7 +188,7 @@ SurfacePhysicsBase::is_gas_species (std::string species_symbol)
 bool
 SurfacePhysicsBase::is_surface_species (std::string species_symbol)
 {
-    for (const auto& [_,symbol] : surface_species) {
+    for (const auto& [species,symbol] : surface_species_vec) {
         if (symbol == species_symbol) return true;
     }
     return false;
@@ -151,6 +231,7 @@ SurfacePhysicsBase::InitData ()
     num_outflux_species = num_influx_species; //for now
     AllocAndInitInfluxBndVectors();
     AllocAndInitOutfluxBndVectors();
+    AllocAndInitSurfaceDensityFraction();
 }
 
 void
@@ -283,4 +364,16 @@ SurfacePhysicsBase::nullifyOutfluxParticleCounter (int isp)
     }
 }
 
+void
+SurfacePhysicsBase::AllocAndInitSurfaceDensityFraction ()
+{
+    m_surface_density_fraction.resize(m_num_surface_species * surf_ijk.size());
+    for (int isp = 0; isp < m_num_surface_species; ++isp) {
+        for (int i = 0; i < surf_ijk.size(); ++i) {
+            m_surface_density_fraction[isp*surf_ijk.size() + i] = surface_species_fraction[isp];
+            amrex::Print() << " isp : " << isp << " i " << i <<  m_surface_density_fraction[isp*surf_ijk.size() + i] << "\n";
+        }
+    }
+
+}
 #endif

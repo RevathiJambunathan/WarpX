@@ -211,6 +211,8 @@ WarpX::Evolve (int numsteps)
         // value of step in code (first step is 0)
         mypc->doResampling(istep[0]+1, verbose);
 
+        if (do_surface_physics) m_surface_physics->EvolveSurfacePhysics();
+
         if (evolve_scheme == EvolveScheme::Explicit) {
             applyMirrors(cur_time);
             // E : guard cells are NOT up-to-date

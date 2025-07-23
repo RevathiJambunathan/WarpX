@@ -5,6 +5,7 @@ foreach(D IN LISTS WarpX_DIMS)
           PRIVATE
             SurfacePhysicsBase.cpp
             SurfaceParticleMapping.cpp
+            SurfacePhysicsEvolve.cpp
         )
     endif()
 endforeach()

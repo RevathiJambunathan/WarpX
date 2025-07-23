@@ -24,9 +24,12 @@ public:
     void initializeMapping ();
     void AllocAndInitInfluxBndVectors();
     void AllocAndInitOutfluxBndVectors();
+    void AllocAndInitSurfaceDensityFraction();
 
     void countParticlesFromEmbeddedBoundaries(
         MultiParticleContainer& mypc, ablastr::fields::MultiLevelScalarField const& distance_to_eb);
+
+    void EvolveSurfacePhysics ();
 
     void nullifyInfluxParticleCounter ();
     void nullifyInfluxParticleCounter (int isp);
@@ -46,7 +49,22 @@ public:
     amrex::Vector< amrex::Vector< amrex::Real > > num_in_particles;
     amrex::Vector< amrex::Vector< amrex::Real > > num_out_particles;
 
+    int m_num_surface_species;
+    amrex::Vector< amrex::Real > surface_species_fraction;
+    amrex::Gpu::DeviceVector< amrex::Real > m_surface_density_fraction;
 
+    amrex::Gpu::DeviceVector<int> reaction_has_surface_products;
+    amrex::Gpu::DeviceVector<int> surface_sp_is_reactant;
+    amrex::Gpu::DeviceVector<int> surface_sp_is_product;
+
+    // constant values only for testing
+    amrex::Real m_surface_site_density;
+    amrex::Real m_plasma_influx;
+    amrex::Real m_plasma_Ein; // in eV - constant for all species for all surface mesh elements
+    amrex::Real m_chem_dt;
+    amrex::Real m_start_time;
+    amrex::Real m_end_time;
+    amrex::Real m_cur_time;
 private:
     struct Reaction {
         std::string equation;
@@ -54,18 +72,21 @@ private:
         amrex::Vector<std::string> products;
         amrex::Vector<std::string> reactant_type;
         amrex::Vector<std::string> product_type;
-        double P_energy0;
-        double P0;
-        double E_ref;
-        double E_th;
-        double exp;
+        amrex::Vector<int> reactant_sp_val;
+        amrex::Real P_energy0;
+        amrex::Real P0;
+        amrex::Real E_ref;
+        amrex::Real E_th;
+        amrex::Real exp;
     };
     amrex::Vector<std::string> tokenize_reaction (const std::string& input);
     bool is_gas_species (std::string species_symbol);
     bool is_surface_species (std::string species_symbol);
 
     std::map<std::string, std::string> gas_species; //stores gas_species with the symbol
-    std::map<std::string, std::string> surface_species; //stores surface_species with the symbol
+//    std::map<std::string, std::string> surface_species; //stores surface_species with the symbol
+    std::vector<std::pair<std::string, std::string>> gas_species_vec;
+    std::vector<std::pair<std::string, std::string>> surface_species_vec;
     std::vector<Reaction> reactions;
 
 };
