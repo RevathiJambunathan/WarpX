@@ -50,12 +50,21 @@ public:
     amrex::Vector< amrex::Vector< amrex::Real > > num_out_particles;
 
     int m_num_surface_species;
+    int m_num_gas_species;
     amrex::Vector< amrex::Real > surface_species_fraction;
     amrex::Gpu::DeviceVector< amrex::Real > m_surface_density_fraction;
+    amrex::Gpu::DeviceVector< amrex::Real > m_returning_gas_flux;
+    amrex::Gpu::DeviceVector< amrex::Real > m_incoming_flux;
+
+    // run-time gas species to chemistry species mapping
+    int GetChemGasSpeciesIndex (int runtime_species_id) const;
 
     amrex::Gpu::DeviceVector<int> reaction_has_surface_products;
+    amrex::Gpu::DeviceVector<int> reaction_has_gas_products;
     amrex::Gpu::DeviceVector<int> surface_sp_is_reactant;
     amrex::Gpu::DeviceVector<int> surface_sp_is_product;
+    amrex::Gpu::DeviceVector<int> gas_sp_is_reactant;
+    amrex::Gpu::DeviceVector<int> gas_sp_is_product;
 
     // constant values only for testing
     amrex::Real m_surface_site_density;
@@ -65,6 +74,11 @@ public:
     amrex::Real m_start_time;
     amrex::Real m_end_time;
     amrex::Real m_cur_time;
+
+// for testing
+    void initializeInflux(int isp, amrex::Real flux_val);
+    void computeInflux();
+    void computeInflux(int isp);
 private:
     struct Reaction {
         std::string equation;
@@ -83,12 +97,14 @@ private:
     bool is_gas_species (std::string species_symbol);
     bool is_surface_species (std::string species_symbol);
 
-    std::map<std::string, std::string> gas_species; //stores gas_species with the symbol
+//    std::map<std::string, std::string> gas_species; //stores gas_species with the symbol
 //    std::map<std::string, std::string> surface_species; //stores surface_species with the symbol
     std::vector<std::pair<std::string, std::string>> gas_species_vec;
     std::vector<std::pair<std::string, std::string>> surface_species_vec;
     std::vector<Reaction> reactions;
 
+    // runtime species id to chemistry species id (-1 if there is no run time species id corresponding to chem)
+    amrex::Vector<int> m_runtime_to_chemistry_sp_idx;
 };
 
 

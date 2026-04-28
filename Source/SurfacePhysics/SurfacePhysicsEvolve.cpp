@@ -25,7 +25,9 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
    //
    //
    //
-
+    computeInflux();
+//    for (int istep = m_start_time/m_chem_dt; istep < m_end_time/m_chem_dt; istep ++ ) {
+    amrex::Print() << " start time " << m_start_time << " chem dt " << m_chem_dt << " end time " << m_end_time << "\n"; 
     for (int istep = m_start_time/m_chem_dt; istep < m_end_time/m_chem_dt; istep ++ ) {
     const amrex::Real site_density = m_surface_site_density;
     const amrex::Real flux = m_plasma_influx;
@@ -37,8 +39,9 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
     amrex::Real dt = m_chem_dt;
     for ( int isp = 0; isp < surface_species_vec.size(); ++isp) {
         const auto& [s_sp, val] = surface_species_vec[isp];
-        amrex::Print() << "isp " << isp << " s_sp " << s_sp << "val " << val<< "\n";
         amrex::Real* sp_surf_density = m_surface_density_fraction.data();
+//        amrex::Real* sp_influx = bnd_influx[isp].data();
+        amrex::Real* sp_influx = m_incoming_flux.data();
         int num_surf_elements = surf_ijk.size();
         amrex::ParallelFor(surf_ijk.size(),
         [=] AMREX_GPU_DEVICE (int i) noexcept
@@ -74,10 +77,11 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
                         const std::string& reactant = rxn.reactants[ir];
                         const std::string& reactant_type = rxn.reactant_type[ir];
                         int index = -1;
-                        if (reactant_type == "surface") {
-                            index = rxn.reactant_sp_val[ir]*num_surf_elements + i;
-                        }
-                        react_term *= (reactant_type == "gas") ? flux : sp_surf_density[index];
+                        //if (reactant_type == "surface") {
+                        index = rxn.reactant_sp_val[ir]*num_surf_elements + i;
+                        //}
+                        //react_term *= (reactant_type == "gas") ? flux : sp_surf_density[index];
+                        react_term *= (reactant_type == "gas") ? sp_influx[index] : sp_surf_density[index];
                     }
                     react_term *= prefactor * reaction_prob / site_density;
                 } else {
@@ -89,6 +93,11 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
         });
     }
    
+    for (int is = 0; is < surf_ijk.size(); ++is ) {
+        auto& [s_sp, val] = surface_species_vec[0];
+        auto& [as_sp, aval] = surface_species_vec[1];
+        amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " << m_surface_density_fraction[0*surf_ijk.size()+is] << " " << m_surface_density_fraction[1*surf_ijk.size()+is] << "\n";
+    }
 
    // now compute the returning Gammma for each gas species (ion and neutral)
    //
@@ -105,8 +114,72 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
    //                 *= (1-p(E)) / Sites
    //             dGammaR += 
   
-    amrex::Real* sp_surf_density = m_surface_density_fraction.data();
-    amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " << m_surface_density_fraction[0*surf_ijk.size()+0] << " " << m_surface_density_fraction[1*surf_ijk.size()+0] << "\n";
+
+    for (int isp = 0; isp < gas_species_vec.size(); ++isp) {
+        const auto& [s_sp, val] = gas_species_vec[isp];
+//        amrex::Print() << "isp " << isp << " g_sp " << s_sp << "val " << val<< "\n";
+        int num_surf_elements = surf_ijk.size();
+        amrex::Real* sp_surf_density = m_surface_density_fraction.data();
+        amrex::Real* returning_flux = m_returning_gas_flux.data();
+        amrex::Real* sp_influx = m_incoming_flux.data();
+        amrex::ParallelFor(surf_ijk.size(),
+        [=] AMREX_GPU_DEVICE (int i) noexcept
+        {
+            amrex::Real dgamma = 0.;
+            for (int irxn = 0; irxn < reactions.size(); ++irxn) {
+                amrex::Real prefactor = 0.;
+                const Reaction& rxn = reactions[irxn];
+//                if (i == 0) amrex::Print() << " rxn : " << rxn.equation << "\n";
+//                if (i == 0) amrex::Print() << " rxn has gas prod " << reaction_has_gas_products[irxn] << "\n";
+                if (reaction_has_gas_products[irxn] == 1) {
+//                    if (i == 0) amrex::Print() << " rxn has gas prod " << reaction_has_gas_products[irxn] << "\n";
+                    amrex::Real react_term = 0.;
+//                    if (i == 0) amrex::Print() << "gas sp is prod : " << gas_sp_is_product[isp * reactions.size() + irxn] << "\n";
+                    if (gas_sp_is_product[isp * reactions.size() + irxn] == 1) {
+                        react_term = 1.;
+                        prefactor = 1.;
+//                        if (i == 0) amrex::Print() << " prefactor " << prefactor << "\n"; 
+                        amrex::Real exp = rxn.exp;
+                        amrex::Real reaction_prob = rxn.P0
+                                                  * (std::pow(E_in,exp) - std::pow(rxn.E_th,exp))
+                                                  / (std::pow(rxn.E_ref,exp) - std::pow(rxn.E_th,exp));
+//                        if (i == 0) amrex::Print() << " reaction prob " << reaction_prob << "\n";
+                        if (reaction_prob > 0.) {
+                            for (int ir = 0; ir < rxn.reactants.size() ; ++ir) {
+                                const std::string& reactant = rxn.reactants[ir];
+                                const std::string& reactant_type = rxn.reactant_type[ir];
+//                                if (i == 0) amrex::Print() << " reactant " << reactant << " type " << reactant_type << "\n";
+                                int index = -1;
+                                index = rxn.reactant_sp_val[ir]*num_surf_elements + i;
+//                                react_term *= (reactant_type == "gas") ? flux : sp_surf_density[index];
+                                react_term *= (reactant_type == "gas") ? sp_influx[index] : sp_surf_density[index];
+//                                if (reactant_type == "gas" ) {
+//                                    if (i == 0) amrex::Print() << " flux " << flux << " react " << react_term << "\n";
+//                                } else {
+//                                    if (i == 0) amrex::Print() << " sp surf density " << sp_surf_density[index] << " reac " << react_term << "\n";
+//                                }
+                            }
+//                            if (i == 0) amrex::Print() << " react term / site density * pe " << react_term << "\n";
+                            react_term *= prefactor * reaction_prob;
+//                            if (i == 0) amrex::Print() << " react term " << react_term << "\n";
+                        }
+//                        if (i == 0) amrex::Print() << " irxn : " << irxn << " reac term : " << react_term << "\n";
+                    }
+                    dgamma += react_term;
+//                    if (i == 0) amrex::Print() << " dgamma : " << dgamma << "\n";
+                } else {
+//                    if (i == 0) amrex::Print() << "next reaction \n";
+                }
+            }
+            //if (i == 0) amrex::Print() << " dgamma " << dgamma << "\n";
+            returning_flux[isp * num_surf_elements + i] = dgamma;
+            //if (i == 0) amrex::Print() << " isp : " << isp << " " << returning_flux[isp * num_surf_elements + i] << "\n";
+        });
+    }
+
+    for (int is = 0; is < surf_ijk.size(); ++is ) {
+        amrex::PrintToFile("surface_flux_evolution.txt") << istep << " " << m_cur_time << " " << m_returning_gas_flux[0*surf_ijk.size()+is] << " " << m_returning_gas_flux[1*surf_ijk.size()+is] << "\n";
+    }
     m_cur_time += m_chem_dt;
     }  // time loop
 }

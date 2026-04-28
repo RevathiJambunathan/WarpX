@@ -211,7 +211,7 @@ WarpX::Evolve (int numsteps)
         // value of step in code (first step is 0)
         mypc->doResampling(istep[0]+1, verbose);
 
-        if (do_surface_physics) m_surface_physics->EvolveSurfacePhysics();
+//        if (do_surface_physics) m_surface_physics->EvolveSurfacePhysics();
 
         if (evolve_scheme == EvolveScheme::Explicit) {
             applyMirrors(cur_time);
@@ -294,6 +294,7 @@ WarpX::Evolve (int numsteps)
             ExecutePythonCallback("afterEsolve");
         }
 
+        if (do_surface_physics) m_surface_physics->EvolveSurfacePhysics();
         // afterstep callback runs with the updated global time. It is included
         // in the evolve timing.
         ExecutePythonCallback("afterstep");

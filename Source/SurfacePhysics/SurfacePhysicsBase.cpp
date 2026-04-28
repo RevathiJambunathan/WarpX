@@ -40,8 +40,25 @@ void SurfacePhysicsBase::ReadParameters ()
         std::string symbol;
         //pp_chem.query(("gasphase_species."+ species + ".symbol").c_str(), symbol);
         utils::parser::query(pp_gasphase, species, "symbol", symbol);
-        gas_species[species] = symbol;
+//        gas_species[species] = symbol;
+        gas_species_vec.emplace_back(species,symbol);
     }
+    m_num_gas_species = chem_gas_species.size();
+
+
+    // Build runtime species to chemistry gas species map
+    int num_runtime_species = mpc.nSpecies();
+    m_runtime_to_chemistry_sp_idx.assign(num_runtime_species);
+    std::vector<std::string> runtime_species_names = mpc.GetSpeciesNames();
+    for (int runtime_id = 0; runtime_id < num_runtime_species; ++runtime_id) {
+        const std::string& runtime_name = runtime_species_names[runtime_id];
+        for (int chem_id = 0; chem_id < static_cast<int>(m_num_gas_species); ++chem_id) {
+            if (gas_species_vec[chem_id].first == runtime_name) {
+                m_runtime_to_chemistry_sp_idx[runtime_id] = chem_id;
+                break;
+            }
+        }
+    }    
 
     // Read surface species that participate in gas-surface physics
     amrex::Vector<std::string> chem_surface_species;
@@ -60,7 +77,7 @@ void SurfacePhysicsBase::ReadParameters ()
     pp_chem.queryarr("surface_species_fraction", surface_species_fraction);
 
     std::set<std::string> known_symbols;
-    for (const auto& [_, symbol] : gas_species) known_symbols.insert(symbol);
+    for (const auto& [species, symbol] : gas_species_vec) known_symbols.insert(symbol);
     for (const auto& [species, symbol] : surface_species_vec) known_symbols.insert(symbol);
 
 
@@ -85,8 +102,12 @@ void SurfacePhysicsBase::ReadParameters ()
                 rxn.reactant_sp_val.push_back(-1);
             }
             for (const auto& product : rxn.products) {
+                if (known_symbols.find(product) == known_symbols.end()) {
+                    amrex::Abort("Unknown product in reaction"+ product+"\n");
+                }
                 std::string species_type = is_gas_species(product) ? "gas" : "surface";
                 rxn.product_type.push_back(species_type);
+                amrex::Print() << " product : " << product << " species_type : " << species_type << "\n";
             }
 
             rxn.P_energy0 = std::stod(amrex::trim(equation_params[1]));
@@ -117,13 +138,28 @@ void SurfacePhysicsBase::ReadParameters ()
         }
     }
 
+    reaction_has_gas_products.resize(reactions.size(), 0);
+    gas_sp_is_product.resize(gas_species_vec.size()*reactions.size(),0);
+    for (int irxn = 0; irxn < reactions.size(); irxn++) {
+        const Reaction& rxn = reactions[irxn];
+        amrex::Print() << " Reaction " << irxn << "\n";
+        for (int ip = 0; ip < rxn.product_type.size(); ++ip) {
+            amrex::Print() << " prod type " << rxn.product_type[ip] << "\n";
+            if (rxn.product_type[ip] == "gas") {
+                reaction_has_gas_products[irxn] = 1;
+                continue;
+            }
+        }
+    }
+
+
     for (int irxn = 0; irxn < reactions.size(); irxn++) {
         Reaction& rxn = reactions[irxn];
         amrex::Print() << " Reaction " << irxn << "\n";
         for (int ir = 0; ir < rxn.reactant_type.size(); ++ir) {
             rxn.reactant_sp_val[ir] = -1;
             if (rxn.reactant_type[ir] == "surface") {
-                amrex::Print() << " ir :  " << rxn.reactants[ir] << "\n";
+                amrex::Print() << " surf ir :  " << rxn.reactants[ir] << "\n";
                 int index = -1;
                 for (size_t i = 0; i < surface_species_vec.size(); i++){
                     if (surface_species_vec[i].second == rxn.reactants[ir]) {
@@ -132,6 +168,18 @@ void SurfacePhysicsBase::ReadParameters ()
                     }
                 }
                 rxn.reactant_sp_val[ir] = index;
+                amrex::Print() << " for surf rxtnt : index is : " << index << "\n";
+            } else if (rxn.reactant_type[ir] == "gas") {
+                amrex::Print() << " gas ir : " << rxn.reactants[ir] << "\n";
+                int index = -1;
+                for (size_t i = 0; i < gas_species_vec.size(); i++){
+                    if (gas_species_vec[i].second == rxn.reactants[ir]) {
+                        index = static_cast<int>(i);
+                        continue;
+                    }
+                }
+                rxn.reactant_sp_val[ir] = index;
+                amrex::Print() << " for gas rxtnt : index is : " << rxn.reactant_sp_val[ir] << "\n";
             }
         }
     }
@@ -164,6 +212,23 @@ void SurfacePhysicsBase::ReadParameters ()
         }
     }
 
+    for (int isp = 0; isp < gas_species_vec.size(); ++isp) {
+        const std::string& symbol = gas_species_vec[isp].second;
+        const std::string& name = gas_species_vec[isp].first;
+        for (int irxn = 0; irxn < reactions.size(); ++irxn) {
+            const Reaction& rxn = reactions[irxn];
+            bool prod_found = (std::find(rxn.products.begin(), rxn.products.end(), symbol) != rxn.products.end());
+            gas_sp_is_product[isp * reactions.size() + irxn] = prod_found ? 1 : 0;
+        }
+    }
+
+    for (int isp = 0; isp < gas_species_vec.size(); ++isp) {
+        const std::string & symbol = gas_species_vec[isp].second;
+        for (int irxn = 0; irxn < reactions.size(); ++irxn) {
+            const Reaction& rxn = reactions[irxn];
+//            amrex::Print() << " gas is product : " >> gas_sp_is_product[isp*reactions.size() + irxn] << "\n";
+        }
+    }
 
     // for testing purposes reading in constant values for site density, influx, and plasma_Ein
     pp_chem.get("surface_site_density", m_surface_site_density);
@@ -175,10 +240,22 @@ void SurfacePhysicsBase::ReadParameters ()
     m_cur_time = 0.;
 }
 
+int
+SurfacePhysicsBase::GetChemGasSpeciesIndex (int runtime_species_id) const
+{
+    if (runtime_species_id < 0 ||
+        runtime_species_id >= static_cast<int>(m_runtime_to_chemistry_sp_idx.size()))
+    {
+        return -1;
+    }
+    return m_runtime_to_chemistry_sp_idx[runtime_species_id];
+}
+
+
 bool
 SurfacePhysicsBase::is_gas_species (std::string species_symbol)
 {
-    for (const auto& [_,symbol] : gas_species) {
+    for (const auto& [species,symbol] : gas_species_vec) {
         if (symbol == species_symbol) return true;
     }
     return false;
@@ -227,7 +304,6 @@ SurfacePhysicsBase::InitData ()
     auto & warpx = WarpX::GetInstance();
     const auto & mpc = warpx.GetPartContainer();
     num_influx_species = mpc.nSpecies();
-    std::vector<std::string> influx_species_names = mpc.GetSpeciesNames();
     num_outflux_species = num_influx_species; //for now
     AllocAndInitInfluxBndVectors();
     AllocAndInitOutfluxBndVectors();
@@ -305,12 +381,16 @@ SurfacePhysicsBase::AllocAndInitInfluxBndVectors ()
 {
     num_in_particles.resize(num_influx_species);
     bnd_influx.resize(num_influx_species);
+    m_incoming_flux.resize(num_influx_species * surf_ijk.size());
     for (int isp = 0; isp < num_influx_species; ++isp)
     {
         num_in_particles[isp].resize(surf_ijk.size());
         bnd_influx[isp].resize(surf_ijk.size());
 
         nullifyInfluxParticleCounter(isp);
+
+// FOR TESTING
+        initializeInflux(isp,m_plasma_influx);
     }
 }
 
@@ -347,6 +427,17 @@ SurfacePhysicsBase::nullifyInfluxParticleCounter (int isp)
 }
 
 void
+SurfacePhysicsBase::initializeInflux(int isp, amrex::Real flux_val)
+{
+    for (int ibnd = 0; ibnd < surf_ijk.size(); ++ibnd)
+    {
+        bnd_influx[isp][ibnd] = flux_val;
+        m_incoming_flux[isp * surf_ijk.size() + ibnd] = 0.;
+    }
+    amrex::Print() << " initialized incoming flux " << "\n";
+}
+
+void
 SurfacePhysicsBase::nullifyOutfluxParticleCounter ()
 {
     for (int isp = 0; isp < num_outflux_species; ++isp) {
@@ -371,9 +462,72 @@ SurfacePhysicsBase::AllocAndInitSurfaceDensityFraction ()
     for (int isp = 0; isp < m_num_surface_species; ++isp) {
         for (int i = 0; i < surf_ijk.size(); ++i) {
             m_surface_density_fraction[isp*surf_ijk.size() + i] = surface_species_fraction[isp];
-            amrex::Print() << " isp : " << isp << " i " << i <<  m_surface_density_fraction[isp*surf_ijk.size() + i] << "\n";
         }
     }
 
+    m_returning_gas_flux.resize(m_num_gas_species * surf_ijk.size());
+    for (int isp = 0; isp < m_num_gas_species; ++isp) {
+       for (int i = 0; i < surf_ijk.size() ; ++i) {
+           m_returning_gas_flux[isp * surf_ijk.size() + i] = 0.;
+       }
+    }
+}
+
+void
+SurfacePhysicsBase::computeInflux ()
+{
+    for (int isp = 0; isp < num_influx_species; ++isp) {
+        computeInflux(isp);
+    }
+}
+
+void
+SurfacePhysicsBase::computeInflux (int isp)
+{
+    // check if EB is enabled
+    if (!EB::enabled() ) {
+        amrex::Print() << " current mapping works only with EB surfaces \n";
+        return;
+    }
+    auto& warpx = WarpX::GetInstance();
+    const int lev = 0;
+    amrex::Real const dt = warpx.getdt(lev);
+    //
+    amrex::EBFArrayBoxFactory const& eb_box_factory = warpx.fieldEBFactory(lev);
+    amrex::FabArray<amrex::EBCellFlagFab> const& eb_flag = eb_box_factory.getMultiEBCellFlagFab();
+    amrex::MultiCutFab const& eb_bnd_cent = eb_box_factory.getBndryCent();
+    amrex::MultiCutFab const& eb_bnd_normal = eb_box_factory.getBndryNormal();
+    amrex::MultiCutFab const& eb_bnd_area = eb_box_factory.getBndryArea();
+
+    double* const AMREX_RESTRICT dptr_num_in_particles = num_in_particles[isp].dataPtr();
+    double* const AMREX_RESTRICT dptr_bnd_influx = bnd_influx[isp].dataPtr();
+    amrex::Real* sp_influx = m_incoming_flux.data();
+    int num_surf_elements = surf_ijk.size();
+
+    for (amrex::MFIter mfi(eb_flag); mfi.isValid(); ++mfi)
+    {
+        amrex::Box const box = mfi.tilebox();
+        amrex::FabType const fab_type = eb_flag[mfi].getType(box);
+        if (fab_type == amrex::FabType::regular) { continue;}
+        if (fab_type == amrex::FabType::covered) { continue;}
+
+        auto const& eb_flag_arr = eb_flag.array(mfi);
+        const amrex::Array4<const amrex::Real>& eb_bnd_area_arr = eb_bnd_area.array(mfi);
+        auto const& ivect_arr = ivect_map->array(mfi);
+
+        amrex::ParallelFor(box,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+
+            if (eb_flag_arr(i,j,k).isRegular() ) { 
+                return;
+            } else if (eb_flag_arr(i,j,k).isCovered() ) {
+                return;
+            } else {
+                int ivec = ivect_arr(i,j,k);
+            //    dptr_bnd_influx[ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt + 1e19;
+                sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt + 1e19;
+            }
+        });
+    }    
 }
 #endif

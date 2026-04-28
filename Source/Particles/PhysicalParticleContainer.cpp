@@ -1367,7 +1367,18 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
     auto & warpx = WarpX::GetInstance();
     auto & surface_physics = warpx.GetSurfacePhysicsModel();
     auto & ivect_map = surface_physics.ivect_map;
-    amrex::Vector<amrex::Real> surface_outflux = surface_physics.bnd_outflux[this->getSpeciesId()];
+//    amrex::Vector<amrex::Real> surface_outflux = surface_physics.bnd_outflux[this->getSpeciesId()];
+    amrex::Real* surface_outflux = surface_physics.m_returning_gas_flux.data();
+    int runtime_sp_id = this->getSpeciesId();
+    int chem_sp_id = surface_physics.GetChemGasSpeciesIndex(runtime_sp_id);
+    int num_surf_elements = surface_physics.surf_ijk.size();
+
+    // Use surface-return flux only for species that exist in chemistry gas list
+    const bool use_surface_flux =
+        inject_from_eb &&
+        (chem_sp_id >= 0) &&
+        (chem_sp_id < surface_physics.m_num_gas_species);
+
 #endif
 
 #endif
@@ -1712,8 +1723,11 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
 #endif
 
 #ifdef WARPX_SURFACE_PHYSICS
-                int surface_ivect = ivect_map_arr(i,j,k);
-                const Real flux = surface_outflux[surface_ivect];
+                amrex::Real flux;
+                if (use_surface_flux) {
+                    int surface_ivect = ivect_map_arr(i,j,k);
+                    const Real flux = surface_outflux[chem_sp_id * num_surf_elements + surface_ivect];
+                }
 #else
                 const Real flux = inj_flux->getFlux(ppos.x, ppos.y, ppos.z, t);
 #endif
