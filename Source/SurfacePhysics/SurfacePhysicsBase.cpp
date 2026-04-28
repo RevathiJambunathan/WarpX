@@ -47,8 +47,10 @@ void SurfacePhysicsBase::ReadParameters ()
 
 
     // Build runtime species to chemistry gas species map
+    auto & warpx = WarpX::GetInstance();
+    const auto & mpc = warpx.GetPartContainer();
     int num_runtime_species = mpc.nSpecies();
-    m_runtime_to_chemistry_sp_idx.assign(num_runtime_species);
+    m_runtime_to_chemistry_sp_idx.resize(num_runtime_species,-1);
     std::vector<std::string> runtime_species_names = mpc.GetSpeciesNames();
     for (int runtime_id = 0; runtime_id < num_runtime_species; ++runtime_id) {
         const std::string& runtime_name = runtime_species_names[runtime_id];

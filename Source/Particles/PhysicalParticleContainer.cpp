@@ -1723,7 +1723,7 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
 #endif
 
 #ifdef WARPX_SURFACE_PHYSICS
-                amrex::Real flux;
+                amrex::Real flux = 0.;
                 if (use_surface_flux) {
                     int surface_ivect = ivect_map_arr(i,j,k);
                     const Real flux = surface_outflux[chem_sp_id * num_surf_elements + surface_ivect];
