@@ -47,6 +47,12 @@ SurfacePhysicsBase::countParticlesFromEmbeddedBoundaries (
     const amrex::Geometry& geom = warpx.Geom(0);
     auto plo = geom.ProbLoArray();
 
+    // set counter for time window over which we are computing the incoming flux
+    if (! m_influx_window_started) {
+        m_influx_window_start_time = warpx.gett_new(0);
+        m_influx_window_started = true;        
+    }
+
     for (int i = 0; i < num_influx_species; ++i)
     {
         amrex::Print() << " influx sp name " << mypc.GetSpeciesNames()[0] << " " << mypc.GetSpeciesNames()[1] << "\n";

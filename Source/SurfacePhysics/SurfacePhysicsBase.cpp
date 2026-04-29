@@ -494,6 +494,8 @@ SurfacePhysicsBase::computeInflux (int isp)
     auto& warpx = WarpX::GetInstance();
     const int lev = 0;
     amrex::Real const dt = warpx.getdt(lev);
+    amrex::Real const cur_time = warpx.gett_new(lev);
+    amrex::Real const influx_window = cur_time - m_influx_window_start_time;
     //
     amrex::EBFArrayBoxFactory const& eb_box_factory = warpx.fieldEBFactory(lev);
     amrex::FabArray<amrex::EBCellFlagFab> const& eb_flag = eb_box_factory.getMultiEBCellFlagFab();
@@ -505,6 +507,13 @@ SurfacePhysicsBase::computeInflux (int isp)
     double* const AMREX_RESTRICT dptr_bnd_influx = bnd_influx[isp].dataPtr();
     amrex::Real* sp_influx = m_incoming_flux.data();
     int num_surf_elements = surf_ijk.size();
+
+    if (!m_influx_window_started || influx_window <= 0.) {
+        for (int ibnd = 0; ibnd < num_surf_elements; ++ibnd) {
+            sp_influx[isp*num_surf_elements + ibnd] = 0.;
+        }
+        return;
+    }
 
     for (amrex::MFIter mfi(eb_flag); mfi.isValid(); ++mfi)
     {
@@ -527,7 +536,7 @@ SurfacePhysicsBase::computeInflux (int isp)
             } else {
                 int ivec = ivect_arr(i,j,k);
             //    dptr_bnd_influx[ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt + 1e19;
-                sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt + 1e19;
+                sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/influx_window; // + 1e19;
             }
         });
     }    

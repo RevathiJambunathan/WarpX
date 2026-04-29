@@ -182,4 +182,5 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
     }
     m_cur_time += m_chem_dt;
     }  // time loop
+    // Here we can reset influx collection window - nullify Influx ParticleCounter and reset influx window start time
 }

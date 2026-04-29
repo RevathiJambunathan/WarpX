@@ -31,6 +31,8 @@ public:
 
     void EvolveSurfacePhysics ();
 
+    amrex::Real m_influx_window_start_time = 0.;
+    bool m_influx_window_started = false;
     void nullifyInfluxParticleCounter ();
     void nullifyInfluxParticleCounter (int isp);
     void nullifyOutfluxParticleCounter ();
