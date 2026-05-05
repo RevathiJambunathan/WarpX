@@ -8,7 +8,7 @@
 
 #include <AMReX.H>
 #include <AMReX_IntVect.H>
-#include <AMReX_Real.H>
+#include <AMReX_REAL.H>
 #include <AMReX_Vector.H>
 #include <AMReX_iMultiFab.H>
 
