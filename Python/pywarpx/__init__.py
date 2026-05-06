@@ -40,6 +40,7 @@ from .LoadThirdParty import load_cupy  # noqa
 from .Particles import newspecies, particles  # noqa
 from .ProjectionDivBCleaner import projectiondivbcleaner  # noqa
 from .PSATD import psatd  # noqa
+from .SurfaceChemistry import surface_chemistry #noqa
 from .WarpX import warpx  # noqa
 
 # This is a circular import and must happen after the import of libwarpx
