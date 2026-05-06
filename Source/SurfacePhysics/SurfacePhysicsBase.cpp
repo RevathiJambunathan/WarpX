@@ -240,6 +240,34 @@ void SurfacePhysicsBase::ReadParameters ()
     pp_chem.get("start_time",m_start_time);
     pp_chem.get("end_time",m_end_time);
     m_cur_time = 0.;
+
+    int num_rxns = static_cast<int>(reactions.size());
+    int max_r = 0;
+    for (const auto& rxn : reactions) {
+        max_r = std::max(max_r, static_cast<int>(rxn.reactants.size()));
+    }
+    m_max_reactants_per_rxn = max_r;
+
+    m_rxn_P0.resize(num_rxns);
+    m_rxn_E_ref.resize(num_rxns);
+    m_rxn_E_th.resize(num_rxns);
+    m_rxn_exp.resize(num_rxns);
+    m_rxn_num_reactants.resize(num_rxns);
+    m_reactant_is_gas.resize(num_rxns * max_r, 0);
+    m_reactant_sp_val.resize(num_rxns * max_r, -1);
+
+    for (int irxn = 0; irxn < num_rxns; ++irxn) {
+        const auto& rxn = reactions[irxn];
+        m_rxn_P0[irxn]    = rxn.P0;
+        m_rxn_E_ref[irxn] = rxn.E_ref;
+        m_rxn_E_th[irxn]  = rxn.E_th;
+        m_rxn_exp[irxn]   = rxn.exp;
+	m_rxn_num_reactants[irxn] = static_cast<int>(rxn.reactants.size());
+	for (int ir = 0; ir < m_rxn_num_reactants[irxn]; ++ir) {
+	    m_reactant_is_gas[irxn*max_r + ir] = (rxn.reactant_type[ir] == "gas") ? 1 : 0;
+	    m_reactant_sp_val[irxn*max_r + ir] = rxn.reactant_sp_val[ir];
+	}
+    }
 }
 
 int
@@ -351,7 +379,7 @@ SurfacePhysicsBase::initializeMapping ()
         auto const ivect_arr = ivect_map->array(mfi);
 
         amrex::LoopOnCpu( box,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+            [=] (int i, int j, int k) {
 
             amrex::IntVect const iv(AMREX_D_DECL(i,j,k));            
             if (eb_flag_arr(i,j,k).isRegular() ) {

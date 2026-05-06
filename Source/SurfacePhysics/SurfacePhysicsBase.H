@@ -105,6 +105,16 @@ private:
     std::vector<std::pair<std::string, std::string>> surface_species_vec;
     std::vector<Reaction> reactions;
 
+    // reaction data
+    amrex::Gpu::DeviceVector<amrex::Real> m_rxn_P0;
+    amrex::Gpu::DeviceVector<amrex::Real> m_rxn_E_ref;
+    amrex::Gpu::DeviceVector<amrex::Real> m_rxn_E_th;
+    amrex::Gpu::DeviceVector<amrex::Real> m_rxn_exp;
+    amrex::Gpu::DeviceVector<int> m_rxn_num_reactants;
+    int m_max_reactants_per_rxn = 0;
+    amrex::Gpu::DeviceVector<int> m_reactant_is_gas; // [irxn*max_r + ir] =1 if gas, 0 if surface
+    amrex::Gpu::DeviceVector<int> m_reactant_sp_val; // [irxn*max_r + ir] = species index
+
     // runtime species id to chemistry species id (-1 if there is no run time species id corresponding to chem)
     amrex::Vector<int> m_runtime_to_chemistry_sp_idx;
 };
