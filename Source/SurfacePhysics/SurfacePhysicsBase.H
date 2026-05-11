@@ -46,10 +46,10 @@ public:
     amrex::Vector<amrex::Real> surf_normal_z;
     int num_influx_species;
     int num_outflux_species;
-    amrex::Vector< amrex::Vector<amrex::Real> > bnd_influx;
-    amrex::Vector< amrex::Vector<amrex::Real> > bnd_outflux;
-    amrex::Vector< amrex::Vector< amrex::Real > > num_in_particles;
-    amrex::Vector< amrex::Vector< amrex::Real > > num_out_particles;
+    amrex::Vector< amrex::Gpu::DeviceVector< amrex::Real> > bnd_influx;
+    amrex::Vector< amrex::Gpu::DeviceVector< amrex::Real> > bnd_outflux;
+    amrex::Vector< amrex::Gpu::DeviceVector< amrex::Real > > num_in_particles;
+    amrex::Vector< amrex::Gpu::DeviceVector< amrex::Real > > num_out_particles;
 
     int m_num_surface_species;
     int m_num_gas_species;

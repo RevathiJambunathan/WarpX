@@ -51,6 +51,7 @@ SurfacePhysicsBase::countParticlesFromEmbeddedBoundaries (
     if (! m_influx_window_started) {
         m_influx_window_start_time = warpx.gett_new(0);
         m_influx_window_started = true;        
+	amrex::Print() << "window set to true \n";
     }
 
     for (int i = 0; i < num_influx_species; ++i)

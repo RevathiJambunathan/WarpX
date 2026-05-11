@@ -1726,7 +1726,7 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
                 amrex::Real flux = 0.;
                 if (use_surface_flux) {
                     int surface_ivect = ivect_map_arr(i,j,k);
-                    const Real flux = surface_outflux[chem_sp_id * num_surf_elements + surface_ivect];
+                    flux = surface_outflux[chem_sp_id * num_surf_elements + surface_ivect];
                 }
 #else
                 const Real flux = inj_flux->getFlux(ppos.x, ppos.y, ppos.z, t);

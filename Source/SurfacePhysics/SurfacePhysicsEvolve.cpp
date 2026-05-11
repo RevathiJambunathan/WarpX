@@ -96,10 +96,17 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
         });
     }
    
-    for (int is = 0; is < num_surf_elements; ++is ) {
-        auto& [s_sp, val] = surface_species_vec[0];
-        auto& [as_sp, aval] = surface_species_vec[1];
-        amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " << m_surface_density_fraction[0*surf_ijk.size()+is] << " " << m_surface_density_fraction[1*surf_ijk.size()+is] << "\n";
+    {
+        amrex::Vector<amrex::Real> h_surf_dens(m_surface_density_fraction.size());
+        amrex::Gpu::copy(amrex::Gpu::deviceToHost,
+                         m_surface_density_fraction.begin(),
+                         m_surface_density_fraction.end(),
+                         h_surf_dens.begin());
+        for (int is = 0; is < num_surf_elements; ++is ) {
+            auto& [s_sp, val] = surface_species_vec[0];
+            auto& [as_sp, aval] = surface_species_vec[1];
+            amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " << h_surf_dens[0*surf_ijk.size()+is] << " " << h_surf_dens[1*surf_ijk.size()+is] << "\n";
+        }
     }
 
    // now compute the returning Gammma for each gas species (ion and neutral)
@@ -156,8 +163,20 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
         });
     }
 
-    for (int is = 0; is < num_surf_elements; ++is ) {
-        amrex::PrintToFile("surface_flux_evolution.txt") << istep << " " << m_cur_time << " " << m_returning_gas_flux[0*surf_ijk.size()+is] << " " << m_returning_gas_flux[1*surf_ijk.size()+is] << "\n";
+    {
+        amrex::Vector<amrex::Real> h_gas_flux(m_returning_gas_flux.size());
+        amrex::Gpu::copy(amrex::Gpu::deviceToHost,
+                         m_returning_gas_flux.begin(),
+                         m_returning_gas_flux.end(),
+                         h_gas_flux.begin());
+        amrex::Vector<amrex::Real> h_gas_influx(m_incoming_flux.size());
+        amrex::Gpu::copy(amrex::Gpu::deviceToHost,
+                         m_incoming_flux.begin(),
+                         m_incoming_flux.end(),
+                         h_gas_influx.begin());
+        for (int is = 0; is < num_surf_elements; ++is ) {
+            amrex::PrintToFile("surface_flux_evolution.txt") << istep << " " << m_cur_time << " " << h_gas_flux[0*surf_ijk.size()+is] << " " << h_gas_flux[1*surf_ijk.size()+is] << " influx " << h_gas_influx[0*surf_ijk.size() + is] << " " << h_gas_influx[1*surf_ijk.size() + is] << "\n";
+        }
     }
     m_cur_time += m_chem_dt;
     }  // time loop
