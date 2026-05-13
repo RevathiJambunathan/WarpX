@@ -2674,47 +2674,47 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
 
     def _generate_chemistry_file_contents(self):
         lines = []
-          gas_names = " ".join(sp["name"] for sp in self.gas_species)
-          lines.append(f"chem.gasphase_species = {gas_names}")
-          for sp in self.gas_species:
-              lines.append(f"gasphase_species.{sp['name']}.symbol = {sp['symbol']}")
-          lines.append("")
+        gas_names = " ".join(sp["name"] for sp in self.gas_species)
+        lines.append(f"chem.gasphase_species = {gas_names}")
+        for sp in self.gas_species:
+            lines.append(f"gasphase_species.{sp['name']}.symbol = {sp['symbol']}")
+        lines.append("")
 
-          surf_names = " ".join(sp["name"] for sp in self.surface_species)
-          surf_fractions = " ".join(
-              str(sp["initial_fraction"]) for sp in self.surface_species
-          )
-          lines.append(f"chem.surface_species = {surf_names}")
-          lines.append(f"chem.surface_species_fraction = {surf_fractions}")
-          for sp in self.surface_species:
-              lines.append(f"surface_species.{sp['name']}.symbol = {sp['symbol']}")
-          lines.append("")
+        surf_names = " ".join(sp["name"] for sp in self.surface_species)
+        surf_fractions = " ".join(
+            str(sp["initial_fraction"]) for sp in self.surface_species
+        )
+        lines.append(f"chem.surface_species = {surf_names}")
+        lines.append(f"chem.surface_species_fraction = {surf_fractions}")
+        for sp in self.surface_species:
+            lines.append(f"surface_species.{sp['name']}.symbol = {sp['symbol']}")
+        lines.append("")
 
-          if self.reactions:
-              continuation = " \\\n                 "
-              quoted = continuation.join(f'"{rxn}"' for rxn in self.reactions)
-              lines.append(f"chem.reactions = {quoted}")
-          lines.append("")
+        if self.reactions:
+            continuation = " \\\n                 "
+            quoted = continuation.join(f'"{rxn}"' for rxn in self.reactions)
+            lines.append(f"chem.reactions = {quoted}")
+        lines.append("")
 
-          lines.append(f"chem.surface_site_density = {self.surface_site_density}")
-          lines.append(f"chem.dt = {self.dt}")
-          lines.append(f"chem.start_time = {self.start_time}")
-          lines.append(f"chem.end_time = {self.end_time}")
-          if self.plasma_influx is not None:
-              lines.append(f"chem.plasma_influx = {self.plasma_influx}")
-          if self.plasma_Ein is not None:
-              lines.append(f"chem.plasma_Ein = {self.plasma_Ein}")
-          lines.append("")
+        lines.append(f"chem.surface_site_density = {self.surface_site_density}")
+        lines.append(f"chem.dt = {self.dt}")
+        lines.append(f"chem.start_time = {self.start_time}")
+        lines.append(f"chem.end_time = {self.end_time}")
+        if self.plasma_influx is not None:
+            lines.append(f"chem.plasma_influx = {self.plasma_influx}")
+        if self.plasma_Ein is not None:
+            lines.append(f"chem.plasma_Ein = {self.plasma_Ein}")
+        lines.append("")
 
-          return "\n".join(lines)
+        return "\n".join(lines)
 
-      def surface_chemistry_initialize_inputs(self):
-          content = self._generate_chemistry_file_content()
-          with open(self.chemistry_input_file, "w") as f:
-              f.write(content)
+    def surface_chemistry_initialize_inputs(self):
+        content = self._generate_chemistry_file_contents()
+        with open(self.chemistry_input_file, "w") as f:
+            f.write(content)
 
-          pywarpx.warpx.do_surface_physics = 1
-          pywarpx.surface_chemistry.input_file = self.chemistry_input_file
+        pywarpx.warpx.do_surface_physics = 1
+        pywarpx.surface_chemistry.input_file = self.chemistry_input_file
 
 class Simulation(picmistandard.PICMI_Simulation):
     """
@@ -3080,7 +3080,7 @@ class Simulation(picmistandard.PICMI_Simulation):
             self.embedded_boundary.embedded_boundary_initialize_inputs(self.solver)
 
         if self.surface_chemistry is not None:
-            self.surface_chemistry.surface_chemistry_initialize_inputs(self.solver)
+            self.surface_chemistry.surface_chemistry_initialize_inputs()
 
         for i in range(len(self.lasers)):
             self.lasers[i].laser_initialize_inputs()
