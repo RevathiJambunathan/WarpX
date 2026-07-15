@@ -103,9 +103,12 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
                          m_surface_density_fraction.end(),
                          h_surf_dens.begin());
         for (int is = 0; is < num_surf_elements; ++is ) {
-            auto& [s_sp, val] = surface_species_vec[0];
-            auto& [as_sp, aval] = surface_species_vec[1];
-            amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " << h_surf_dens[0*surf_ijk.size()+is] << " " << h_surf_dens[1*surf_ijk.size()+is] << "\n";
+            amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " ;
+            for (int s_sp = 0; s_sp < static_cast<int>(surface_species_vec.size()); s_sp++) {
+                amrex::PrintToFile("surface_evolution.txt") << surface_species_vec[s_sp].first << " ";
+                amrex::PrintToFile("surface_evolution.txt") << h_surf_dens[s_sp*surf_ijk.size()+is] << " ";
+            }
+            amrex::PrintToFile("surface_evolution.txt") << "\n";
         }
     }
 
@@ -175,7 +178,12 @@ SurfacePhysicsBase::EvolveSurfacePhysics ()
                          m_incoming_flux.end(),
                          h_gas_influx.begin());
         for (int is = 0; is < num_surf_elements; ++is ) {
-            amrex::PrintToFile("surface_flux_evolution.txt") << istep << " " << m_cur_time << " " << h_gas_flux[0*surf_ijk.size()+is] << " " << h_gas_flux[1*surf_ijk.size()+is] << " influx " << h_gas_influx[0*surf_ijk.size() + is] << " " << h_gas_influx[1*surf_ijk.size() + is] << "\n";
+            amrex::PrintToFile("surface_flux_evolution.txt") << istep << " " << m_cur_time << " " ;
+            for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
+                amrex::PrintToFile("surface_flux_evolution.txt") << gas_species_vec[g_sp].first << " ";
+                amrex::PrintToFile("surface_flux_evolution.txt") << h_gas_flux[g_sp*surf_ijk.size()+is] << " ";
+            }
+            amrex::PrintToFile("surface_flux_evolution.txt")  << "\n";
         }
     }
     m_cur_time += m_chem_dt;
