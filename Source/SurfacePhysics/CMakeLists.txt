@@ -6,6 +6,7 @@ foreach(D IN LISTS WarpX_DIMS)
             SurfacePhysicsBase.cpp
             SurfaceParticleMapping.cpp
             SurfacePhysicsEvolve.cpp
+            SurfacePhysicsCheckpoint.cpp
         )
     endif()
 endforeach()

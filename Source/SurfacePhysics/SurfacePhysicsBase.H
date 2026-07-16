@@ -77,6 +77,10 @@ public:
     amrex::Real m_end_time;
     amrex::Real m_cur_time;
 
+    // Checkpoint and restart
+    void WriteCheckpoint (const std::string& checkpoint_dir);
+    void ReadCheckpoint (const std::string& checkpoint_dir);
+
 // for testing
     void initializeInflux(int isp, amrex::Real flux_val);
     void computeInflux();

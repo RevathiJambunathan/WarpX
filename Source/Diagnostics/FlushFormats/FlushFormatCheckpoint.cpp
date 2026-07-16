@@ -171,6 +171,12 @@ FlushFormatCheckpoint::WriteToFile (
 
     WriteDMaps(checkpointname, nlev);
 
+#ifdef WARPX_SURFACE_PHYSICS
+    if (warpx.DoSurfacePhysics()) {
+        warpx.GetSurfacePhysicsModel().WriteCheckpoint(checkpointname);
+    }
+#endif
+
     VisMF::SetHeaderVersion(current_version);
 
 }
