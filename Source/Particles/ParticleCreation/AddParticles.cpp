@@ -1253,6 +1253,22 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
         eb_factory = &(WarpX::GetInstance().fieldEBFactory(0));
         eb_flag = &(eb_factory->getMultiEBCellFlagFab());
     }
+
+#ifdef WARPX_SURFACE_PHYSICS
+    auto & warpx = WarpX::GetInstance();
+    auto & surface_physics = warpx.GetSurfacePhysicsModel();
+    auto & ivect_map = surface_physics.ivect_map;
+    amrex::Real* surface_outflux = surface_physics.m_returning_gas_flux.data();
+    int runtime_sp_id = this->getSpeciesId();
+    int chem_sp_id = surface_physics.GetChemGasSpeciesIndex(runtime_sp_id);
+    int num_surf_elements = surface_physics.surf_ijk.size();
+    // Use surface-return flux only for species that exist in chemistry gas list
+    const bool use_surface_flux =
+        inject_from_eb &&
+        (chem_sp_id >= 0) &&
+        (chem_sp_id < surface_physics.m_num_gas_species);
+#endif // closes ifdef for WarpX surface physics
+
 #endif
 
     amrex::LayoutData<amrex::Real>* cost = WarpX::getCosts(0);
@@ -1347,6 +1363,9 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
 #ifdef AMREX_USE_EB
         auto eb_flag_arr = eb_flag ? eb_flag->const_array(mfi) : Array4<EBCellFlag const>{};
         auto eb_data = eb_factory ? eb_factory->getEBData(mfi) : EBData{};
+#ifdef WARPX_SURFACE_PHYSICS
+        amrex::Array4<const int> ivect_map_arr = ivect_map->array(mfi);
+#endif
 #endif
 
         amrex::ParallelForRNG(overlap_box, [=] AMREX_GPU_DEVICE (int i, int j, int k, amrex::RandomEngine const& engine) noexcept
@@ -1616,7 +1635,16 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
                 pu.y = cos_phi*sin_theta*ur + cos_theta*ut - sin_phi*sin_theta*up;
                 pu.z = sin_phi*ur + cos_phi*up;
 #endif
+
+#ifdef WARPX_SURFACE_PHYSICS
+                amrex::Real flux = 0.;
+                if (use_surface_flux) {
+                    int surface_ivect = ivect_map_arr(i,j,k);
+                    flux = surface_outflux[chem_sp_id * num_surf_elements + surface_ivect];
+                }
+#else
                 const amrex::Real flux = inj_flux->getFlux(pos.x, pos.y, pos.z, t);
+#endif
                 // Remove particle if flux is negative or 0
                 if (flux <= 0) {
                     pa_idcpu[ip] = amrex::ParticleIdCpus::Invalid;

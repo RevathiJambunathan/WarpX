@@ -860,6 +860,15 @@ WarpX::InitData ()
 
     m_electrostatic_solver->InitData();
 
+#ifdef WARPX_SURFACE_PHYSICS
+    if (do_surface_physics) {
+        m_surface_physics->InitData();
+        if (!restart_chkfile.empty()) {
+            m_surface_physics->ReadCheckpoint(restart_chkfile);
+        }
+    }
+#endif
+
     if (WarpX::electromagnetic_solver_id == ElectromagneticSolverAlgo::HybridPIC) {
         m_hybrid_pic_model->InitData(m_fields);
     }

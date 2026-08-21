@@ -3746,6 +3746,119 @@ class PlasmaLens(picmistandard.base._ClassWithInit):
         pywarpx.particles.repeated_plasma_lens_strengths_B = self.strengths_B
 
 
+
+class SurfaceChemistry(picmistandard.base._ClassWithInit):
+    """
+    Configure surface chemistry for WarpX. Compile with SURFACE_PHYSICS=ON
+
+
+    Parameters
+    ----------
+
+    gas_species : list of dict with 'name' (str) and 'symbol' (str)
+        Example: [{'name': 'ar_ions', 'symbol': 'Ar+_g'}, ...]
+
+    surface_species : list of dict
+        Each dict must have 'name' (str), 'symbol' (str), and 'initial_fraction' (float).
+        Example: [{'name':'silicon', 'symbol':'Si_s', 'initial_fraction': 1.0}, ...]
+
+    reactions : list of str
+        Each string is one reaction in the format:
+        "ReactantA + ReactantB -> Product; P_energy0; P0; E_ref; E_th; exponent"
+
+    surface_site_density : float
+        Surface site density in m^-2.
+
+    dt : float
+        Chemistry timestep in seconds
+
+    start_time : float
+        Chemistry evolution start time in seconds.
+
+    end_time : float
+        Chemistry evolution end time in seconds.
+
+    plasma_influx : float, optional
+        Constant incoming plasma flux (for testing, replaces flux computed from PIC loop)
+
+    plasma_Ein : float, optional
+        Constant incoming ion energy in eV (replaces ion energy computed from PIC loop)
+
+    chemistry_input_file : str, default='chemistry.txt'
+        Path where the generated chemistry input file will be written.
+    """
+
+    def __init__(
+        self,
+        gas_species,
+        surface_species,
+        reactions,
+        surface_site_density,
+        dt,
+        start_time,
+        end_time,
+        plasma_influx=None,
+        plasma_Ein=None,
+        chemistry_input_file="chemistry.txt",
+        **kw,
+    ):
+        self.gas_species = gas_species
+        self.surface_species = surface_species
+        self.reactions = reactions
+        self.surface_site_density = surface_site_density
+        self.dt = dt
+        self.start_time = start_time
+        self.end_time = end_time
+        self.plasma_influx = plasma_influx
+        self.plasma_Ein = plasma_Ein
+        self.chemistry_input_file = chemistry_input_file
+
+        self.handle_init(kw)
+
+    def _generate_chemistry_file_contents(self):
+        lines = []
+        gas_names = " ".join(sp["name"] for sp in self.gas_species)
+        lines.append(f"chem.gasphase_species = {gas_names}")
+        for sp in self.gas_species:
+            lines.append(f"gasphase_species.{sp['name']}.symbol = {sp['symbol']}")
+        lines.append("")
+
+        surf_names = " ".join(sp["name"] for sp in self.surface_species)
+        surf_fractions = " ".join(
+            str(sp["initial_fraction"]) for sp in self.surface_species
+        )
+        lines.append(f"chem.surface_species = {surf_names}")
+        lines.append(f"chem.surface_species_fraction = {surf_fractions}")
+        for sp in self.surface_species:
+            lines.append(f"surface_species.{sp['name']}.symbol = {sp['symbol']}")
+        lines.append("")
+
+        if self.reactions:
+            continuation = " \\\n                 "
+            quoted = continuation.join(f'"{rxn}"' for rxn in self.reactions)
+            lines.append(f"chem.reactions = {quoted}")
+        lines.append("")
+
+        lines.append(f"chem.surface_site_density = {self.surface_site_density}")
+        lines.append(f"chem.dt = {self.dt}")
+        lines.append(f"chem.start_time = {self.start_time}")
+        lines.append(f"chem.end_time = {self.end_time}")
+        if self.plasma_influx is not None:
+            lines.append(f"chem.plasma_influx = {self.plasma_influx}")
+        if self.plasma_Ein is not None:
+            lines.append(f"chem.plasma_Ein = {self.plasma_Ein}")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def surface_chemistry_initialize_inputs(self):
+        content = self._generate_chemistry_file_contents()
+        with open(self.chemistry_input_file, "w") as f:
+            f.write(content)
+
+        pywarpx.warpx.do_surface_physics = 1
+        pywarpx.surface_chemistry.input_file = self.chemistry_input_file
+
 class Simulation(picmistandard.PICMI_Simulation):
     """
     See `Input Parameters <https://warpx.readthedocs.io/en/latest/usage/parameters.html>`__ for more information.
@@ -3878,6 +3991,9 @@ class Simulation(picmistandard.PICMI_Simulation):
 
     warpx_embedded_boundary: embedded boundary instance, optional
 
+    warpx_surface_chemistry: Surface Chemistry instance, optional
+        To perform gas-surface interactions
+
     warpx_break_signals: list of strings
         Signals on which to break
 
@@ -4000,6 +4116,7 @@ class Simulation(picmistandard.PICMI_Simulation):
         )
 
         self.embedded_boundary = kw.pop("warpx_embedded_boundary", None)
+        self.surface_chemistry = kw.pop("warpx_surface_chemistry", None)
 
         self.break_signals = kw.pop("warpx_break_signals", None)
         self.checkpoint_signals = kw.pop("warpx_checkpoint_signals", None)
@@ -4175,6 +4292,9 @@ class Simulation(picmistandard.PICMI_Simulation):
 
         if self.embedded_boundary is not None:
             self.embedded_boundary.embedded_boundary_initialize_inputs(self.solver)
+
+        if self.surface_chemistry is not None:
+            self.surface_chemistry.surface_chemistry_initialize_inputs()
 
         for i in range(len(self.lasers)):
             self.lasers[i].laser_initialize_inputs()

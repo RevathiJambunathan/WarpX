@@ -24,7 +24,7 @@ from .Interpolation import interpolation
 from .Lasers import lasers, lasers_list
 from .Particles import particles, particles_list
 from .PSATD import psatd
-
+from .SurfaceChemistry import surface_chemistry
 
 class WarpX(Bucket):
     """
@@ -55,6 +55,7 @@ class WarpX(Bucket):
         argv += interpolation.attrlist()
         argv += psatd.attrlist()
         argv += eb2.attrlist()
+        argv += surface_chemistry.attrlist()        
 
         argv += particles.attrlist()
         for particle in particles_list:

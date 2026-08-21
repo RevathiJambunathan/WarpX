@@ -346,6 +346,8 @@ WarpX::Evolve (int numsteps)
             SynchronizeVelocityWithPosition();
         }
 
+        if (do_surface_physics) m_surface_physics->EvolveSurfacePhysics();
+
         // afterstep callback runs with the updated global time. It is included
         // in the evolve timing.
         ExecutePythonCallback("afterstep");
@@ -811,6 +813,10 @@ void WarpX::HandleParticlesAtBoundaries (int step, amrex::Real cur_time, int num
         mypc->ScrapeParticlesAtEB(m_fields.get_mr_levels(FieldType::distance_to_eb, finest_level));
         m_particle_boundary_buffer->gatherParticlesFromEmbeddedBoundaries(
             *mypc, m_fields.get_mr_levels(FieldType::distance_to_eb, finest_level), cur_time);
+#ifdef WARPX_SURFACE_PHYSICS
+        if (do_surface_physics) m_surface_physics->countParticlesFromEmbeddedBoundaries(
+            *mypc, m_fields.get_mr_levels(FieldType::distance_to_eb, finest_level));
+#endif
         if (eb_particle_boundary == ParticleBoundaryType::Absorbing) {
             // If particles are simply absorbed, no need for a full Redistribute.
             // Instead: simply delete the absorbed particles
