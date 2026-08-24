@@ -32,8 +32,9 @@ FindEmbeddedBoundaryMapAndCounter::FindEmbeddedBoundaryMapAndCounter (const amre
        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dxi,
        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> plo,
        amrex::Array4<const int> ivec_map_arr,
-       double* incident_np)
-    : m_dt(dt), m_phi_arr(phi_arr), m_dxi(dxi), m_plo(plo), m_ivec_map_arr(ivec_map_arr), m_incident_np(incident_np)
+       double* incident_np,
+       amrex::ParticleReal mass)
+    : m_dt(dt), m_phi_arr(phi_arr), m_dxi(dxi), m_plo(plo), m_ivec_map_arr(ivec_map_arr), m_incident_np(incident_np), m_mass(mass)
 {
 }
 
@@ -42,7 +43,8 @@ SurfacePhysicsBase::countParticlesFromEmbeddedBoundaries (
     MultiParticleContainer& mypc, ablastr::fields::MultiLevelScalarField const& distance_to_eb)
 {
     amrex::Print() << " in map particles to EB surface \n";
-    using PIter = amrex::ParConstIterSoA<PIdx::nattribs, 0>;
+    //using PIter = amrex::ParConstIterSoA<PIdx::nattribs, 0>;
+    using PIter = amrex::ParConstIterSoA<PIdx::nattribs, 0, amrex::PolymorphicArenaAllocator>;
     const auto& warpx = WarpX::GetInstance();
     const amrex::Geometry& geom = warpx.Geom(0);
     auto plo = geom.ProbLoArray();
@@ -63,6 +65,7 @@ SurfacePhysicsBase::countParticlesFromEmbeddedBoundaries (
         {
             const auto& plevel = pc.GetParticles(lev);
             auto dxi = warpx.Geom(lev).InvCellSizeArray();
+            amrex::ParticleReal mass = pc.getMass();
 //#ifdef AMREX_USE_OMP
 //#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
 //#endif
@@ -76,7 +79,7 @@ SurfacePhysicsBase::countParticlesFromEmbeddedBoundaries (
                 const auto dt = warpx.getdt(pti.GetLevel());
 
                 const auto MapParticleToEB = FindEmbeddedBoundaryMapAndCounter(dt,
-                    phi_arr, dxi, plo, ivec_map_arr, dptr_incident_np);
+                    phi_arr, dxi, plo, ivec_map_arr, dptr_incident_np, mass);
 
                 const auto& ptile = plevel.at(index);
                 auto ptile_data = ptile.getConstParticleTileData();

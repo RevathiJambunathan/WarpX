@@ -32,7 +32,8 @@ struct FindEmbeddedBoundaryMapAndCounter
        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dxi,
        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> plo,
        amrex::Array4<const int> ivec_map_arr,
-       double* incident_np);
+       double* incident_np,
+       amrex::ParticleRead mass);
 
     template <typename SrcData>
     AMREX_GPU_HOST_DEVICE
@@ -48,6 +49,7 @@ struct FindEmbeddedBoundaryMapAndCounter
 
         // Temporary variables to avoid implicit capture
         amrex::Real const dt = m_dt;
+        amrex::ParticleReal const mass = m_mass;
         amrex::Array4<amrex::Real const> const phiarr = m_phi_arr;
         amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const dxi = m_dxi;
         amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> const plo = m_plo;
@@ -58,7 +60,7 @@ struct FindEmbeddedBoundaryMapAndCounter
                 int i, j, k;
                 amrex::Real W[AMREX_SPACEDIM][2];
                 amrex::ParticleReal x_temp=xp, y_temp=yp, z_temp=zp;
-                UpdatePosition(x_temp, y_temp, z_temp, ux, uy, uz, -dt_frac*dt);
+                UpdatePosition(x_temp, y_temp, z_temp, ux, uy, uz, -dt_frac*dt, mass);
                 ablastr::particles::compute_weights<amrex::IndexType::NODE>(
                     x_temp, y_temp, z_temp, plo, dxi, i, j, k, W);
                 amrex::Real const phi_value = ablastr::particles::interp_field_nodal(i, j, k, W, phiarr);
@@ -89,6 +91,7 @@ struct FindEmbeddedBoundaryMapAndCounter
     }
 
     amrex::Real m_dt;
+    amrex::ParticleReal m_mass;
     amrex::Array4<const amrex::Real> m_phi_arr;
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> m_dxi;
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> m_plo;
