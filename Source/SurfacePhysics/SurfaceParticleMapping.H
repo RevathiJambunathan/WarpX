@@ -70,7 +70,7 @@ struct FindEmbeddedBoundaryMapAndCounter
          // intersection point
          amrex::ParticleReal xc=xp, yc=yp, zc=zp;
          // tracing the position back by dt_fraction where phi_value was 0 from bisect
-         UpdatePosition(xc, yc, zc, ux, uy, uz, -dt_fraction*m_dt);
+         UpdatePosition(xc, yc, zc, ux, uy, uz, -dt_fraction*m_dt, mass);
 
          // Find cell-center index that contains the intersection point
          int ic = 0, jc = 0, kc = 0;
