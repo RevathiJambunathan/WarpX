@@ -33,7 +33,7 @@ struct FindEmbeddedBoundaryMapAndCounter
        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> plo,
        amrex::Array4<const int> ivec_map_arr,
        double* incident_np,
-       amrex::ParticleRead mass);
+       amrex::ParticleReal mass);
 
     template <typename SrcData>
     AMREX_GPU_HOST_DEVICE
