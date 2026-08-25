@@ -397,6 +397,7 @@ WarpX::Evolve (int numsteps)
                                  && cur_time < stop_time + dt[0]);
     if (final_time_step || m_exit_loop_due_to_interrupt_signal) {
         multi_diags->FilterComputePackFlushLastTimestep( istep[0] );
+        ExecutePythonCallback("afterdiagnostics");
         if (m_exit_loop_due_to_interrupt_signal) { ExecutePythonCallback("onbreaksignal"); }
     }
 
