@@ -737,9 +737,9 @@ SurfacePhysicsBase::computeInflux (int isp)
                 int ivec = ivect_arr(i,j,k);
             //    dptr_bnd_influx[ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt + 1e19;
 	        if (influx_window > 0) {
-                    sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/influx_window + 1e19;
+                    sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/influx_window;
 		}    else {
-                    sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt + 1e19; }
+                    sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt; }
             }
         });
     }    
