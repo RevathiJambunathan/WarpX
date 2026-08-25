@@ -216,6 +216,7 @@ void SurfacePhysicsBase::ReadParameters ()
     pp_chem.get("dt", m_chem_dt);
     pp_chem.get("start_time",m_start_time);
     pp_chem.get("end_time",m_end_time);
+    pp_chem.get("influx_window_start_time",m_influx_window_start_time);
     m_cur_time = 0.;
 
     int max_r = 0;

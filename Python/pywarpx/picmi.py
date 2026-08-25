@@ -3784,6 +3784,9 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
     plasma_Ein : float, optional
         Constant incoming ion energy in eV (replaces ion energy computed from PIC loop)
 
+    influx_window_start_time : float, optional
+        Start time (s) of the window over which incoming plasma flux is averaged.
+
     chemistry_input_file : str, default='chemistry.txt'
         Path where the generated chemistry input file will be written.
     """
@@ -3799,6 +3802,7 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
         end_time,
         plasma_influx=None,
         plasma_Ein=None,
+        influx_window_start_time=None,
         chemistry_input_file="chemistry.txt",
         **kw,
     ):
@@ -3811,6 +3815,7 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
         self.end_time = end_time
         self.plasma_influx = plasma_influx
         self.plasma_Ein = plasma_Ein
+        self.influx_window_start_time = influx_window_start_time
         self.chemistry_input_file = chemistry_input_file
 
         self.handle_init(kw)
@@ -3847,6 +3852,10 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
             lines.append(f"chem.plasma_influx = {self.plasma_influx}")
         if self.plasma_Ein is not None:
             lines.append(f"chem.plasma_Ein = {self.plasma_Ein}")
+        if self.influx_window_start_time is not None:
+            lines.append(
+                f"chem.influx_window_start_time = {self.influx_window_start_time}"
+            )
         lines.append("")
 
         return "\n".join(lines)
