@@ -40,6 +40,7 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
     int* gas_is_prod                = gas_sp_is_product.data();
     computeInflux();
     amrex::Print() << " start time " << m_start_time << " chem dt " << m_chem_dt << " end time " << m_end_time << "\n"; 
+    m_cur_time = m_start_time;
     for (int istep = m_start_time/m_chem_dt; istep < m_end_time/m_chem_dt; istep ++ ) {
     const amrex::Real site_density = m_surface_site_density;
     const amrex::Real flux = m_plasma_influx;
