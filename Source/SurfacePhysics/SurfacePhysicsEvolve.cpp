@@ -109,14 +109,22 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
                          m_surface_density_fraction.begin(),
                          m_surface_density_fraction.end(),
                          h_surf_dens.begin());
-//        for (int is = 0; is < num_surf_elements; ++is ) {
-//            amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " ;
-//            for (int s_sp = 0; s_sp < static_cast<int>(surface_species_vec.size()); s_sp++) {
-//                amrex::PrintToFile("surface_evolution.txt") << surface_species_vec[s_sp].first << " ";
-//                amrex::PrintToFile("surface_evolution.txt") << h_surf_dens[s_sp*surf_ijk.size()+is] << " ";
-//            }
-//            amrex::PrintToFile("surface_evolution.txt") << "\n";
-//        }
+        if (!m_surface_evolution_header_written) {
+#if defined(WARPX_DIM_3D)
+            amrex::PrintToFile("surface_evolution.txt")
+                << "surface_mesh_id chem_istep chem_physical_time i j k x y z ";
+#elif defined(WARPX_DIM_XZ)
+            amrex::PrintToFile("surface_evolution.txt")
+                << "surface_mesh_id chem_istep chem_physical_time i j x z ";
+#endif
+            for (int s_sp = 0; s_sp < static_cast<int>(surface_species_vec.size()); s_sp++) {
+                amrex::PrintToFile("surface_evolution.txt")
+                    << surface_species_vec[s_sp].first << "_name "
+                    << surface_species_vec[s_sp].first << "_density_fraction ";
+            }
+            amrex::PrintToFile("surface_evolution.txt") << "\n";
+            m_surface_evolution_header_written = true;
+        }
         for (int is = 0; is < num_surf_elements; ++is ) {
             const amrex::IntVect& iv = surf_ijk[is];
 #if defined(WARPX_DIM_3D)
@@ -208,6 +216,22 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
                          m_incoming_flux.begin(),
                          m_incoming_flux.end(),
                          h_gas_influx.begin());
+        if (!m_surface_flux_evolution_header_written) {
+#if defined(WARPX_DIM_3D)
+            amrex::PrintToFile("surface_flux_evolution.txt")
+                << "surface_mesh_id chem_istep chem_physical_time i j k x y z ";
+#elif defined(WARPX_DIM_XZ)
+            amrex::PrintToFile("surface_flux_evolution.txt")
+                << "surface_mesh_id chem_istep chem_physical_time i j x z ";
+#endif
+            for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
+                amrex::PrintToFile("surface_flux_evolution.txt")
+                    << gas_species_vec[g_sp].first << "_name "
+                    << gas_species_vec[g_sp].first << "_flux ";
+            }
+            amrex::PrintToFile("surface_flux_evolution.txt") << "\n";
+            m_surface_flux_evolution_header_written = true;
+        }
         for (int is = 0; is < num_surf_elements; ++is ) {
             const amrex::IntVect& iv = surf_ijk[is];
 #if defined(WARPX_DIM_3D)
