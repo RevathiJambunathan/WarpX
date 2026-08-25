@@ -3,8 +3,8 @@
 void
 SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
 {
-    amrex::Print() << " in evolve surface physics \n";
     if (cur_time < m_start_time) return;
+    amrex::Print() << " in evolve surface physics \n";
    // surface density = Sites = 1e19/m^2 - input at initialization
    // loop over surface species
    //     parallelize over all mesh elements
