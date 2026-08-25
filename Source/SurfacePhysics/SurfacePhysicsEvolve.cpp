@@ -1,4 +1,5 @@
 #include "SurfacePhysicsBase.H"
+#include "WarpX.H"
 
 void
 SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
@@ -39,6 +40,10 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
     int* rxn_has_gas_prod           = reaction_has_gas_products.data();
     int* gas_is_prod                = gas_sp_is_product.data();
     computeInflux();
+    const amrex::Geometry& geom = WarpX::GetInstance().Geom(0);
+    const auto plo = geom.ProbLoArray();
+    const auto dx  = geom.CellSizeArray();
+
     amrex::Print() << " start time " << m_start_time << " chem dt " << m_chem_dt << " end time " << m_end_time << "\n"; 
     m_cur_time = m_start_time;
     for (int istep = m_start_time/m_chem_dt; istep < m_end_time/m_chem_dt; istep ++ ) {
@@ -104,8 +109,32 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
                          m_surface_density_fraction.begin(),
                          m_surface_density_fraction.end(),
                          h_surf_dens.begin());
+//        for (int is = 0; is < num_surf_elements; ++is ) {
+//            amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " ;
+//            for (int s_sp = 0; s_sp < static_cast<int>(surface_species_vec.size()); s_sp++) {
+//                amrex::PrintToFile("surface_evolution.txt") << surface_species_vec[s_sp].first << " ";
+//                amrex::PrintToFile("surface_evolution.txt") << h_surf_dens[s_sp*surf_ijk.size()+is] << " ";
+//            }
+//            amrex::PrintToFile("surface_evolution.txt") << "\n";
+//        }
         for (int is = 0; is < num_surf_elements; ++is ) {
-            amrex::PrintToFile("surface_evolution.txt") << istep << " " << m_cur_time << " " ;
+            const amrex::IntVect& iv = surf_ijk[is];
+#if defined(WARPX_DIM_3D)
+            const amrex::Real x = plo[0] + (iv[0] + 0.5) * dx[0];
+            const amrex::Real y = plo[1] + (iv[1] + 0.5) * dx[1];
+            const amrex::Real z = plo[2] + (iv[2] + 0.5) * dx[2];
+            amrex::PrintToFile("surface_evolution.txt")
+                << is << " " << istep << " " << m_cur_time << " "
+                << iv[0] << " " << iv[1] << " " << iv[2] << " "
+                << x << " " << y << " " << z << " ";
+#elif defined(WARPX_DIM_XZ)
+            const amrex::Real x = plo[0] + (iv[0] + 0.5) * dx[0];
+            const amrex::Real z = plo[1] + (iv[1] + 0.5) * dx[1];
+            amrex::PrintToFile("surface_evolution.txt")
+                << is << " " << istep << " " << m_cur_time << " "
+                << iv[0] << " " << iv[1] << " "
+                << x << " " << z << " ";
+#endif
             for (int s_sp = 0; s_sp < static_cast<int>(surface_species_vec.size()); s_sp++) {
                 amrex::PrintToFile("surface_evolution.txt") << surface_species_vec[s_sp].first << " ";
                 amrex::PrintToFile("surface_evolution.txt") << h_surf_dens[s_sp*surf_ijk.size()+is] << " ";
