@@ -346,7 +346,7 @@ WarpX::Evolve (int numsteps)
             SynchronizeVelocityWithPosition();
         }
 
-        if (do_surface_physics) m_surface_physics->EvolveSurfacePhysics(cur_time);
+        if (do_surface_physics) m_surface_physics->EvolveSurfacePhysics(cur_time, step);
 
         // afterstep callback runs with the updated global time. It is included
         // in the evolve timing.

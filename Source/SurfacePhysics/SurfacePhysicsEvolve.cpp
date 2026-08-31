@@ -2,7 +2,7 @@
 #include "WarpX.H"
 
 void
-SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
+SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
 {
     if (cur_time < m_start_time) return;
     amrex::Print() << " in evolve surface physics \n";
@@ -216,6 +216,49 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time)
                          m_incoming_flux.begin(),
                          m_incoming_flux.end(),
                          h_gas_influx.begin());
+        if (!m_gas_influx_surface_written) {
+            const std::string gas_influx_fname =
+                "gas_influx_surface_step" + std::to_string(pic_step) + ".txt";
+
+            amrex::PrintToFile(gas_influx_fname) << "pic_step " << pic_step << "\n";
+#if defined(WARPX_DIM_3D)
+            amrex::PrintToFile(gas_influx_fname)
+                << "surface_mesh_id i j k x y z ";
+#elif defined(WARPX_DIM_XZ)
+            amrex::PrintToFile(gas_influx_fname)
+                << "surface_mesh_id i j x z ";
+#endif
+            for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
+                amrex::PrintToFile(gas_influx_fname)
+                    << gas_species_vec[g_sp].first << "_name "
+                    << gas_species_vec[g_sp].first << "_influx ";
+            }
+            amrex::PrintToFile(gas_influx_fname) << "\n";
+
+            for (int is = 0; is < num_surf_elements; ++is) {
+                const amrex::IntVect& iv = surf_ijk[is];
+#if defined(WARPX_DIM_3D)
+                const amrex::Real x = plo[0] + (iv[0] + 0.5) * dx[0];
+                const amrex::Real y = plo[1] + (iv[1] + 0.5) * dx[1];
+                const amrex::Real z = plo[2] + (iv[2] + 0.5) * dx[2];
+                amrex::PrintToFile(gas_influx_fname)
+                    << is << " " << iv[0] << " " << iv[1] << " " << iv[2] << " "
+                    << x << " " << y << " " << z << " ";
+#elif defined(WARPX_DIM_XZ)
+                const amrex::Real x = plo[0] + (iv[0] + 0.5) * dx[0];
+                const amrex::Real z = plo[1] + (iv[1] + 0.5) * dx[1];
+                amrex::PrintToFile(gas_influx_fname)
+                    << is << " " << iv[0] << " " << iv[1] << " "
+                    << x << " " << z << " ";
+#endif
+                for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
+                    amrex::PrintToFile(gas_influx_fname) << gas_species_vec[g_sp].first << " ";
+                    amrex::PrintToFile(gas_influx_fname) << h_gas_influx[g_sp*surf_ijk.size()+is] << " ";
+                }
+                amrex::PrintToFile(gas_influx_fname) << "\n";
+            }
+            m_gas_influx_surface_written = true;
+        }
         if (!m_surface_flux_evolution_header_written) {
 #if defined(WARPX_DIM_3D)
             amrex::PrintToFile("surface_flux_evolution.txt")

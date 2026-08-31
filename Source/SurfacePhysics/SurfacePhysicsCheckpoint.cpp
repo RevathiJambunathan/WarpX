@@ -63,6 +63,7 @@ SurfacePhysicsBase::WriteCheckpoint (const std::string& checkpoint_dir)
         hdr << static_cast<int>(m_influx_window_started) << "\n";
         hdr << static_cast<int>(m_surface_evolution_header_written)      << "\n";
         hdr << static_cast<int>(m_surface_flux_evolution_header_written) << "\n";
+        hdr << static_cast<int>(m_gas_influx_surface_written)            << "\n";
         hdr << num_influx_species         << "\n";
         hdr << num_outflux_species        << "\n";
         hdr << m_num_surface_species      << "\n";
@@ -133,7 +134,7 @@ SurfacePhysicsBase::ReadCheckpoint (const std::string& checkpoint_dir)
 
     amrex::Real chk_cur_time, chk_influx_window_start;
     int chk_influx_started;
-    int chk_surf_evol_hdr_written, chk_surf_flux_hdr_written;
+    int chk_surf_evol_hdr_written, chk_surf_flux_hdr_written, chk_gas_influx_surf_written;
     int chk_num_influx, chk_num_outflux, chk_num_surf_sp, chk_num_gas_sp;
     int chk_n_surf;
 
@@ -142,6 +143,7 @@ SurfacePhysicsBase::ReadCheckpoint (const std::string& checkpoint_dir)
     is >> chk_influx_started;
     is >> chk_surf_evol_hdr_written;
     is >> chk_surf_flux_hdr_written;
+    is >> chk_gas_influx_surf_written;
     is >> chk_num_influx;
     is >> chk_num_outflux;
     is >> chk_num_surf_sp;
@@ -161,6 +163,7 @@ SurfacePhysicsBase::ReadCheckpoint (const std::string& checkpoint_dir)
     m_influx_window_started    = static_cast<bool>(chk_influx_started);
     m_surface_evolution_header_written      = static_cast<bool>(chk_surf_evol_hdr_written);
     m_surface_flux_evolution_header_written = static_cast<bool>(chk_surf_flux_hdr_written);
+    m_gas_influx_surface_written            = static_cast<bool>(chk_gas_influx_surf_written);
 
     // -----------------------------------------------------------------------
     // 2.  Helper: read binary file, check size, copy to device

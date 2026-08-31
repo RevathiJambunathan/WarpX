@@ -29,12 +29,13 @@ public:
     void countParticlesFromEmbeddedBoundaries(
         MultiParticleContainer& mypc, ablastr::fields::MultiLevelScalarField const& distance_to_eb);
 
-    void EvolveSurfacePhysics (amrex::Real cur_time);
+    void EvolveSurfacePhysics (amrex::Real cur_time, int pic_step);
 
     amrex::Real m_influx_window_start_time = 0.;
     bool m_influx_window_started = false;
     bool m_surface_evolution_header_written = false;
     bool m_surface_flux_evolution_header_written = false;
+    bool m_gas_influx_surface_written = false;
     void nullifyInfluxParticleCounter ();
     void nullifyInfluxParticleCounter (int isp);
     void nullifyOutfluxParticleCounter ();
