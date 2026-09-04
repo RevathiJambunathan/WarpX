@@ -46,6 +46,7 @@ struct FindEmbeddedBoundaryMapAndCounter
         amrex::ParticleReal ux = src.m_rdata[PIdx::ux][src_i];
         amrex::ParticleReal uy = src.m_rdata[PIdx::uy][src_i];
         amrex::ParticleReal uz = src.m_rdata[PIdx::uz][src_i];
+        amrex::ParticleReal wp = src.m_rdata[PIdx::w][src_i];
 
         // Temporary variables to avoid implicit capture
         amrex::Real const dt = m_dt;
@@ -86,7 +87,7 @@ struct FindEmbeddedBoundaryMapAndCounter
          kc = static_cast<int>(floor( (zc - plo[AMREX_SPACEDIM-1])*dxi[AMREX_SPACEDIM-1] ) );
 #endif
          int ivec = m_ivec_map_arr(ic,jc,kc);
-         amrex::HostDevice::Atomic::Add(&m_incident_np[ivec], static_cast<double>(1.0));
+         amrex::HostDevice::Atomic::Add(&m_incident_np[ivec], static_cast<double>(wp));
          return;
     }
 
