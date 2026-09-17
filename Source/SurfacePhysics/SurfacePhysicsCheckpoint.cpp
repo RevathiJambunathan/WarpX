@@ -69,6 +69,11 @@ SurfacePhysicsBase::WriteCheckpoint (const std::string& checkpoint_dir)
         hdr << m_num_surface_species      << "\n";
         hdr << m_num_gas_species          << "\n";
         hdr << n_surf                     << "\n";
+        hdr << static_cast<int>(m_use_energy_binned_flux) << "\n";
+        hdr << m_energy_bin_min           << "\n";
+        hdr << m_energy_bin_max           << "\n";
+        hdr << m_energy_bin_size          << "\n";
+        hdr << m_num_energy_bins          << "\n";
     }
 
     auto write_array = [&](const amrex::Real* d_ptr, int count,
@@ -109,6 +114,12 @@ SurfacePhysicsBase::WriteCheckpoint (const std::string& checkpoint_dir)
                     "num_out_particles_sp" + std::to_string(isp));
     }
 
+    if (m_num_energy_bins > 0) {
+        write_array(m_incoming_flux_ebin.dataPtr(),
+                    num_influx_species * n_surf * m_num_energy_bins,
+                    "incoming_flux_ebin");
+    }
+
     amrex::ParallelDescriptor::Barrier();
     amrex::Print() << " SurfacePhysics checkpoint written to "
                    << surface_chk_dir(checkpoint_dir) << "\n";
@@ -137,6 +148,9 @@ SurfacePhysicsBase::ReadCheckpoint (const std::string& checkpoint_dir)
     int chk_surf_evol_hdr_written, chk_surf_flux_hdr_written, chk_gas_influx_surf_written;
     int chk_num_influx, chk_num_outflux, chk_num_surf_sp, chk_num_gas_sp;
     int chk_n_surf;
+    int chk_use_energy_binned_flux;
+    amrex::Real chk_energy_bin_min, chk_energy_bin_max, chk_energy_bin_size;
+    int chk_num_energy_bins;
 
     is >> chk_cur_time;
     is >> chk_influx_window_start;
@@ -149,6 +163,11 @@ SurfacePhysicsBase::ReadCheckpoint (const std::string& checkpoint_dir)
     is >> chk_num_surf_sp;
     is >> chk_num_gas_sp;
     is >> chk_n_surf;
+    is >> chk_use_energy_binned_flux;
+    is >> chk_energy_bin_min;
+    is >> chk_energy_bin_max;
+    is >> chk_energy_bin_size;
+    is >> chk_num_energy_bins;
 
     WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
         chk_num_surf_sp == m_num_surface_species &&
@@ -157,6 +176,16 @@ SurfacePhysicsBase::ReadCheckpoint (const std::string& checkpoint_dir)
         chk_num_outflux == num_outflux_species   &&
         chk_n_surf      == n_surf,
         "SurfacePhysics restart: species counts in checkpoint do not match input.");
+
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+        chk_use_energy_binned_flux == static_cast<int>(m_use_energy_binned_flux) &&
+        chk_num_energy_bins        == m_num_energy_bins &&
+        (m_num_energy_bins == 0 ||
+         (chk_energy_bin_min  == m_energy_bin_min &&
+          chk_energy_bin_max  == m_energy_bin_max &&
+          chk_energy_bin_size == m_energy_bin_size)),
+        "SurfacePhysics restart: use_energy_binned_flux/energy bin configuration in "
+        "checkpoint does not match input.");
 
     m_cur_time                 = chk_cur_time;
     m_influx_window_start_time = chk_influx_window_start;
@@ -218,6 +247,12 @@ SurfacePhysicsBase::ReadCheckpoint (const std::string& checkpoint_dir)
         read_array(num_out_particles[isp].dataPtr(),
                    n_surf,
                    "num_out_particles_sp" + std::to_string(isp));
+    }
+
+    if (m_num_energy_bins > 0) {
+        read_array(m_incoming_flux_ebin.dataPtr(),
+                   num_influx_species * n_surf * m_num_energy_bins,
+                   "incoming_flux_ebin");
     }
 
     amrex::Print() << " SurfacePhysics checkpoint read from "

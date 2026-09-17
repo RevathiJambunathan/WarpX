@@ -33,8 +33,13 @@ FindEmbeddedBoundaryMapAndCounter::FindEmbeddedBoundaryMapAndCounter (const amre
        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> plo,
        amrex::Array4<const int> ivec_map_arr,
        double* incident_np,
-       amrex::ParticleReal mass)
-    : m_dt(dt), m_phi_arr(phi_arr), m_dxi(dxi), m_plo(plo), m_ivec_map_arr(ivec_map_arr), m_incident_np(incident_np), m_mass(mass)
+       amrex::ParticleReal mass,
+       double* incident_np_ebin,
+       amrex::Real energy_bin_min,
+       amrex::Real energy_bin_size,
+       int num_energy_bins)
+    : m_dt(dt), m_phi_arr(phi_arr), m_dxi(dxi), m_plo(plo), m_ivec_map_arr(ivec_map_arr), m_incident_np(incident_np), m_mass(mass),
+      m_incident_np_ebin(incident_np_ebin), m_energy_bin_min(energy_bin_min), m_energy_bin_size(energy_bin_size), m_num_energy_bins(num_energy_bins)
 {
 }
 
@@ -61,6 +66,9 @@ SurfacePhysicsBase::countParticlesFromEmbeddedBoundaries (
         amrex::Print() << " influx sp name " << mypc.GetSpeciesNames()[0] << " " << mypc.GetSpeciesNames()[1] << "\n";
         const auto& pc = mypc.GetParticleContainer(i);
         double* const AMREX_RESTRICT dptr_incident_np = num_in_particles[i].dataPtr();
+        int const num_ebin = m_num_energy_bins;
+        double* const AMREX_RESTRICT dptr_incident_np_ebin =
+            (num_ebin > 0) ? num_in_particles_ebin[i].dataPtr() : nullptr;
         for (int lev = 0; lev < pc.numLevels(); ++lev)
         {
             const auto& plevel = pc.GetParticles(lev);
@@ -79,7 +87,8 @@ SurfacePhysicsBase::countParticlesFromEmbeddedBoundaries (
                 const auto dt = warpx.getdt(pti.GetLevel());
 
                 const auto MapParticleToEB = FindEmbeddedBoundaryMapAndCounter(dt,
-                    phi_arr, dxi, plo, ivec_map_arr, dptr_incident_np, mass);
+                    phi_arr, dxi, plo, ivec_map_arr, dptr_incident_np, mass,
+                    dptr_incident_np_ebin, m_energy_bin_min, m_energy_bin_size, num_ebin);
 
                 const auto& ptile = plevel.at(index);
                 auto ptile_data = ptile.getConstParticleTileData();

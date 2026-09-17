@@ -1,6 +1,7 @@
 #ifndef WARPX_SURFACE_PARTICLE_MAPPING_H
 #define WARPX_SURFACE_PARTICLE_MAPPING_H
 
+#include "Particles/Algorithms/KineticEnergy.H"
 #include "Particles/MultiParticleContainer.H"
 #include "Particles/WarpXParticleContainer.H"
 #include "Particles/Pusher/GetAndSetPosition.H"
@@ -33,7 +34,11 @@ struct FindEmbeddedBoundaryMapAndCounter
        amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> plo,
        amrex::Array4<const int> ivec_map_arr,
        double* incident_np,
-       amrex::ParticleReal mass);
+       amrex::ParticleReal mass,
+       double* incident_np_ebin,
+       amrex::Real energy_bin_min,
+       amrex::Real energy_bin_size,
+       int num_energy_bins);
 
     template <typename SrcData>
     AMREX_GPU_HOST_DEVICE
@@ -88,6 +93,16 @@ struct FindEmbeddedBoundaryMapAndCounter
 #endif
          int ivec = m_ivec_map_arr(ic,jc,kc);
          amrex::HostDevice::Atomic::Add(&m_incident_np[ivec], static_cast<double>(wp));
+
+         if (m_num_energy_bins > 0) {
+             amrex::Real const ke_J = Algorithms::KineticEnergy(ux, uy, uz, mass);
+             amrex::Real const ke_eV = ke_J / PhysConst::q_e;
+             int ebin = static_cast<int>(
+                 amrex::Math::floor((ke_eV - m_energy_bin_min) / m_energy_bin_size));
+             ebin = amrex::Clamp(ebin, 0, m_num_energy_bins - 1);
+             amrex::HostDevice::Atomic::Add(
+                 &m_incident_np_ebin[ivec * m_num_energy_bins + ebin], static_cast<double>(wp));
+         }
          return;
     }
 
@@ -98,6 +113,10 @@ struct FindEmbeddedBoundaryMapAndCounter
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> m_plo;
     amrex::Array4<const int> m_ivec_map_arr;
     double* m_incident_np;
+    double* m_incident_np_ebin;
+    amrex::Real m_energy_bin_min;
+    amrex::Real m_energy_bin_size;
+    int m_num_energy_bins;
 };
 
 #endif

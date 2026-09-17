@@ -2,6 +2,57 @@
 #include "WarpX.H"
 
 void
+SurfacePhysicsBase::computeFluxWeightedReactionRates ()
+{
+    int const num_rxns          = static_cast<int>(reactions.size());
+    int const num_surf_elements = static_cast<int>(surf_ijk.size());
+    const amrex::Real* rxn_P0       = m_rxn_P0.data();
+    const amrex::Real* rxn_E_ref    = m_rxn_E_ref.data();
+    const amrex::Real* rxn_E_th     = m_rxn_E_th.data();
+    const amrex::Real* rxn_exp_arr  = m_rxn_exp.data();
+    const int* rxn_gas_reactant_sp_idx = m_rxn_gas_reactant_sp_idx.data();
+
+    m_rxn_flux_weighted_rate.resize(num_rxns * num_surf_elements);
+    amrex::Real* rate = m_rxn_flux_weighted_rate.data();
+
+    bool const use_ebin = m_use_energy_binned_flux;
+    int const num_ebin  = m_num_energy_bins;
+    const amrex::Real* sp_influx_ebin = m_incoming_flux_ebin.data();
+    amrex::Real const energy_bin_min  = m_energy_bin_min;
+    amrex::Real const energy_bin_size = m_energy_bin_size;
+    amrex::Real const E_in = m_plasma_Ein;
+
+    amrex::ParallelFor(num_surf_elements,
+    [=] AMREX_GPU_DEVICE (int i) noexcept
+    {
+        for (int irxn = 0; irxn < num_rxns; ++irxn) {
+            amrex::Real const exp_val = rxn_exp_arr[irxn];
+            int const gas_sp = rxn_gas_reactant_sp_idx[irxn];
+
+            if (use_ebin && gas_sp >= 0) {
+                amrex::Real flux_weighted_rate = 0.;
+                for (int ie = 0; ie < num_ebin; ++ie) {
+                    amrex::Real const E_bin = energy_bin_min + (ie + 0.5) * energy_bin_size;
+                    amrex::Real const P_bin = rxn_P0[irxn]
+                                    * (std::pow(E_bin,exp_val) - std::pow(rxn_E_th[irxn],exp_val))
+                                    / (std::pow(rxn_E_ref[irxn],exp_val) - std::pow(rxn_E_th[irxn],exp_val));
+                    if (P_bin > 0) {
+                        amrex::Real const flux_ebin =
+                            sp_influx_ebin[(gas_sp*num_surf_elements + i)*num_ebin + ie];
+                        flux_weighted_rate += P_bin * flux_ebin;
+                    }
+                }
+                rate[irxn*num_surf_elements + i] = flux_weighted_rate;
+            } else {
+                rate[irxn*num_surf_elements + i] = rxn_P0[irxn]
+                                * (std::pow(E_in,exp_val) - std::pow(rxn_E_th[irxn],exp_val))
+                                / (std::pow(rxn_E_ref[irxn],exp_val) - std::pow(rxn_E_th[irxn],exp_val));
+            }
+        }
+    });
+}
+
+void
 SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
 {
     if (cur_time < m_start_time) return;
@@ -27,10 +78,6 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
    //
     int num_rxns          = static_cast<int>(reactions.size());
     int max_r             = m_max_reactants_per_rxn;
-    const amrex::Real* rxn_P0       = m_rxn_P0.data();
-    const amrex::Real* rxn_E_ref    = m_rxn_E_ref.data();
-    const amrex::Real* rxn_E_th     = m_rxn_E_th.data();
-    const amrex::Real* rxn_exp_arr  = m_rxn_exp.data();
     const int* rxn_num_react        = m_rxn_num_reactants.data();
     const int* react_is_gas         = m_reactant_is_gas.data();
     const int* react_sp_val         = m_reactant_sp_val.data();
@@ -39,19 +86,23 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
     int* surf_sp_is_product         = surface_sp_is_product.data();
     int* rxn_has_gas_prod           = reaction_has_gas_products.data();
     int* gas_is_prod                = gas_sp_is_product.data();
+    const int* rxn_gas_reactant_sp_idx = m_rxn_gas_reactant_sp_idx.data();
+    bool const use_ebin = m_use_energy_binned_flux;
+    int num_surf_elements = static_cast<int>(surf_ijk.size());
     computeInflux();
     const amrex::Geometry& geom = WarpX::GetInstance().Geom(0);
     const auto plo = geom.ProbLoArray();
     const auto dx  = geom.CellSizeArray();
 
-    amrex::Print() << " start time " << m_start_time << " chem dt " << m_chem_dt << " end time " << m_end_time << "\n"; 
+    amrex::Print() << " start time " << m_start_time << " chem dt " << m_chem_dt << " end time " << m_end_time << "\n";
     m_cur_time = m_start_time;
     for (int istep = m_start_time/m_chem_dt; istep < m_end_time/m_chem_dt; istep ++ ) {
     const amrex::Real site_density = m_surface_site_density;
     const amrex::Real flux = m_plasma_influx;
-    const amrex::Real E_in = m_plasma_Ein ; //* 1.6022e-19; // eV to Joules
     amrex::Real dt = m_chem_dt;
-    int num_surf_elements = static_cast<int>(surf_ijk.size());
+
+    computeFluxWeightedReactionRates();
+    const amrex::Real* rxn_flux_weighted_rate = m_rxn_flux_weighted_rate.data();
 
     // Surface species evolution
     for ( int isp = 0; isp < static_cast<int>(surface_species_vec.size()); ++isp) {
@@ -83,17 +134,23 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                         }
                     }
                 }
-                amrex::Real exp_val = rxn_exp_arr[irxn];
-                amrex::Real reaction_prob = rxn_P0[irxn]
-                                * (std::pow(E_in,exp_val) - std::pow(rxn_E_th[irxn],exp_val))
-                                / (std::pow(rxn_E_ref[irxn],exp_val) - std::pow(rxn_E_th[irxn],exp_val));
-                if (reaction_prob > 0) {
+                amrex::Real reaction_rate = rxn_flux_weighted_rate[irxn*num_surf_elements + i];
+                bool const rxn_uses_ebin_gas_reactant =
+                    use_ebin && (rxn_gas_reactant_sp_idx[irxn] >= 0);
+                if (reaction_rate > 0) {
                     for (int ir = 0; ir < rxn_num_react[irxn]; ir++) {
-                        int index = react_sp_val[irxn * max_r + ir] * num_surf_elements + i;
-                        react_term *= (react_is_gas[irxn * max_r + ir] == 1) ?
-                                          sp_influx[index] : sp_surf_density[index];
+                        int const sp_val = react_sp_val[irxn * max_r + ir];
+                        int index = sp_val * num_surf_elements + i;
+                        bool const is_gas = (react_is_gas[irxn * max_r + ir] == 1);
+                        // when using energy-binned flux, the gas reactant's flux is
+                        // already folded into reaction_rate; skip it here
+                        if (rxn_uses_ebin_gas_reactant && is_gas &&
+                            sp_val == rxn_gas_reactant_sp_idx[irxn]) {
+                            continue;
+                        }
+                        react_term *= is_gas ? sp_influx[index] : sp_surf_density[index];
                     }
-                    react_term *= prefactor * reaction_prob / site_density;
+                    react_term *= prefactor * reaction_rate / site_density;
                 } else {
                     dN = 0.;
                 }
@@ -186,16 +243,23 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                     if (gas_is_prod[isp * num_rxns + irxn] == 1) {
                         react_term = 1.;
                         prefactor = 1.;
-                        amrex::Real exp_val = rxn_exp_arr[irxn];
-                        amrex::Real reaction_prob = rxn_P0[irxn]
-                                        * (std::pow(E_in,exp_val) - std::pow(rxn_E_th[irxn],exp_val))
-                                        / (std::pow(rxn_E_ref[irxn],exp_val) - std::pow(rxn_E_th[irxn],exp_val));
-                        if (reaction_prob > 0.) {
+                        amrex::Real reaction_rate = rxn_flux_weighted_rate[irxn*num_surf_elements + i];
+                        bool const rxn_uses_ebin_gas_reactant =
+                            use_ebin && (rxn_gas_reactant_sp_idx[irxn] >= 0);
+                        if (reaction_rate > 0.) {
                             for (int ir = 0; ir < rxn_num_react[irxn] ; ++ir) {
-                                int index = react_sp_val[irxn * max_r + ir] * num_surf_elements + i;
-                                react_term *= (react_is_gas[irxn * max_r + ir] == 1) ? sp_influx[index] : sp_surf_density[index];
+                                int const sp_val = react_sp_val[irxn * max_r + ir];
+                                int index = sp_val * num_surf_elements + i;
+                                bool const is_gas = (react_is_gas[irxn * max_r + ir] == 1);
+                                // when using energy-binned flux, the gas reactant's flux is
+                                // already folded into reaction_rate; skip it here
+                                if (rxn_uses_ebin_gas_reactant && is_gas &&
+                                    sp_val == rxn_gas_reactant_sp_idx[irxn]) {
+                                    continue;
+                                }
+                                react_term *= is_gas ? sp_influx[index] : sp_surf_density[index];
                             }
-                            react_term *= prefactor * reaction_prob;
+                            react_term *= prefactor * reaction_rate;
                         }
                     }
                     dgamma += react_term;
@@ -217,10 +281,41 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                          m_incoming_flux.end(),
                          h_gas_influx.begin());
         if (!m_gas_influx_surface_written) {
+            int const num_ebin = m_num_energy_bins;
+
+            amrex::Vector<amrex::Real> h_rxn_flux_weighted_rate(m_rxn_flux_weighted_rate.size());
+            amrex::Gpu::copy(amrex::Gpu::deviceToHost,
+                             m_rxn_flux_weighted_rate.begin(),
+                             m_rxn_flux_weighted_rate.end(),
+                             h_rxn_flux_weighted_rate.begin());
+
+            amrex::Vector<amrex::Real> h_gas_influx_ebin;
+            if (num_ebin > 0) {
+                h_gas_influx_ebin.resize(m_incoming_flux_ebin.size());
+                amrex::Gpu::copy(amrex::Gpu::deviceToHost,
+                                 m_incoming_flux_ebin.begin(),
+                                 m_incoming_flux_ebin.end(),
+                                 h_gas_influx_ebin.begin());
+            }
+
             const std::string gas_influx_fname =
                 "gas_influx_surface_step" + std::to_string(pic_step) + ".txt";
 
             amrex::PrintToFile(gas_influx_fname) << "pic_step " << pic_step << "\n";
+
+            for (int irxn = 0; irxn < num_rxns; ++irxn) {
+                amrex::PrintToFile(gas_influx_fname)
+                    << "# rxn" << irxn << ": " << reactions[irxn].equation << "\n";
+            }
+            if (num_ebin > 0) {
+                amrex::PrintToFile(gas_influx_fname)
+                    << "# energy_bins: num_bins=" << num_ebin
+                    << " bin_min=" << m_energy_bin_min
+                    << " bin_max=" << m_energy_bin_max
+                    << " bin_size=" << m_energy_bin_size << "\n";
+            }
+
+            // ---- Table 1: per-surface-element summary, always written ----
 #if defined(WARPX_DIM_3D)
             amrex::PrintToFile(gas_influx_fname)
                 << "surface_mesh_id i j k x y z ";
@@ -232,6 +327,9 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                 amrex::PrintToFile(gas_influx_fname)
                     << gas_species_vec[g_sp].first << "_name "
                     << gas_species_vec[g_sp].first << "_influx ";
+            }
+            for (int irxn = 0; irxn < num_rxns; ++irxn) {
+                amrex::PrintToFile(gas_influx_fname) << "rxn" << irxn << "_rate ";
             }
             amrex::PrintToFile(gas_influx_fname) << "\n";
 
@@ -255,8 +353,40 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                     amrex::PrintToFile(gas_influx_fname) << gas_species_vec[g_sp].first << " ";
                     amrex::PrintToFile(gas_influx_fname) << h_gas_influx[g_sp*surf_ijk.size()+is] << " ";
                 }
+                for (int irxn = 0; irxn < num_rxns; ++irxn) {
+                    amrex::PrintToFile(gas_influx_fname)
+                        << h_rxn_flux_weighted_rate[irxn*num_surf_elements + is] << " ";
+                }
                 amrex::PrintToFile(gas_influx_fname) << "\n";
             }
+
+            // ---- Table 2 (long format): one row per (surface_mesh_id, bin_index),
+            //      only written when energy binning is enabled ----
+            if (num_ebin > 0) {
+                amrex::PrintToFile(gas_influx_fname) << "\n";
+                amrex::PrintToFile(gas_influx_fname)
+                    << "surface_mesh_id bin_index bin_energy_center ";
+                for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
+                    amrex::PrintToFile(gas_influx_fname)
+                        << gas_species_vec[g_sp].first << "_influx_bin ";
+                }
+                amrex::PrintToFile(gas_influx_fname) << "\n";
+
+                for (int is = 0; is < num_surf_elements; ++is) {
+                    for (int ie = 0; ie < num_ebin; ++ie) {
+                        amrex::Real const bin_center =
+                            m_energy_bin_min + (ie + 0.5) * m_energy_bin_size;
+                        amrex::PrintToFile(gas_influx_fname)
+                            << is << " " << ie << " " << bin_center << " ";
+                        for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
+                            amrex::PrintToFile(gas_influx_fname)
+                                << h_gas_influx_ebin[(g_sp*num_surf_elements + is)*num_ebin + ie] << " ";
+                        }
+                        amrex::PrintToFile(gas_influx_fname) << "\n";
+                    }
+                }
+            }
+
             m_gas_influx_surface_written = true;
         }
         if (!m_surface_flux_evolution_header_written) {

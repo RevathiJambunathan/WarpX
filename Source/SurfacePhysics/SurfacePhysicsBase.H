@@ -61,6 +61,16 @@ public:
     amrex::Gpu::DeviceVector< amrex::Real > m_returning_gas_flux;
     amrex::Gpu::DeviceVector< amrex::Real > m_incoming_flux;
 
+    // Optional energy-binned incident flux (per influx species, per surface element, per bin)
+    bool m_use_energy_binned_flux = false;
+    amrex::Real m_energy_bin_min = 0.;
+    amrex::Real m_energy_bin_max = 0.;
+    amrex::Real m_energy_bin_size = 0.;
+    int m_num_energy_bins = 0; // 0 when energy binning is disabled
+    amrex::Vector< amrex::Gpu::DeviceVector< amrex::Real > > num_in_particles_ebin;
+    amrex::Vector< amrex::Gpu::DeviceVector< amrex::Real > > bnd_influx_ebin;
+    amrex::Gpu::DeviceVector< amrex::Real > m_incoming_flux_ebin;
+
     // run-time gas species to chemistry species mapping
     int GetChemGasSpeciesIndex (int runtime_species_id) const;
 
@@ -88,6 +98,7 @@ public:
     void initializeInflux(int isp, amrex::Real flux_val);
     void computeInflux();
     void computeInflux(int isp);
+    void computeFluxWeightedReactionRates ();
 private:
     struct Reaction {
         std::string equation;
@@ -121,6 +132,13 @@ private:
     int m_max_reactants_per_rxn = 0;
     amrex::Gpu::DeviceVector<int> m_reactant_is_gas; // [irxn*max_r + ir] =1 if gas, 0 if surface
     amrex::Gpu::DeviceVector<int> m_reactant_sp_val; // [irxn*max_r + ir] = species index
+
+    // [irxn] = gas influx species index of the (at most one) gas reactant in the
+    // reaction, or -1 if the reaction has no gas reactant
+    amrex::Gpu::DeviceVector<int> m_rxn_gas_reactant_sp_idx;
+    // [irxn*num_surf_elements + i] = precomputed reaction rate for this reaction at
+    // this surface element, recomputed every EvolveSurfacePhysics() call
+    amrex::Gpu::DeviceVector<amrex::Real> m_rxn_flux_weighted_rate;
 
     // runtime species id to chemistry species id (-1 if there is no run time species id corresponding to chem)
     amrex::Vector<int> m_runtime_to_chemistry_sp_idx;

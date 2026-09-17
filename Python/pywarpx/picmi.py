@@ -3787,6 +3787,23 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
     influx_window_start_time : float, optional
         Start time (s) of the window over which incoming plasma flux is averaged.
 
+    use_energy_binned_flux : bool, optional
+        If True, incident particles are histogrammed by kinetic energy (eV) per
+        surface element per gas species, and gas-reactant reaction rates are computed
+        as a flux-weighted sum over energy bins instead of using the scalar
+        plasma_Ein probability. Default False.
+
+    energy_bin_min : float, optional
+        Minimum energy (eV) of the energy binning range. Required if
+        use_energy_binned_flux is True.
+
+    energy_bin_max : float, optional
+        Maximum energy (eV) of the energy binning range. Required if
+        use_energy_binned_flux is True.
+
+    energy_bin_size : float, optional
+        Width (eV) of each energy bin. Required if use_energy_binned_flux is True.
+
     chemistry_input_file : str, default='chemistry.txt'
         Path where the generated chemistry input file will be written.
     """
@@ -3803,6 +3820,10 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
         plasma_influx=None,
         plasma_Ein=None,
         influx_window_start_time=None,
+        use_energy_binned_flux=None,
+        energy_bin_min=None,
+        energy_bin_max=None,
+        energy_bin_size=None,
         chemistry_input_file="chemistry.txt",
         **kw,
     ):
@@ -3816,6 +3837,10 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
         self.plasma_influx = plasma_influx
         self.plasma_Ein = plasma_Ein
         self.influx_window_start_time = influx_window_start_time
+        self.use_energy_binned_flux = use_energy_binned_flux
+        self.energy_bin_min = energy_bin_min
+        self.energy_bin_max = energy_bin_max
+        self.energy_bin_size = energy_bin_size
         self.chemistry_input_file = chemistry_input_file
 
         self.handle_init(kw)
@@ -3856,6 +3881,16 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
             lines.append(
                 f"chem.influx_window_start_time = {self.influx_window_start_time}"
             )
+        if self.use_energy_binned_flux is not None:
+            lines.append(
+                f"chem.use_energy_binned_flux = {int(self.use_energy_binned_flux)}"
+            )
+        if self.energy_bin_min is not None:
+            lines.append(f"chem.energy_bin_min = {self.energy_bin_min}")
+        if self.energy_bin_max is not None:
+            lines.append(f"chem.energy_bin_max = {self.energy_bin_max}")
+        if self.energy_bin_size is not None:
+            lines.append(f"chem.energy_bin_size = {self.energy_bin_size}")
         lines.append("")
 
         return "\n".join(lines)

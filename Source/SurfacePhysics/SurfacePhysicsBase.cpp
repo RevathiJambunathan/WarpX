@@ -17,6 +17,8 @@
 #include <AMReX_ParallelDescriptor.H>
 #include <AMReX_Print.H>
 
+#include <cmath>
+
 SurfacePhysicsBase::SurfacePhysicsBase ()
 {
     amrex::Print() << " in surface physics base class \n";
@@ -173,6 +175,19 @@ void SurfacePhysicsBase::ReadParameters ()
         }
     }
 
+    // Precompute, for each reaction, the influx-species index of its (at most one)
+    // gas reactant, used by the energy-binned flux-weighted rate calculation.
+    amrex::Vector<int> h_rxn_gas_reactant_sp_idx(num_rxns, -1);
+    for (int irxn = 0; irxn < num_rxns; ++irxn) {
+        const Reaction& rxn = reactions[irxn];
+        for (int ir = 0; ir < (int)rxn.reactant_type.size(); ++ir) {
+            if (rxn.reactant_type[ir] == "gas") {
+                h_rxn_gas_reactant_sp_idx[irxn] = rxn.reactant_sp_val[ir];
+                break;
+            }
+        }
+    }
+
     for (int isp = 0; isp < num_surf_sp; ++isp) {
         const std::string& symbol = surface_species_vec[isp].second;
         const std::string& name = surface_species_vec[isp].first;
@@ -217,6 +232,15 @@ void SurfacePhysicsBase::ReadParameters ()
     pp_chem.get("start_time",m_start_time);
     pp_chem.get("end_time",m_end_time);
     pp_chem.get("influx_window_start_time",m_influx_window_start_time);
+
+    pp_chem.query("use_energy_binned_flux", m_use_energy_binned_flux);
+    if (m_use_energy_binned_flux) {
+        pp_chem.get("energy_bin_min", m_energy_bin_min);
+        pp_chem.get("energy_bin_max", m_energy_bin_max);
+        pp_chem.get("energy_bin_size", m_energy_bin_size);
+        m_num_energy_bins = static_cast<int>(
+            std::ceil((m_energy_bin_max - m_energy_bin_min) / m_energy_bin_size));
+    }
     m_cur_time = 0.;
 
     int max_r = 0;
@@ -290,6 +314,10 @@ void SurfacePhysicsBase::ReadParameters ()
     m_reactant_sp_val.resize(num_rxns * max_r);
     amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_reactant_sp_val.begin(),
                      h_reactant_sp_val.end(), m_reactant_sp_val.begin());
+
+    m_rxn_gas_reactant_sp_idx.resize(num_rxns);
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_rxn_gas_reactant_sp_idx.begin(),
+                     h_rxn_gas_reactant_sp_idx.end(), m_rxn_gas_reactant_sp_idx.begin());
 }
 
 int
@@ -529,10 +557,18 @@ SurfacePhysicsBase::AllocAndInitInfluxBndVectors ()
     num_in_particles.resize(num_influx_species);
     bnd_influx.resize(num_influx_species);
     m_incoming_flux.resize(num_influx_species * surf_ijk.size());
+
+    num_in_particles_ebin.resize(num_influx_species);
+    bnd_influx_ebin.resize(num_influx_species);
+    m_incoming_flux_ebin.resize(num_influx_species * surf_ijk.size() * m_num_energy_bins);
+
     for (int isp = 0; isp < num_influx_species; ++isp)
     {
         num_in_particles[isp].resize(surf_ijk.size());
         bnd_influx[isp].resize(surf_ijk.size());
+
+        num_in_particles_ebin[isp].resize(surf_ijk.size() * m_num_energy_bins);
+        bnd_influx_ebin[isp].resize(surf_ijk.size() * m_num_energy_bins);
 
         nullifyInfluxParticleCounter(isp);
 
@@ -574,6 +610,17 @@ SurfacePhysicsBase::nullifyInfluxParticleCounter (int isp)
 	    p_num_part[i] = 0.;
 	    p_bnd_influx[i] = 0.;
         });
+
+    int const num_ebin = m_num_energy_bins;
+    if (num_ebin > 0) {
+        amrex::Real* p_num_part_ebin = num_in_particles_ebin[isp].dataPtr();
+        amrex::Real* p_bnd_influx_ebin = bnd_influx_ebin[isp].dataPtr();
+        amrex::ParallelFor(num_surf * num_ebin,
+            [=] AMREX_GPU_DEVICE (int i) noexcept{
+                p_num_part_ebin[i] = 0.;
+                p_bnd_influx_ebin[i] = 0.;
+            });
+    }
 }
 
 void
@@ -704,6 +751,10 @@ SurfacePhysicsBase::computeInflux (int isp)
     amrex::Real* sp_influx = m_incoming_flux.data();
     int num_surf_elements = surf_ijk.size();
 
+    int const num_ebin = m_num_energy_bins;
+    double* const AMREX_RESTRICT dptr_num_in_particles_ebin =
+        (num_ebin > 0) ? num_in_particles_ebin[isp].dataPtr() : nullptr;
+    amrex::Real* sp_influx_ebin = (num_ebin > 0) ? m_incoming_flux_ebin.data() : nullptr;
 
     amrex::Print() << m_influx_window_started << " influx window " << influx_window << "\n";
     if (!m_influx_window_started || influx_window < 0.) {
@@ -712,6 +763,13 @@ SurfacePhysicsBase::computeInflux (int isp)
             [=] AMREX_GPU_DEVICE (int ibnd) noexcept {
                 p_sp_influx[ibnd] = 0.;
             });
+        if (num_ebin > 0) {
+            amrex::Real* p_sp_influx_ebin = sp_influx_ebin + isp * num_surf_elements * num_ebin;
+            amrex::ParallelFor(num_surf_elements * num_ebin,
+                [=] AMREX_GPU_DEVICE (int ibnd) noexcept {
+                    p_sp_influx_ebin[ibnd] = 0.;
+                });
+        }
         amrex::Gpu::streamSynchronize();
     }
 
@@ -729,19 +787,23 @@ SurfacePhysicsBase::computeInflux (int isp)
         amrex::ParallelFor(box,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) {
 
-            if (eb_flag_arr(i,j,k).isRegular() ) { 
+            if (eb_flag_arr(i,j,k).isRegular() ) {
                 return;
             } else if (eb_flag_arr(i,j,k).isCovered() ) {
                 return;
             } else {
                 int ivec = ivect_arr(i,j,k);
-            //    dptr_bnd_influx[ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt + 1e19;
-	        if (influx_window > 0) {
-                    sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/influx_window;
-		}    else {
-                    sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/eb_bnd_area_arr(i,j,k)/dt; }
+                amrex::Real const area = eb_bnd_area_arr(i,j,k);
+                amrex::Real const denom = (influx_window > 0) ? influx_window : dt;
+                sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/area/denom;
+                if (num_ebin > 0) {
+                    for (int ie = 0; ie < num_ebin; ++ie) {
+                        sp_influx_ebin[(isp*num_surf_elements + ivec)*num_ebin + ie] =
+                            dptr_num_in_particles_ebin[ivec*num_ebin + ie]/area/denom;
+                    }
+                }
             }
         });
-    }    
+    }
 }
 #endif
