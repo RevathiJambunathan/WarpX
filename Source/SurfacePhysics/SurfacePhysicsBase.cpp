@@ -11,6 +11,7 @@
 #include "EmbeddedBoundary/Enabled.H"
 #include "Particles/MultiParticleContainer.H"
 #include "Utils/Parser/ParserUtils.H"
+#include "Utils/TextMsg.H"
 #include "WarpX.H"
 
 #include <AMReX.H>
@@ -351,6 +352,65 @@ SurfacePhysicsBase::is_surface_species (std::string species_symbol)
     return false;
 }
 
+void
+SurfacePhysicsBase::RemapGasReactantIndicesToPlasmaSpecies ()
+{
+    auto & warpx = WarpX::GetInstance();
+    const auto & mpc = warpx.GetPartContainer();
+    const std::vector<std::string> plasma_species_names = mpc.GetSpeciesNames();
+
+    // chem gas-species index -> plasma (runtime PIC) species index, or -1 if this
+    // chemistry gas species has no matching PIC particle species (e.g. a
+    // product-only outgassed species like SiCl2_g/Ar_g — never used as a flux
+    // lookup anyway, since it's never a reactant).
+    amrex::Vector<int> chem_to_plasma_species(m_num_gas_species, -1);
+    for (int chem_id = 0; chem_id < m_num_gas_species; ++chem_id) {
+        const std::string& chem_name = gas_species_vec[chem_id].first;
+        for (int plasma_id = 0; plasma_id < num_influx_species; ++plasma_id) {
+            if (plasma_species_names[plasma_id] == chem_name) {
+                chem_to_plasma_species[chem_id] = plasma_id;
+                break;
+            }
+        }
+    }
+
+    // Remap every gas-reactant index used to look up flux, in place.
+    // reactant_sp_val is only meaningful (>=0) for entries that are gas reactants;
+    // those are the only entries ever used to index m_incoming_flux[_ebin].
+    for (auto& rxn : reactions) {
+        for (int ir = 0; ir < (int)rxn.reactant_type.size(); ++ir) {
+            if (rxn.reactant_type[ir] != "gas") { continue; }
+            int const chem_id = rxn.reactant_sp_val[ir];
+            WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
+                chem_id >= 0 && chem_to_plasma_species[chem_id] >= 0,
+                "SurfacePhysics: gas reactant '" + rxn.reactants[ir] +
+                "' in reaction '" + rxn.equation +
+                "' has no matching PIC particle species — its incident flux "
+                "cannot be computed.");
+            rxn.reactant_sp_val[ir] = chem_to_plasma_species[chem_id];
+        }
+    }
+
+    // Rebuild the device-side copies that were populated from reactant_sp_val /
+    // the chem-space gas-reactant index in ReadParameters(), now in plasma-species space.
+    int const num_rxns = static_cast<int>(reactions.size());
+    amrex::Vector<int> h_reactant_sp_val(num_rxns * m_max_reactants_per_rxn, -1);
+    amrex::Vector<int> h_rxn_gas_reactant_sp_idx(num_rxns, -1);
+    for (int irxn = 0; irxn < num_rxns; ++irxn) {
+        const auto& rxn = reactions[irxn];
+        for (int ir = 0; ir < (int)rxn.reactant_type.size(); ++ir) {
+            h_reactant_sp_val[irxn * m_max_reactants_per_rxn + ir] = rxn.reactant_sp_val[ir];
+            if (rxn.reactant_type[ir] == "gas") {
+                h_rxn_gas_reactant_sp_idx[irxn] = rxn.reactant_sp_val[ir];
+            }
+        }
+    }
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_reactant_sp_val.begin(),
+                     h_reactant_sp_val.end(), m_reactant_sp_val.begin());
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_rxn_gas_reactant_sp_idx.begin(),
+                     h_rxn_gas_reactant_sp_idx.end(), m_rxn_gas_reactant_sp_idx.begin());
+}
+
 amrex::Vector<std::string>
 SurfacePhysicsBase::tokenize_reaction (const std::string& input) {
 
@@ -397,7 +457,8 @@ SurfacePhysicsBase::InitData ()
                 break;
             }
         }
-    }    
+    }
+    RemapGasReactantIndicesToPlasmaSpecies();
     AllocAndInitInfluxBndVectors();
     AllocAndInitOutfluxBndVectors();
     AllocAndInitSurfaceDensityFraction();

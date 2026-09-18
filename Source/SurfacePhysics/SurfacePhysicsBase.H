@@ -117,6 +117,17 @@ private:
     bool is_gas_species (std::string species_symbol);
     bool is_surface_species (std::string species_symbol);
 
+    // Reaction gas-reactant indices are parsed (in ReadParameters) in chemistry-file
+    // gas-species index space (index into gas_species_vec, size m_num_gas_species).
+    // But m_incoming_flux/m_incoming_flux_ebin are indexed by runtime plasma-species
+    // index (index into the PIC species list, size num_influx_species). These two
+    // index spaces differ whenever the chemistry file lists gas species with no
+    // matching PIC particle species (e.g. reaction-product-only gas species).
+    // This remaps m_reactant_sp_val/m_rxn_gas_reactant_sp_idx's gas-reactant entries
+    // from chemistry-space to plasma-species-space; called from InitData() once
+    // num_influx_species/m_runtime_to_chemistry_sp_idx are known.
+    void RemapGasReactantIndicesToPlasmaSpecies ();
+
 //    std::map<std::string, std::string> gas_species; //stores gas_species with the symbol
 //    std::map<std::string, std::string> surface_species; //stores surface_species with the symbol
     std::vector<std::pair<std::string, std::string>> gas_species_vec;
