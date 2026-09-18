@@ -363,12 +363,12 @@ SurfacePhysicsBase::RemapGasReactantIndicesToPlasmaSpecies ()
     // chemistry gas species has no matching PIC particle species (e.g. a
     // product-only outgassed species like SiCl2_g/Ar_g — never used as a flux
     // lookup anyway, since it's never a reactant).
-    amrex::Vector<int> chem_to_plasma_species(m_num_gas_species, -1);
+    m_chem_gas_sp_to_plasma_sp_idx.assign(m_num_gas_species, -1);
     for (int chem_id = 0; chem_id < m_num_gas_species; ++chem_id) {
         const std::string& chem_name = gas_species_vec[chem_id].first;
         for (int plasma_id = 0; plasma_id < num_influx_species; ++plasma_id) {
             if (plasma_species_names[plasma_id] == chem_name) {
-                chem_to_plasma_species[chem_id] = plasma_id;
+                m_chem_gas_sp_to_plasma_sp_idx[chem_id] = plasma_id;
                 break;
             }
         }
@@ -382,12 +382,12 @@ SurfacePhysicsBase::RemapGasReactantIndicesToPlasmaSpecies ()
             if (rxn.reactant_type[ir] != "gas") { continue; }
             int const chem_id = rxn.reactant_sp_val[ir];
             WARPX_ALWAYS_ASSERT_WITH_MESSAGE(
-                chem_id >= 0 && chem_to_plasma_species[chem_id] >= 0,
+                chem_id >= 0 && m_chem_gas_sp_to_plasma_sp_idx[chem_id] >= 0,
                 "SurfacePhysics: gas reactant '" + rxn.reactants[ir] +
                 "' in reaction '" + rxn.equation +
                 "' has no matching PIC particle species — its incident flux "
                 "cannot be computed.");
-            rxn.reactant_sp_val[ir] = chem_to_plasma_species[chem_id];
+            rxn.reactant_sp_val[ir] = m_chem_gas_sp_to_plasma_sp_idx[chem_id];
         }
     }
 

@@ -90,6 +90,8 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
     bool const use_ebin = m_use_energy_binned_flux;
     int num_surf_elements = static_cast<int>(surf_ijk.size());
     computeInflux();
+    computeFluxWeightedReactionRates();
+    amrex::Print() << "computed flux weighted reaction rate \n";
     const amrex::Geometry& geom = WarpX::GetInstance().Geom(0);
     const auto plo = geom.ProbLoArray();
     const auto dx  = geom.CellSizeArray();
@@ -101,7 +103,6 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
     const amrex::Real flux = m_plasma_influx;
     amrex::Real dt = m_chem_dt;
 
-    computeFluxWeightedReactionRates();
     const amrex::Real* rxn_flux_weighted_rate = m_rxn_flux_weighted_rate.data();
 
     // Surface species evolution
@@ -351,7 +352,10 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
 #endif
                 for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
                     amrex::PrintToFile(gas_influx_fname) << gas_species_vec[g_sp].first << " ";
-                    amrex::PrintToFile(gas_influx_fname) << h_gas_influx[g_sp*surf_ijk.size()+is] << " ";
+		    int const plasma_sp = m_chem_gas_sp_to_plasma_sp_idx[g_sp];
+                    amrex::Real const influx_val =
+                        (plasma_sp >= 0) ? h_gas_influx[plasma_sp*surf_ijk.size()+is] : 0.;
+                    amrex::PrintToFile(gas_influx_fname) << influx_val << " ";
                 }
                 for (int irxn = 0; irxn < num_rxns; ++irxn) {
                     amrex::PrintToFile(gas_influx_fname)
@@ -379,8 +383,11 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                         amrex::PrintToFile(gas_influx_fname)
                             << is << " " << ie << " " << bin_center << " ";
                         for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
-                            amrex::PrintToFile(gas_influx_fname)
-                                << h_gas_influx_ebin[(g_sp*num_surf_elements + is)*num_ebin + ie] << " ";
+                            int const plasma_sp = m_chem_gas_sp_to_plasma_sp_idx[g_sp];
+                            amrex::Real const influx_val = (plasma_sp >= 0)
+                                ? h_gas_influx_ebin[(plasma_sp*num_surf_elements + is)*num_ebin + ie]
+                                : 0.;
+                            amrex::PrintToFile(gas_influx_fname) << influx_val << " ";
                         }
                         amrex::PrintToFile(gas_influx_fname) << "\n";
                     }

@@ -153,6 +153,13 @@ private:
 
     // runtime species id to chemistry species id (-1 if there is no run time species id corresponding to chem)
     amrex::Vector<int> m_runtime_to_chemistry_sp_idx;
+
+    // chemistry gas-species id (index into gas_species_vec) to plasma/influx species
+    // id (index into m_incoming_flux[_ebin]), or -1 if this chemistry gas species has
+    // no matching PIC particle species (e.g. a reaction-product-only gas species).
+    // Built once in RemapGasReactantIndicesToPlasmaSpecies(); reused by the
+    // gas_influx_surface_step*.txt diagnostic print in SurfacePhysicsEvolve.cpp.
+    amrex::Vector<int> m_chem_gas_sp_to_plasma_sp_idx;
 };
 
 
