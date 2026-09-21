@@ -115,6 +115,14 @@ SurfacePhysicsBase::WriteCheckpoint (const std::string& checkpoint_dir)
     }
 
     if (m_num_energy_bins > 0) {
+        for (int isp = 0; isp < num_influx_species; ++isp) {
+            write_array(num_in_particles_ebin[isp].dataPtr(),
+                        n_surf * m_num_energy_bins,
+                        "num_in_particles_ebin_sp" + std::to_string(isp));
+        }
+    }
+
+    if (m_num_energy_bins > 0) {
         write_array(m_incoming_flux_ebin.dataPtr(),
                     num_influx_species * n_surf * m_num_energy_bins,
                     "incoming_flux_ebin");
@@ -247,6 +255,14 @@ SurfacePhysicsBase::ReadCheckpoint (const std::string& checkpoint_dir)
         read_array(num_out_particles[isp].dataPtr(),
                    n_surf,
                    "num_out_particles_sp" + std::to_string(isp));
+    }
+
+    if (m_num_energy_bins > 0) {
+        for (int isp = 0; isp < num_influx_species; ++isp) {
+            read_array(num_in_particles_ebin[isp].dataPtr(),
+                       n_surf * m_num_energy_bins,
+                       "num_in_particles_ebin_sp" + std::to_string(isp));
+        }
     }
 
     if (m_num_energy_bins > 0) {
