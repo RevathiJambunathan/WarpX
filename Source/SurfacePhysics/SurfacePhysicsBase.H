@@ -136,6 +136,8 @@ private:
 
     // reaction data
     amrex::Gpu::DeviceVector<amrex::Real> m_rxn_P0;
+    amrex::Gpu::DeviceVector<amrex::Real> m_rxn_P_energy0;
+    amrex::Gpu::DeviceVector<int> m_rxn_P_is_const; // 1 if 0 < P_energy0 < 1: constant probability
     amrex::Gpu::DeviceVector<amrex::Real> m_rxn_E_ref;
     amrex::Gpu::DeviceVector<amrex::Real> m_rxn_E_th;
     amrex::Gpu::DeviceVector<amrex::Real> m_rxn_exp;

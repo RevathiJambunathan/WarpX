@@ -7,6 +7,8 @@ SurfacePhysicsBase::computeFluxWeightedReactionRates ()
     int const num_rxns          = static_cast<int>(reactions.size());
     int const num_surf_elements = static_cast<int>(surf_ijk.size());
     const amrex::Real* rxn_P0       = m_rxn_P0.data();
+    const amrex::Real* rxn_P_energy0 = m_rxn_P_energy0.data();
+    const int* rxn_P_is_const       = m_rxn_P_is_const.data();
     const amrex::Real* rxn_E_ref    = m_rxn_E_ref.data();
     const amrex::Real* rxn_E_th     = m_rxn_E_th.data();
     const amrex::Real* rxn_exp_arr  = m_rxn_exp.data();
@@ -28,8 +30,13 @@ SurfacePhysicsBase::computeFluxWeightedReactionRates ()
         for (int irxn = 0; irxn < num_rxns; ++irxn) {
             amrex::Real const exp_val = rxn_exp_arr[irxn];
             int const gas_sp = rxn_gas_reactant_sp_idx[irxn];
+            bool const P_is_const = (rxn_P_is_const[irxn] == 1);
 
-            if (use_ebin && gas_sp >= 0) {
+            if (P_is_const) {
+                // energy-independent: rate is the probability only; the gas flux is
+                // multiplied in later in EvolveSurfacePhysics
+                rate[irxn*num_surf_elements + i] = rxn_P_energy0[irxn];
+            } else if (use_ebin && gas_sp >= 0) {
                 amrex::Real flux_weighted_rate = 0.;
                 for (int ie = 0; ie < num_ebin; ++ie) {
                     amrex::Real const E_bin = energy_bin_min + (ie + 0.5) * energy_bin_size;
@@ -87,6 +94,7 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
     int* rxn_has_gas_prod           = reaction_has_gas_products.data();
     int* gas_is_prod                = gas_sp_is_product.data();
     const int* rxn_gas_reactant_sp_idx = m_rxn_gas_reactant_sp_idx.data();
+    const int* rxn_P_is_const = m_rxn_P_is_const.data();
     bool const use_ebin = m_use_energy_binned_flux;
     int num_surf_elements = static_cast<int>(surf_ijk.size());
     computeInflux();
@@ -137,7 +145,7 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                 }
                 amrex::Real reaction_rate = rxn_flux_weighted_rate[irxn*num_surf_elements + i];
                 bool const rxn_uses_ebin_gas_reactant =
-                    use_ebin && (rxn_gas_reactant_sp_idx[irxn] >= 0);
+                    use_ebin && (rxn_gas_reactant_sp_idx[irxn] >= 0) && (rxn_P_is_const[irxn] == 0);
                 if (reaction_rate > 0) {
                     for (int ir = 0; ir < rxn_num_react[irxn]; ir++) {
                         int const sp_val = react_sp_val[irxn * max_r + ir];
@@ -153,7 +161,7 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                     }
                     react_term *= prefactor * reaction_rate / site_density;
                 } else {
-                    dN = 0.;
+                    react_term = 0.;
                 }
                 dN += react_term;
             }
@@ -246,7 +254,8 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                         prefactor = 1.;
                         amrex::Real reaction_rate = rxn_flux_weighted_rate[irxn*num_surf_elements + i];
                         bool const rxn_uses_ebin_gas_reactant =
-                            use_ebin && (rxn_gas_reactant_sp_idx[irxn] >= 0);
+                            use_ebin && (rxn_gas_reactant_sp_idx[irxn] >= 0)
+                            && (rxn_P_is_const[irxn] == 0);
                         if (reaction_rate > 0.) {
                             for (int ir = 0; ir < rxn_num_react[irxn] ; ++ir) {
                                 int const sp_val = react_sp_val[irxn * max_r + ir];
@@ -261,6 +270,8 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
                                 react_term *= is_gas ? sp_influx[index] : sp_surf_density[index];
                             }
                             react_term *= prefactor * reaction_rate;
+                        } else {
+                            react_term = 0.;
                         }
                     }
                     dgamma += react_term;

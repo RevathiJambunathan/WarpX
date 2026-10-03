@@ -63,7 +63,7 @@ SurfacePhysicsBase::countParticlesFromEmbeddedBoundaries (
 
     for (int i = 0; i < num_influx_species; ++i)
     {
-        amrex::Print() << " influx sp name " << mypc.GetSpeciesNames()[0] << " " << mypc.GetSpeciesNames()[1] << "\n";
+        amrex::Print() << " influx sp " << i << " name " << mypc.GetSpeciesNames()[i] << "\n";
         const auto& pc = mypc.GetParticleContainer(i);
         double* const AMREX_RESTRICT dptr_incident_np = num_in_particles[i].dataPtr();
         int const num_ebin = m_num_energy_bins;

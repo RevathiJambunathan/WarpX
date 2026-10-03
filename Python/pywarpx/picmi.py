@@ -3764,7 +3764,11 @@ class SurfaceChemistry(picmistandard.base._ClassWithInit):
 
     reactions : list of str
         Each string is one reaction in the format:
-        "ReactantA + ReactantB -> Product; P_energy0; P0; E_ref; E_th; exponent"
+        "ReactantA + ReactantB => Product; P_energy0; P0; E_ref; E_th; exponent"
+        If 0 < P_energy0 < 1, the reaction has a constant, energy-independent
+        probability P_energy0. P0, E_ref, E_th and exponent are then ignored, but all
+        six fields must still be given. Otherwise the probability is
+        P0 * (E^exponent - E_th^exponent) / (E_ref^exponent - E_th^exponent).
 
     surface_site_density : float
         Surface site density in m^-2.

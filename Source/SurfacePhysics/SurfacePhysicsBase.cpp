@@ -251,6 +251,8 @@ void SurfacePhysicsBase::ReadParameters ()
     m_max_reactants_per_rxn = max_r;
 
     amrex::Vector<amrex::Real> h_rxn_P0(num_rxns);
+    amrex::Vector<amrex::Real> h_rxn_P_energy0(num_rxns);
+    amrex::Vector<int> h_rxn_P_is_const(num_rxns);
     amrex::Vector<amrex::Real> h_rxn_E_ref(num_rxns);
     amrex::Vector<amrex::Real> h_rxn_E_th(num_rxns);
     amrex::Vector<amrex::Real> h_rxn_exp(num_rxns);
@@ -261,6 +263,8 @@ void SurfacePhysicsBase::ReadParameters ()
     for (int irxn = 0; irxn < num_rxns; ++irxn) {
         const auto& rxn = reactions[irxn];
         h_rxn_P0[irxn]    = rxn.P0;
+        h_rxn_P_energy0[irxn] = rxn.P_energy0;
+        h_rxn_P_is_const[irxn] = (rxn.P_energy0 > 0. && rxn.P_energy0 < 1.) ? 1 : 0;
         h_rxn_E_ref[irxn] = rxn.E_ref;
         h_rxn_E_th[irxn]  = rxn.E_th;
         h_rxn_exp[irxn]   = rxn.exp;
@@ -294,6 +298,14 @@ void SurfacePhysicsBase::ReadParameters ()
 
     m_rxn_P0.resize(num_rxns);
     amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_rxn_P0.begin(), h_rxn_P0.end(), m_rxn_P0.begin());
+
+    m_rxn_P_energy0.resize(num_rxns);
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_rxn_P_energy0.begin(),
+                     h_rxn_P_energy0.end(), m_rxn_P_energy0.begin());
+
+    m_rxn_P_is_const.resize(num_rxns);
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_rxn_P_is_const.begin(),
+                     h_rxn_P_is_const.end(), m_rxn_P_is_const.begin());
 
     m_rxn_E_ref.resize(num_rxns);
     amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_rxn_E_ref.begin(), h_rxn_E_ref.end(), m_rxn_E_ref.begin());
