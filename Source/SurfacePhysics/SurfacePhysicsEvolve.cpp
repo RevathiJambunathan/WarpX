@@ -1,6 +1,9 @@
 #include "SurfacePhysicsBase.H"
 #include "WarpX.H"
 
+#include <sstream>
+#include <string>
+
 void
 SurfacePhysicsBase::computeFluxWeightedReactionRates ()
 {
@@ -191,30 +194,32 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
             amrex::PrintToFile("surface_evolution.txt") << "\n";
             m_surface_evolution_header_written = true;
         }
+        std::ostringstream surf_evo_rows;
         for (int is = 0; is < num_surf_elements; ++is ) {
             const amrex::IntVect& iv = surf_ijk[is];
 #if defined(WARPX_DIM_3D)
             const amrex::Real x = plo[0] + (iv[0] + 0.5) * dx[0];
             const amrex::Real y = plo[1] + (iv[1] + 0.5) * dx[1];
             const amrex::Real z = plo[2] + (iv[2] + 0.5) * dx[2];
-            amrex::PrintToFile("surface_evolution.txt")
+            surf_evo_rows
                 << is << " " << istep << " " << m_cur_time << " "
                 << iv[0] << " " << iv[1] << " " << iv[2] << " "
                 << x << " " << y << " " << z << " ";
 #elif defined(WARPX_DIM_XZ)
             const amrex::Real x = plo[0] + (iv[0] + 0.5) * dx[0];
             const amrex::Real z = plo[1] + (iv[1] + 0.5) * dx[1];
-            amrex::PrintToFile("surface_evolution.txt")
+            surf_evo_rows
                 << is << " " << istep << " " << m_cur_time << " "
                 << iv[0] << " " << iv[1] << " "
                 << x << " " << z << " ";
 #endif
             for (int s_sp = 0; s_sp < static_cast<int>(surface_species_vec.size()); s_sp++) {
-                amrex::PrintToFile("surface_evolution.txt") << surface_species_vec[s_sp].first << " ";
-                amrex::PrintToFile("surface_evolution.txt") << h_surf_dens[s_sp*surf_ijk.size()+is] << " ";
+                surf_evo_rows << surface_species_vec[s_sp].first << " ";
+                surf_evo_rows << h_surf_dens[s_sp*surf_ijk.size()+is] << " ";
             }
-            amrex::PrintToFile("surface_evolution.txt") << "\n";
+            surf_evo_rows << "\n";
         }
+        amrex::PrintToFile("surface_evolution.txt") << surf_evo_rows.str();
     }
 
    // now compute the returning Gammma for each gas species (ion and neutral)
@@ -423,30 +428,32 @@ SurfacePhysicsBase::EvolveSurfacePhysics (amrex::Real cur_time, int pic_step)
             amrex::PrintToFile("surface_flux_evolution.txt") << "\n";
             m_surface_flux_evolution_header_written = true;
         }
+        std::ostringstream surf_flux_rows;
         for (int is = 0; is < num_surf_elements; ++is ) {
             const amrex::IntVect& iv = surf_ijk[is];
 #if defined(WARPX_DIM_3D)
             const amrex::Real x = plo[0] + (iv[0] + 0.5) * dx[0];
             const amrex::Real y = plo[1] + (iv[1] + 0.5) * dx[1];
             const amrex::Real z = plo[2] + (iv[2] + 0.5) * dx[2];
-            amrex::PrintToFile("surface_flux_evolution.txt")
+            surf_flux_rows
                 << is << " " << istep << " " << m_cur_time << " "
                 << iv[0] << " " << iv[1] << " " << iv[2] << " "
                 << x << " " << y << " " << z << " ";
 #elif defined(WARPX_DIM_XZ)
             const amrex::Real x = plo[0] + (iv[0] + 0.5) * dx[0];
             const amrex::Real z = plo[1] + (iv[1] + 0.5) * dx[1];
-            amrex::PrintToFile("surface_flux_evolution.txt")
+            surf_flux_rows
                 << is << " " << istep << " " << m_cur_time << " "
                 << iv[0] << " " << iv[1] << " "
                 << x << " " << z << " ";
 #endif
             for (int g_sp = 0; g_sp < static_cast<int>(gas_species_vec.size()); ++g_sp) {
-                amrex::PrintToFile("surface_flux_evolution.txt") << gas_species_vec[g_sp].first << " ";
-                amrex::PrintToFile("surface_flux_evolution.txt") << h_gas_flux[g_sp*surf_ijk.size()+is] << " ";
+                surf_flux_rows << gas_species_vec[g_sp].first << " ";
+                surf_flux_rows << h_gas_flux[g_sp*surf_ijk.size()+is] << " ";
             }
-            amrex::PrintToFile("surface_flux_evolution.txt")  << "\n";
+            surf_flux_rows << "\n";
         }
+        amrex::PrintToFile("surface_flux_evolution.txt") << surf_flux_rows.str();
     }
     m_cur_time += m_chem_dt;
     }  // time loop
