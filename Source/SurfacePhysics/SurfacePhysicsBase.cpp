@@ -10,6 +10,7 @@
 #include "SurfacePhysicsBase.H"
 #include "EmbeddedBoundary/Enabled.H"
 #include "Particles/MultiParticleContainer.H"
+#include "Particles/ParticleCreation/AddPlasmaUtilities.H"
 #include "Utils/Parser/ParserUtils.H"
 #include "Utils/TextMsg.H"
 #include "WarpX.H"
@@ -809,6 +810,7 @@ SurfacePhysicsBase::computeInflux (int isp)
     auto& warpx = WarpX::GetInstance();
     const int lev = 0;
     amrex::Real const dt = warpx.getdt(lev);
+    auto const dx = warpx.Geom(lev).CellSizeArray();
     amrex::Real const cur_time = warpx.gett_new(lev);
     amrex::Real const influx_window = cur_time - m_influx_window_start_time;
     amrex::Print() << " influx window " << influx_window << "\n";
@@ -855,6 +857,7 @@ SurfacePhysicsBase::computeInflux (int isp)
 
         auto const& eb_flag_arr = eb_flag.array(mfi);
         const amrex::Array4<const amrex::Real>& eb_bnd_area_arr = eb_bnd_area.array(mfi);
+        const amrex::Array4<const amrex::Real>& eb_bnd_normal_arr = eb_bnd_normal.array(mfi);
         auto const& ivect_arr = ivect_map->array(mfi);
 
         amrex::ParallelFor(box,
@@ -866,7 +869,14 @@ SurfacePhysicsBase::computeInflux (int isp)
                 return;
             } else {
                 int ivec = ivect_arr(i,j,k);
-                amrex::Real const area = eb_bnd_area_arr(i,j,k);
+                // eb_bnd_area_arr is normalized (unitless); undo the normalization
+                // to get the physical area of the EB face in this cell
+                // (m^2 in 3D, m per unit length in y in XZ), as done for EB injection.
+                amrex::Real const area = eb_bnd_area_arr(i,j,k)
+                    * compute_scale_fac_area_eb(dx, amrex::Real(1.0),
+                          AMREX_D_DECL(eb_bnd_normal_arr(i,j,k,0),
+                                       eb_bnd_normal_arr(i,j,k,1),
+                                       eb_bnd_normal_arr(i,j,k,2)));
                 amrex::Real const denom = (influx_window > 0) ? influx_window : dt;
                 sp_influx[isp*num_surf_elements + ivec] = dptr_num_in_particles[ivec]/area/denom;
                 if (num_ebin > 0) {
