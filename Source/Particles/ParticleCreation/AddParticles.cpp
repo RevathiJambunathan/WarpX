@@ -1641,6 +1641,9 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
                 if (use_surface_flux) {
                     int surface_ivect = ivect_map_arr(i,j,k);
                     flux = surface_outflux[chem_sp_id * num_surf_elements + surface_ivect];
+                } else if (!inject_from_eb) {
+                    // plane injection: use the user-specified flux function
+                    flux = inj_flux->getFlux(pos.x, pos.y, pos.z, t);
                 }
 #else
                 const amrex::Real flux = inj_flux->getFlux(pos.x, pos.y, pos.z, t);
