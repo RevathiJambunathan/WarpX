@@ -1264,7 +1264,7 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
     int num_surf_elements = surface_physics.surf_ijk.size();
     // Use surface-return flux only for species that exist in chemistry gas list
     const bool use_surface_flux =
-        inject_from_eb &&
+        inject_from_eb && warpx.DoSurfacePhysics() &&
         (chem_sp_id >= 0) &&
         (chem_sp_id < surface_physics.m_num_gas_species);
 #endif // closes ifdef for WarpX surface physics
@@ -1641,7 +1641,7 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
                 if (use_surface_flux) {
                     int surface_ivect = ivect_map_arr(i,j,k);
                     flux = surface_outflux[chem_sp_id * num_surf_elements + surface_ivect];
-                } else if (!inject_from_eb) {
+                } else {
                     // plane injection: use the user-specified flux function
                     flux = inj_flux->getFlux(pos.x, pos.y, pos.z, t);
                 }
