@@ -1256,17 +1256,26 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
 
 #ifdef WARPX_SURFACE_PHYSICS
     auto & warpx = WarpX::GetInstance();
-    auto & surface_physics = warpx.GetSurfacePhysicsModel();
-    auto & ivect_map = surface_physics.ivect_map;
-    amrex::Real* surface_outflux = surface_physics.m_returning_gas_flux.data();
-    int runtime_sp_id = this->getSpeciesId();
-    int chem_sp_id = surface_physics.GetChemGasSpeciesIndex(runtime_sp_id);
-    int num_surf_elements = surface_physics.surf_ijk.size();
-    // Use surface-return flux only for species that exist in chemistry gas list
-    const bool use_surface_flux =
-        inject_from_eb && warpx.DoSurfacePhysics() &&
-        (chem_sp_id >= 0) &&
-        (chem_sp_id < surface_physics.m_num_gas_species);
+    // m_surface_physics only exists when warpx.do_surface_physics = 1,
+    // so do not touch the surface physics model otherwise.
+    amrex::iMultiFab const* ivect_map = nullptr;
+    amrex::Real* surface_outflux = nullptr;
+    int chem_sp_id = -1;
+    int num_surf_elements = 0;
+    bool use_surface_flux = false;
+    if (warpx.DoSurfacePhysics()) {
+        auto & surface_physics = warpx.GetSurfacePhysicsModel();
+        ivect_map = surface_physics.ivect_map.get();
+        surface_outflux = surface_physics.m_returning_gas_flux.data();
+        int runtime_sp_id = this->getSpeciesId();
+        chem_sp_id = surface_physics.GetChemGasSpeciesIndex(runtime_sp_id);
+        num_surf_elements = surface_physics.surf_ijk.size();
+        // Use surface-return flux only for species that exist in chemistry gas list
+        use_surface_flux =
+            inject_from_eb &&
+            (chem_sp_id >= 0) &&
+            (chem_sp_id < surface_physics.m_num_gas_species);
+    }
 #endif // closes ifdef for WarpX surface physics
 
 #endif
@@ -1364,7 +1373,8 @@ PhysicalParticleContainer::AddPlasmaFlux (PlasmaInjector const& plasma_injector,
         auto eb_flag_arr = eb_flag ? eb_flag->const_array(mfi) : Array4<EBCellFlag const>{};
         auto eb_data = eb_factory ? eb_factory->getEBData(mfi) : EBData{};
 #ifdef WARPX_SURFACE_PHYSICS
-        amrex::Array4<const int> ivect_map_arr = ivect_map->array(mfi);
+        amrex::Array4<const int> ivect_map_arr = ivect_map ? ivect_map->const_array(mfi)
+                                                           : amrex::Array4<const int>{};
 #endif
 #endif
 
